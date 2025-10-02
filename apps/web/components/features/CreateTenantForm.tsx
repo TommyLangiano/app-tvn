@@ -33,7 +33,7 @@ export function CreateTenantForm() {
     try {
       const supabase = createClient();
 
-      const { data: tenantId, error } = await supabase.rpc('create_tenant', {
+      const { error } = await supabase.rpc('create_tenant', {
         p_name: name,
         p_plan: plan,
       });
@@ -62,7 +62,7 @@ export function CreateTenantForm() {
         <CardHeader>
           <CardTitle>Create Your Workspace</CardTitle>
           <CardDescription>
-            Get started by creating your first workspace. You'll get a 14-day free trial.
+            Get started by creating your first workspace. You&apos;ll get a 14-day free trial.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
