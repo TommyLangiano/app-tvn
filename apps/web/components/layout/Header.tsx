@@ -23,7 +23,7 @@ export function Header() {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const { plan, isTrialing, trialEnd, loading } = useSubscriptionStatus();
-  const { toggle } = useSidebar();
+  const { toggle, isOpen } = useSidebar();
 
   const handleLogout = async () => {
     try {
@@ -62,10 +62,12 @@ export function Header() {
   };
 
   return (
-    <header className="fixed left-0 right-0 top-0 z-30 h-20 bg-surface">
+    <header className={`fixed right-0 top-0 z-30 h-20 bg-surface border-b border-border transition-all duration-300 ${
+      isOpen ? 'left-60' : 'left-0'
+    }`}>
       <div className="flex h-full items-center justify-between px-4 lg:px-6">
-        <div className="flex items-center gap-2 flex-1">
-          {/* Hamburger Menu - Always visible */}
+        <div className="flex items-center gap-4 flex-1">
+          {/* Hamburger and logo - always visible */}
           <Button
             variant="ghost"
             size="icon"
@@ -74,6 +76,11 @@ export function Header() {
           >
             <Menu className="h-6 w-6" />
           </Button>
+
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <span className="text-sm font-bold">TVN</span>
+          </div>
+
           {/* Page title will be handled by individual pages */}
         </div>
 

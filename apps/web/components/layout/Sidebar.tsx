@@ -1,6 +1,6 @@
 'use client';
 
-import { Home, FolderKanban, Users, Settings, X } from 'lucide-react';
+import { Home, FolderKanban, Users, Settings } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -15,38 +15,13 @@ const menuItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { isOpen, close } = useSidebar();
+  const { isOpen } = useSidebar();
 
   return (
-    <>
-      {/* Overlay for mobile */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
-          onClick={close}
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside className={cn(
-        "fixed left-0 top-0 z-50 h-screen w-60 bg-surface transition-transform duration-300",
-        isOpen ? "translate-x-0" : "-translate-x-full"
-      )}>
-      {/* Logo */}
-      <div className="flex h-20 items-center justify-between px-6">
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <span className="text-sm font-bold">TVN</span>
-          </div>
-        </Link>
-        <button
-          onClick={close}
-          className="text-muted hover:text-foreground"
-        >
-          <X className="h-5 w-5" />
-        </button>
-      </div>
-
+    <aside className={cn(
+      "fixed left-0 top-20 z-50 h-[calc(100vh-5rem)] w-60 bg-surface border-r border-border transition-transform duration-300",
+      isOpen ? "translate-x-0" : "-translate-x-full"
+    )}>
       {/* Navigation */}
       <nav className="space-y-1 p-4">
         {menuItems.map((item) => {
@@ -70,7 +45,6 @@ export function Sidebar() {
           );
         })}
       </nav>
-      </aside>
-    </>
+    </aside>
   );
 }

@@ -2,24 +2,36 @@
 
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
-import { SidebarProvider } from '@/contexts/SidebarContext';
+import { SidebarProvider, useSidebar } from '@/contexts/SidebarContext';
 
 interface AppLayoutProps {
   children: React.ReactNode;
 }
 
+function AppLayoutContent({ children }: AppLayoutProps) {
+  const { isOpen } = useSidebar();
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Sidebar />
+      <Header />
+
+      {/* Main content area */}
+      <main
+        className={`mt-20 min-h-[calc(100vh-5rem)] bg-background p-6 transition-all duration-300 ${
+          isOpen ? 'ml-60' : 'ml-0'
+        }`}
+      >
+        {children}
+      </main>
+    </div>
+  );
+}
+
 export function AppLayout({ children }: AppLayoutProps) {
   return (
     <SidebarProvider>
-      <div className="min-h-screen bg-background">
-        <Sidebar />
-        <Header />
-
-        {/* Main content area */}
-        <main className="mt-20 min-h-[calc(100vh-5rem)] bg-background p-6">
-          {children}
-        </main>
-      </div>
+      <AppLayoutContent>{children}</AppLayoutContent>
     </SidebarProvider>
   );
 }
