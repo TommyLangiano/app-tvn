@@ -16,7 +16,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         <Header />
 
         {/* Main content area */}
-        <main className="ml-0 lg:ml-60 mt-16 min-h-[calc(100vh-4rem)] bg-background p-6">
+        <main className="mt-20 min-h-[calc(100vh-5rem)] bg-background p-6">
           {children}
         </main>
       </div>

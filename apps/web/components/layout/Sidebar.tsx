@@ -29,12 +29,11 @@ export function Sidebar() {
 
       {/* Sidebar */}
       <aside className={cn(
-        "fixed left-0 top-0 z-50 h-screen w-60 border-r border-border bg-surface transition-transform duration-300",
-        "lg:translate-x-0",
+        "fixed left-0 top-0 z-50 h-screen w-60 bg-surface transition-transform duration-300",
         isOpen ? "translate-x-0" : "-translate-x-full"
       )}>
       {/* Logo */}
-      <div className="flex h-16 items-center justify-between px-6">
+      <div className="flex h-20 items-center justify-between px-6">
         <Link href="/dashboard" className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <span className="text-sm font-bold">TVN</span>
@@ -42,7 +41,7 @@ export function Sidebar() {
         </Link>
         <button
           onClick={close}
-          className="lg:hidden text-muted hover:text-foreground"
+          className="text-muted hover:text-foreground"
         >
           <X className="h-5 w-5" />
         </button>

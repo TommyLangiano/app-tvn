@@ -62,15 +62,15 @@ export function Header() {
   };
 
   return (
-    <header className="fixed left-0 lg:left-60 right-0 top-0 z-30 h-16 bg-surface">
+    <header className="fixed left-0 right-0 top-0 z-30 h-20 bg-surface">
       <div className="flex h-full items-center justify-between px-4 lg:px-6">
         <div className="flex items-center gap-2 flex-1">
-          {/* Hamburger Menu - Mobile Only */}
+          {/* Hamburger Menu - Always visible */}
           <Button
             variant="ghost"
             size="icon"
             onClick={toggle}
-            className="lg:hidden h-10 w-10"
+            className="h-10 w-10"
           >
             <Menu className="h-6 w-6" />
           </Button>
