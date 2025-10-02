@@ -64,8 +64,8 @@ export function Header() {
   return (
     <header className="fixed left-0 right-0 top-0 z-40 h-16 bg-surface border-b border-border/50 backdrop-blur-sm">
       <div className="flex h-full items-center justify-between">
-        {/* Left section - sidebar header part (240px) */}
-        <div className="w-60 h-full flex items-center justify-between px-6">
+        {/* Left section - sidebar header part (256px) */}
+        <div className="w-64 h-full flex items-center justify-between px-6">
           {/* Logo TVN */}
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-lg shadow-primary/20">
             <span className="text-base font-bold">TVN</span>

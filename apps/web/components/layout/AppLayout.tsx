@@ -18,11 +18,13 @@ function AppLayoutContent({ children }: AppLayoutProps) {
 
       {/* Main content area */}
       <main
-        className={`mt-16 min-h-[calc(100vh-4rem)] bg-background p-6 transition-all duration-300 ${
-          isOpen ? 'ml-60' : 'ml-0'
+        className={`mt-16 min-h-[calc(100vh-4rem)] bg-background transition-all duration-300 ${
+          isOpen ? 'ml-64' : 'ml-0'
         }`}
       >
-        {children}
+        <div className="px-8 py-8">
+          {children}
+        </div>
       </main>
     </div>
   );
