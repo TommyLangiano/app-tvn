@@ -25,7 +25,7 @@ export function Breadcrumb({ pageName }: BreadcrumbProps) {
 
   const breadcrumbItems = paths
     .filter(path => path !== 'dashboard') // Rimuove 'dashboard' dal breadcrumb
-    .map((path, index, array) => {
+    .map((path) => {
       const actualIndex = paths.indexOf(path);
       const href = '/' + paths.slice(0, actualIndex + 1).join('/');
       const label = pageLabels[path] || path.charAt(0).toUpperCase() + path.slice(1);
