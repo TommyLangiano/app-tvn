@@ -13,8 +13,8 @@ function AppLayoutContent({ children }: AppLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      <Sidebar />
       <Header />
+      <Sidebar />
 
       {/* Main content area */}
       <main

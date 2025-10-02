@@ -1,6 +1,6 @@
 'use client';
 
-import { Bell, User, CreditCard, Moon, Sun, LogOut, Menu } from 'lucide-react';
+import { Bell, User, CreditCard, Moon, Sun, LogOut, Menu, Search, SlidersHorizontal } from 'lucide-react';
 import { useTheme } from '@/components/common/theme-provider';
 import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
 import { useSidebar } from '@/contexts/SidebarContext';
@@ -62,12 +62,16 @@ export function Header() {
   };
 
   return (
-    <header className={`fixed right-0 top-0 z-30 h-20 bg-surface border-b border-border transition-all duration-300 ${
-      isOpen ? 'left-60' : 'left-0'
-    }`}>
-      <div className="flex h-full items-center justify-between px-4 lg:px-6">
-        <div className="flex items-center gap-4 flex-1">
-          {/* Hamburger and logo - always visible */}
+    <header className="fixed left-0 right-0 top-0 z-40 h-20 bg-surface border-b border-border">
+      <div className="flex h-full items-center justify-between">
+        {/* Left section - sidebar header part (240px) */}
+        <div className="w-60 h-full flex items-center justify-between px-4">
+          {/* Logo TVN */}
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <span className="text-sm font-bold">TVN</span>
+          </div>
+
+          {/* Hamburger Menu */}
           <Button
             variant="ghost"
             size="icon"
@@ -76,13 +80,31 @@ export function Header() {
           >
             <Menu className="h-6 w-6" />
           </Button>
-
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <span className="text-sm font-bold">TVN</span>
-          </div>
-
-          {/* Page title will be handled by individual pages */}
         </div>
+
+        {/* Right section - main header content */}
+        <div className="flex-1 flex items-center justify-between px-4 lg:px-6">
+          <div className="flex items-center gap-4 flex-1">
+            {/* Global Search Bar */}
+            <div className="relative w-full max-w-xl">
+              <div className="flex items-center gap-2 h-11 rounded-lg border border-border bg-background overflow-hidden">
+                {/* Filter Button */}
+                <button className="flex items-center justify-center h-full px-3 hover:bg-accent transition-colors border-r border-border">
+                  <SlidersHorizontal className="h-4 w-4 text-muted" />
+                </button>
+
+                {/* Search Input */}
+                <div className="relative flex-1 flex items-center">
+                  <Search className="absolute left-3 h-4 w-4 text-muted" />
+                  <input
+                    type="text"
+                    placeholder="Cerca ovunque..."
+                    className="w-full h-full pl-10 pr-4 bg-transparent text-sm text-foreground placeholder:text-muted focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
 
         <div className="flex items-center gap-3">
           {/* Subscription Status */}
@@ -143,6 +165,7 @@ export function Header() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          </div>
         </div>
       </div>
     </header>
