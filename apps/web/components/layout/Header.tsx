@@ -23,7 +23,7 @@ export function Header() {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const { plan, isTrialing, trialEnd, loading } = useSubscriptionStatus();
-  const { toggle, isOpen } = useSidebar();
+  const { toggle } = useSidebar();
 
   const handleLogout = async () => {
     try {
