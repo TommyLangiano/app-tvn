@@ -1,0 +1,96 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+
+
+@layer base {
+  :root {
+    /* Modern SaaS Design System - Light Mode */
+    --radius: 12px;
+
+    /* Base Colors */
+    --bg: 245 247 250;
+    --surface: 255 255 255;
+    --text: 30 41 59;
+    --border: 226 232 240;
+
+    /* Brand Colors */
+    --primary: 63 81 181; /* indigo-600 */
+    --primary-foreground: 255 255 255;
+
+    /* Semantic Colors */
+    --success: 16 185 129; /* green-500 */
+    --danger: 185 28 28; /* red-700 */
+    --warning: 245 158 11; /* amber-500 */
+
+    /* Text Colors */
+    --muted: 100 116 139; /* gray-500 */
+
+    /* shadcn/ui compatibility */
+    --background: var(--bg);
+    --foreground: var(--text);
+    --card: var(--surface);
+    --card-foreground: var(--text);
+    --popover: var(--surface);
+    --popover-foreground: var(--text);
+    --secondary: 241 245 249;
+    --secondary-foreground: var(--text);
+    --muted-foreground: var(--muted);
+    --accent: 241 245 249;
+    --accent-foreground: var(--text);
+    --destructive: var(--danger);
+    --destructive-foreground: 255 255 255;
+    --input: var(--border);
+    --ring: var(--primary);
+  }
+
+  [data-theme="dark"],
+  .dark {
+    /* Modern SaaS Design System - Dark Mode */
+    --bg: 15 17 23;
+    --surface: 26 31 43;
+    --text: 241 245 249;
+    --border: 51 65 85;
+
+    --primary: 99 102 241; /* indigo-500 */
+    --success: 34 197 94;
+    --danger: 220 38 38;
+    --warning: 245 158 11;
+    --muted: 148 163 184;
+
+    /* shadcn/ui compatibility */
+    --background: var(--bg);
+    --foreground: var(--text);
+    --card: var(--surface);
+    --card-foreground: var(--text);
+    --popover: var(--surface);
+    --popover-foreground: var(--text);
+    --secondary: 51 65 85;
+    --secondary-foreground: var(--text);
+    --muted-foreground: var(--muted);
+    --accent: 51 65 85;
+    --accent-foreground: var(--text);
+    --destructive: var(--danger);
+    --destructive-foreground: 255 255 255;
+    --input: var(--border);
+    --ring: var(--primary);
+  }
+}
+
+
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
