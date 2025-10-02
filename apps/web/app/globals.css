@@ -43,8 +43,8 @@
     --secondary: 241 245 249;
     --secondary-foreground: var(--text);
     --muted-foreground: var(--muted);
-    --accent: 241 245 249;
-    --accent-foreground: var(--text);
+    --accent: 238 242 255; /* indigo-50 - very light indigo based on primary */
+    --accent-foreground: 63 81 181; /* primary color for text */
     --destructive: var(--danger);
     --destructive-foreground: 255 255 255;
     --input: var(--border);
@@ -75,8 +75,8 @@
     --secondary: 51 65 85;
     --secondary-foreground: var(--text);
     --muted-foreground: var(--muted);
-    --accent: 51 65 85;
-    --accent-foreground: var(--text);
+    --accent: 55 65 81; /* darker blue-slate matching primary indigo */
+    --accent-foreground: 165 180 252; /* indigo-300 for text */
     --destructive: var(--danger);
     --destructive-foreground: 255 255 255;
     --input: var(--border);
