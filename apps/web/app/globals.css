@@ -22,7 +22,7 @@
     --border: 226 232 240;
 
     /* Brand Colors */
-    --primary: 16 185 129; /* emerald-500 - fresh green for SaaS */
+    --primary: 5 150 105; /* emerald-600 - darker green for SaaS */
     --primary-foreground: 255 255 255;
 
     /* Semantic Colors */
@@ -44,7 +44,7 @@
     --secondary-foreground: var(--text);
     --muted-foreground: var(--muted);
     --accent: 236 253 245; /* emerald-50 - very light green based on primary */
-    --accent-foreground: 16 185 129; /* primary emerald for text */
+    --accent-foreground: 5 150 105; /* darker primary emerald for text */
     --destructive: var(--danger);
     --destructive-foreground: 255 255 255;
     --input: var(--border);
@@ -75,8 +75,8 @@
     --secondary: 51 65 85;
     --secondary-foreground: var(--text);
     --muted-foreground: var(--muted);
-    --accent: 6 78 59; /* dark emerald-900 matching primary green */
-    --accent-foreground: 110 231 183; /* emerald-300 for text */
+    --accent: 52 211 153; /* emerald-400 - bright green for hover backgrounds in dark mode */
+    --accent-foreground: 236 253 245; /* very light green for text */
     --destructive: var(--danger);
     --destructive-foreground: 255 255 255;
     --input: var(--border);
