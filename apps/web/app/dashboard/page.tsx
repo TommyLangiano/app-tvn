@@ -33,7 +33,7 @@ export default async function DashboardPage() {
 
   // Single-tenant setup: Get first tenant
   const tenant = userTenants[0];
-  const tenantData = tenant.tenants as { id: string; name: string } | null;
+  const tenantData = Array.isArray(tenant.tenants) ? tenant.tenants[0] : tenant.tenants;
 
   // User has tenant, show dashboard home
   return (
