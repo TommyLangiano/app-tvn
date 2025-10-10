@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { X, Upload, FileText, CloudUpload, RotateCcw, Check, ChevronsUpDown } from 'lucide-react';
+import { X, FileText, CloudUpload, RotateCcw, Check, ChevronsUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -37,7 +37,6 @@ const aliquoteIva = ['0', '4', '5', '10', '22'];
 export function FatturaAttivaForm({
   commessaId,
   commessaNome,
-  clientePrecompilato,
   onSuccess,
   onCancel
 }: FatturaAttivaFormProps) {
@@ -73,6 +72,7 @@ export function FatturaAttivaForm({
     return () => {
       document.body.style.overflow = 'unset';
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadTenantId = async () => {
@@ -157,11 +157,7 @@ export function FatturaAttivaForm({
     return (imponibile * aliquota) / 100;
   };
 
-  const calcolaTotale = () => {
-    const imponibile = parseFloat(formData.importo_imponibile) || 0;
-    const iva = calcolaIva();
-    return imponibile + iva;
-  };
+  // Removed unused calcolaTotale function - totale is calculated in handleImponibileChange
 
   // Calcolo da Totale a Imponibile
   const handleTotaleChange = (totale: string) => {
@@ -170,7 +166,6 @@ export function FatturaAttivaForm({
 
     // Formula: imponibile = totale / (1 + aliquota/100)
     const imponibile = totaleNum / (1 + aliquota / 100);
-    const iva = totaleNum - imponibile;
 
     setFormData({
       ...formData,
@@ -350,9 +345,9 @@ export function FatturaAttivaForm({
 
       toast.success('Fattura aggiunta con successo!');
       onSuccess();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error creating fattura:', error);
-      if (error.code === '23505') {
+      if (error && typeof error === 'object' && 'code' in error && error.code === '23505') {
         toast.error('Numero fattura già esistente');
       } else {
         toast.error('Errore nell\'aggiunta della fattura');

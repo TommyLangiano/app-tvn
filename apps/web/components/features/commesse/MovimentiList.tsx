@@ -5,10 +5,9 @@ import type { Movimento } from '@/types/movimento';
 
 interface MovimentiListProps {
   movimenti: Movimento[];
-  onRefresh: () => void;
 }
 
-export function MovimentiList({ movimenti, onRefresh }: MovimentiListProps) {
+export function MovimentiList({ movimenti }: MovimentiListProps) {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('it-IT', {
       style: 'currency',
@@ -25,7 +24,7 @@ export function MovimentiList({ movimenti, onRefresh }: MovimentiListProps) {
       <div className="rounded-xl border-2 border-dashed border-border bg-card p-12 text-center">
         <p className="text-muted-foreground">Nessun movimento registrato</p>
         <p className="text-sm text-muted-foreground mt-2">
-          Aggiungi il primo ricavo o costo per iniziare a tracciare l'economia della commessa
+          Aggiungi il primo ricavo o costo per iniziare a tracciare l&apos;economia della commessa
         </p>
       </div>
     );
