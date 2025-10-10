@@ -98,6 +98,7 @@ export function EditMovimentoModal({ movimento, onClose, onSuccess }: EditMovime
     initialAllegatoRef.current = movimento.allegato_url;
     setShowRemoveConfirm(false);
     loadClientiFornitori();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [movimento.id]);
 
   const loadClientiFornitori = async () => {
@@ -243,6 +244,7 @@ export function EditMovimentoModal({ movimento, onClose, onSuccess }: EditMovime
     return () => {
       active = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [movimento.id, movimento.categoria]);
 
   const validateFile = (file: File) => {
@@ -433,7 +435,7 @@ export function EditMovimentoModal({ movimento, onClose, onSuccess }: EditMovime
       }
 
       const supabase = createClient();
-      const dataToUpdate: any = {
+      const dataToUpdate: Record<string, unknown> = {
         tipologia: formData.tipologia,
         data_emissione: formData.data_emissione,
         modalita_pagamento: formData.modalita_pagamento || null,
@@ -746,7 +748,7 @@ export function EditMovimentoModal({ movimento, onClose, onSuccess }: EditMovime
                   Documentazione
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Gestisci l'allegato associato al movimento.
+                  Gestisci l&apos;allegato associato al movimento.
                 </p>
               </div>
               {currentFilePath && currentFileUrl && (
@@ -892,9 +894,9 @@ export function EditMovimentoModal({ movimento, onClose, onSuccess }: EditMovime
             className="w-full max-w-sm rounded-xl border-2 border-border bg-background p-6 shadow-xl"
             onClick={(event) => event.stopPropagation()}
           >
-            <h3 className="text-lg font-semibold">Rimuovere l'allegato?</h3>
+            <h3 className="text-lg font-semibold">Rimuovere l&apos;allegato?</h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              Eliminando l'allegato dovrai caricarne uno nuovo prima di salvare se desideri sostituirlo.
+              Eliminando l&apos;allegato dovrai caricarne uno nuovo prima di salvare se desideri sostituirlo.
             </p>
             <div className="mt-6 flex justify-end gap-3">
               <Button

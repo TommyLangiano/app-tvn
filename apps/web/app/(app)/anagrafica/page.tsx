@@ -164,7 +164,8 @@ export default function AnagraficaPage() {
     );
   });
 
-  // Group clienti alphabetically
+  // Group clienti alphabetically - unused for now but kept for future feature
+  /*
   const clientiRaggruppati = clientiFiltrati.reduce((acc, cliente) => {
     let firstLetter = '#';
     if (cliente.forma_giuridica === 'persona_fisica' && cliente.cognome) {
@@ -179,6 +180,7 @@ export default function AnagraficaPage() {
     acc[firstLetter].push(cliente);
     return acc;
   }, {} as Record<string, Cliente[]>);
+  */
 
   // Filter fornitori based on search
   const fornitoriFiltrati = fornitori.filter(fornitore => {
@@ -195,7 +197,8 @@ export default function AnagraficaPage() {
     );
   });
 
-  // Group fornitori alphabetically
+  // Group fornitori alphabetically - unused for now but kept for future feature
+  /*
   const fornitoriRaggruppati = fornitoriFiltrati.reduce((acc, fornitore) => {
     let firstLetter = '#';
     if (fornitore.forma_giuridica === 'persona_fisica' && fornitore.cognome) {
@@ -210,6 +213,7 @@ export default function AnagraficaPage() {
     acc[firstLetter].push(fornitore);
     return acc;
   }, {} as Record<string, Fornitore[]>);
+  */
 
   // Pagination for clienti
   const totalClienti = clientiFiltrati.length;

@@ -96,7 +96,7 @@ export default function ModificaCommessaPage() {
       const supabase = createClient();
 
       // Clean up data - remove empty optional fields
-      const dataToUpdate: any = { ...formData };
+      const dataToUpdate: Record<string, unknown> = { ...formData };
 
       // Remove CIG and CUP if not Pubblico or if empty
       if (formData.tipologia_cliente !== 'Pubblico' || !formData.cig) {
