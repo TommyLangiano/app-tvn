@@ -73,10 +73,10 @@ export function Header() {
 
           {/* Hamburger Menu */}
           <Button
-            variant="ghost"
+            variant="outline"
             size="icon"
             onClick={toggle}
-            className="h-9 w-9 hover:bg-accent/50 transition-all"
+            className="h-9 w-9 rounded-lg border-border/50 hover:bg-accent hover:border-accent-foreground/20 transition-all"
           >
             <Menu className="h-5 w-5" />
           </Button>
@@ -136,10 +136,10 @@ export function Header() {
 
           {/* Theme Toggle */}
           <Button
-            variant="ghost"
+            variant="outline"
             size="icon"
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="h-9 w-9 rounded-lg hover:bg-accent/50"
+            className="h-9 w-9 rounded-lg border-border/50 hover:bg-accent hover:border-accent-foreground/20 transition-all"
           >
             <Sun className="h-[18px] w-[18px] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
             <Moon className="absolute h-[18px] w-[18px] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
@@ -147,7 +147,7 @@ export function Header() {
           </Button>
 
           {/* Notifications */}
-          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg hover:bg-accent/50 relative">
+          <Button variant="outline" size="icon" className="h-9 w-9 rounded-lg border-border/50 hover:bg-accent hover:border-accent-foreground/20 transition-all relative">
             <Bell className="h-[18px] w-[18px]" />
             <span className="absolute top-2 right-2 h-2 w-2 bg-danger rounded-full"></span>
             <span className="sr-only">Notifications</span>
@@ -156,7 +156,7 @@ export function Header() {
           {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg hover:bg-accent/50">
+              <Button variant="outline" size="icon" className="h-9 w-9 rounded-lg border-border/50 hover:bg-accent hover:border-accent-foreground/20 transition-all">
                 <User className="h-[18px] w-[18px]" />
                 <span className="sr-only">User menu</span>
               </Button>

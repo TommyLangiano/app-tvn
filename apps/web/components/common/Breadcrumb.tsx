@@ -33,37 +33,44 @@ export function Breadcrumb({ pageName }: BreadcrumbProps) {
     });
 
   return (
-    <div className="mb-6 flex items-center justify-between rounded-xl border border-border bg-card px-6 py-4 shadow-sm">
-      {/* Nome pagina a sinistra */}
-      <h1 className="text-2xl font-bold tracking-tight">{pageName}</h1>
+    <div>
+      <div className="rounded-xl border border-border bg-card px-4 sm:px-6 py-3 sm:py-4 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          {/* Nome pagina a sinistra */}
+          <h1 className="text-lg sm:text-xl font-bold tracking-tight break-words">{pageName}</h1>
 
-      {/* Breadcrumb navigation a destra - mostra solo se ci sono sottopagine */}
-      {breadcrumbItems.length > 1 && (
-        <nav className="flex items-center gap-2 text-sm">
-          <Link
-            href="/dashboard"
-            className="text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Dashboard
-          </Link>
+          {/* Breadcrumb navigation a destra */}
+          {breadcrumbItems.length > 1 ? (
+            <nav className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm overflow-x-auto scrollbar-hide">
+              <Link
+                href="/dashboard"
+                className="text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
+              >
+                Dashboard
+              </Link>
 
-          {breadcrumbItems.map((item, index) => (
-            <div key={item.href} className="flex items-center gap-2">
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              {index === breadcrumbItems.length - 1 ? (
-                <span className="font-medium text-foreground">{item.label}</span>
-              ) : (
-                <Link
-                  href={item.href}
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {item.label}
-                </Link>
-              )}
-            </div>
-          ))}
-        </nav>
-      )}
+              {breadcrumbItems.slice(0, -1).map((item) => (
+                <div key={item.href} className="flex items-center gap-1 sm:gap-2 shrink-0">
+                  <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+                  <Link
+                    href={item.href}
+                    className="text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
+                  >
+                    {item.label}
+                  </Link>
+                </div>
+              ))}
+            </nav>
+          ) : (
+            <Link
+              href="/dashboard"
+              className="text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap text-xs sm:text-sm"
+            >
+              Dashboard
+            </Link>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
