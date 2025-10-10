@@ -73,7 +73,7 @@ export default function NuovaCommessaPage() {
       }
 
       // Clean up data - remove empty optional fields
-      const dataToInsert: any = {
+      const dataToInsert: Record<string, unknown> = {
         ...formData,
         tenant_id: tenantId,
         created_by: user.id,

@@ -56,7 +56,7 @@ export function ArchiveCommessaModal({
 
             <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-900">
-                <strong>I dati non andranno persi</strong> ma verranno spostati nell'archivio in modo temporaneo.
+                <strong>I dati non andranno persi</strong> ma verranno spostati nell&apos;archivio in modo temporaneo.
                 Potrai decidere in seguito se riportarla nelle commesse attive o eliminarla definitivamente.
               </p>
             </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { X, Upload, FileText, CloudUpload, RotateCcw, Check, ChevronsUpDown } from 'lucide-react';
+import { X, FileText, CloudUpload, RotateCcw, Check, ChevronsUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -82,6 +82,7 @@ export function CostoForm({ commessaId, commessaNome, onSuccess, onCancel }: Cos
     return () => {
       document.body.style.overflow = 'unset';
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadTenantId = async () => {
@@ -398,9 +399,9 @@ export function CostoForm({ commessaId, commessaNome, onSuccess, onCancel }: Cos
       }
 
       onSuccess();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error creating costo:', error);
-      if (error.code === '23505') {
+      if (error && typeof error === 'object' && 'code' in error && error.code === '23505') {
         toast.error('Numero fattura già esistente');
       } else {
         toast.error('Errore nell\'aggiunta del costo');

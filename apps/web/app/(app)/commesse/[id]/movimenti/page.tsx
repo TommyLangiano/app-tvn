@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Search, ArrowUpCircle, ArrowDownCircle, FileText, Filter, Info, Pencil, Trash2, ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { ArrowLeft, Search, ArrowUpCircle, ArrowDownCircle, FileText, Info, Pencil, Trash2, ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { Breadcrumb } from '@/components/common/Breadcrumb';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -243,7 +243,7 @@ export default function MovimentiPage() {
 
   // Filtra e ordina movimenti
   const movimentiFiltrati = useMemo(() => {
-    let filtered = movimenti.filter(movimento => {
+    const filtered = movimenti.filter(movimento => {
       // Filtro tipo (ricavo/costo)
       if (tipoFiltro !== 'tutti' && movimento.tipo !== tipoFiltro) {
         return false;
@@ -441,7 +441,7 @@ export default function MovimentiPage() {
 
           {/* Filtro Tipo */}
           <div>
-            <Select value={tipoFiltro} onValueChange={(value: any) => setTipoFiltro(value)}>
+            <Select value={tipoFiltro} onValueChange={(value) => setTipoFiltro(value as 'tutti' | 'ricavo' | 'costo')}>
               <SelectTrigger className="rounded-lg border-2 border-border bg-background">
                 <SelectValue />
               </SelectTrigger>
