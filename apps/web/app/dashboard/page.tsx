@@ -38,29 +38,11 @@ export default async function DashboardPage() {
   // User has tenant, show dashboard home
   return (
     <PageShell
-      title="Welcome back!"
-      description={tenantData?.name || 'Your workspace'}
+      title="Benvenuto!"
+      description={tenantData?.name || 'Il tuo workspace'}
     >
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <a
-          href="/dashboard/projects"
-          className="rounded-lg border bg-card p-6 hover:bg-accent transition-colors"
-        >
-          <h3 className="font-semibold mb-2">Projects</h3>
-          <p className="text-sm text-muted-foreground">
-            Manage your projects and tasks
-          </p>
-        </a>
-
-        <div className="rounded-lg border bg-card p-6 opacity-50">
-          <h3 className="font-semibold mb-2">Settings</h3>
-          <p className="text-sm text-muted-foreground">Coming soon</p>
-        </div>
-
-        <div className="rounded-lg border bg-card p-6 opacity-50">
-          <h3 className="font-semibold mb-2">Team</h3>
-          <p className="text-sm text-muted-foreground">Coming soon</p>
-        </div>
+      <div className="text-center py-12">
+        <p className="text-muted-foreground">Dashboard in arrivo...</p>
       </div>
     </PageShell>
   );
