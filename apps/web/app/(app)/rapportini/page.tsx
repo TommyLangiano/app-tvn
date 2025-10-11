@@ -12,6 +12,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import type { Rapportino } from '@/types/rapportino';
@@ -52,6 +57,14 @@ export default function RapportiniPage() {
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // Popover state
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+  const [selectedYear, setSelectedYear] = useState(currentYear);
+
+  // Generate years (current year ± 5 years)
+  const years = Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i);
 
   useEffect(() => {
     loadRapportini();
@@ -117,6 +130,11 @@ export default function RapportiniPage() {
 
   const nextMonth = () => {
     setCurrentDate(new Date(currentYear, currentMonth + 1, 1));
+  };
+
+  const applyMonthYearSelection = () => {
+    setCurrentDate(new Date(selectedYear, selectedMonth, 1));
+    setShowMonthPicker(false);
   };
 
   const getUserDisplayName = (rapportino: Rapportino) => {
@@ -229,9 +247,83 @@ export default function RapportiniPage() {
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-3xl font-bold">
-            {MESI[currentMonth]} {currentYear}
-          </h1>
+
+          <Popover open={showMonthPicker} onOpenChange={setShowMonthPicker}>
+            <PopoverTrigger asChild>
+              <button
+                className="text-3xl font-bold hover:text-primary transition-colors cursor-pointer"
+                onClick={() => {
+                  setSelectedMonth(currentMonth);
+                  setSelectedYear(currentYear);
+                }}
+              >
+                {MESI[currentMonth]} {currentYear}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-4" align="start">
+              <div className="space-y-4">
+                <h3 className="font-semibold text-sm">Seleziona Mese e Anno</h3>
+
+                {/* Selezione Mese */}
+                <div className="space-y-2">
+                  <label className="text-xs text-muted-foreground">Mese</label>
+                  <Select
+                    value={String(selectedMonth)}
+                    onValueChange={(value) => setSelectedMonth(Number(value))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MESI.map((mese, index) => (
+                        <SelectItem key={index} value={String(index)}>
+                          {mese}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Selezione Anno */}
+                <div className="space-y-2">
+                  <label className="text-xs text-muted-foreground">Anno</label>
+                  <Select
+                    value={String(selectedYear)}
+                    onValueChange={(value) => setSelectedYear(Number(value))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {years.map((year) => (
+                        <SelectItem key={year} value={String(year)}>
+                          {year}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Bottoni */}
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowMonthPicker(false)}
+                  >
+                    Annulla
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={applyMonthYearSelection}
+                  >
+                    Applica
+                  </Button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+
           <Button
             variant="outline"
             size="sm"
