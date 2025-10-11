@@ -1,9 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-
-// Force dynamic rendering - this page requires authentication
-export const dynamic = 'force-dynamic';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Users, Building2, Landmark, Plus, Search, Info, Edit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Breadcrumb } from '@/components/common/Breadcrumb';
@@ -43,7 +40,7 @@ type Fornitore = {
   sede_legale_citta?: string;
 };
 
-export default function AnagraficaPage() {
+function AnagraficaPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<TabType>('clienti');
@@ -853,5 +850,13 @@ export default function AnagraficaPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function AnagraficaPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Caricamento...</div>}>
+      <AnagraficaPageContent />
+    </Suspense>
   );
 }
