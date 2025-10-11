@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Search, FileText, Info, Pencil, Trash2, ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, X, Plus, User, Calendar, Clock, Briefcase } from 'lucide-react';
+import { Search, FileText, Info, Trash2, ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Plus, User, Calendar, Clock, Briefcase } from 'lucide-react';
 import { Breadcrumb } from '@/components/common/Breadcrumb';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,16 +20,22 @@ import { DeleteRapportinoModal } from '@/components/features/rapportini/DeleteRa
 import { NuovoRapportinoModal } from '@/components/features/rapportini/NuovoRapportinoModal';
 import { getSignedUrl } from '@/lib/utils/storage';
 
+const MESI = [
+  'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+  'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
+];
+
 export default function RapportiniPage() {
   const [loading, setLoading] = useState(true);
   const [rapportini, setRapportini] = useState<Rapportino[]>([]);
 
+  // Month navigation state
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const currentMonth = currentDate.getMonth();
+  const currentYear = currentDate.getFullYear();
+
   // Filtri
   const [searchTerm, setSearchTerm] = useState('');
-  const [meseFiltro, setMeseFiltro] = useState<string>(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  });
 
   // Ordinamento
   const [ordinamento, setOrdinamento] = useState<'data_desc' | 'data_asc' | 'ore_desc' | 'ore_asc' | 'user_asc' | 'user_desc'>('data_desc');
@@ -47,12 +53,10 @@ export default function RapportiniPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  // Filtri toggle
-  const [showFilters, setShowFilters] = useState(false);
-
   useEffect(() => {
     loadRapportini();
-  }, [meseFiltro]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentMonth, currentYear]);
 
   const loadRapportini = async () => {
     try {
@@ -70,10 +74,9 @@ export default function RapportiniPage() {
 
       if (!userTenants) return;
 
-      // Parse month filter
-      const [year, month] = meseFiltro.split('-').map(Number);
-      const firstDay = new Date(year, month - 1, 1);
-      const lastDay = new Date(year, month, 0);
+      // Get first and last day of current month
+      const firstDay = new Date(currentYear, currentMonth, 1);
+      const lastDay = new Date(currentYear, currentMonth + 1, 0);
 
       const { data, error } = await supabase
         .from('rapportini')
@@ -106,6 +109,14 @@ export default function RapportiniPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const previousMonth = () => {
+    setCurrentDate(new Date(currentYear, currentMonth - 1, 1));
+  };
+
+  const nextMonth = () => {
+    setCurrentDate(new Date(currentYear, currentMonth + 1, 1));
   };
 
   const getUserDisplayName = (rapportino: Rapportino) => {
@@ -160,7 +171,7 @@ export default function RapportiniPage() {
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, meseFiltro, itemsPerPage]);
+  }, [searchTerm, itemsPerPage]);
 
   // Calcola totale ore
   const totaleOre = rapportiniFiltrati.reduce((sum, r) => sum + r.ore_lavorate, 0);
@@ -207,6 +218,37 @@ export default function RapportiniPage() {
     <div className="space-y-6">
       <Breadcrumb pageName="Rapportini" />
 
+      {/* Header con navigazione mese e bottone nuovo */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={previousMonth}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-3xl font-bold">
+            {MESI[currentMonth]} {currentYear}
+          </h1>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={nextMonth}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <Button
+          onClick={() => setShowNuovoModal(true)}
+          className="gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          Nuovo Rapportino
+        </Button>
+      </div>
+
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="rounded-xl border-2 border-border bg-card p-6">
@@ -250,62 +292,15 @@ export default function RapportiniPage() {
         </div>
       </div>
 
-      {/* Filtri */}
-      <div className="rounded-xl border-2 border-border bg-card overflow-hidden">
-        <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => setShowFilters(!showFilters)}>
-          <div className="flex items-center gap-2 text-sm font-semibold">
-            Filtri e Ricerca
-            {showFilters ? (
-              <ChevronUp className="h-4 w-4 text-muted-foreground" />
-            ) : (
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
-            )}
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              setSearchTerm('');
-              const now = new Date();
-              setMeseFiltro(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
-              setOrdinamento('data_desc');
-            }}
-            className="gap-2"
-          >
-            <X className="h-4 w-4" />
-            Azzera filtri
-          </Button>
-        </div>
-
-        {showFilters && (
-          <div className="px-4 pb-4 space-y-4 border-t border-border pt-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Ricerca */}
-              <div>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Cerca per operaio, commessa, note..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 rounded-lg border-2 border-border bg-background"
-                  />
-                </div>
-              </div>
-
-              {/* Filtro Mese */}
-              <div>
-                <Input
-                  type="month"
-                  value={meseFiltro}
-                  onChange={(e) => setMeseFiltro(e.target.value)}
-                  className="rounded-lg border-2 border-border bg-background"
-                />
-              </div>
-            </div>
-          </div>
-        )}
+      {/* Barra di ricerca */}
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Cerca rapportini..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10"
+        />
       </div>
 
       {/* Bulk Actions */}
@@ -336,18 +331,6 @@ export default function RapportiniPage() {
           </div>
         </div>
       )}
-
-      {/* Header tabella con bottone nuovo */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">Tutti i Rapportini</h2>
-        <Button
-          onClick={() => setShowNuovoModal(true)}
-          className="gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          Nuovo Rapportino
-        </Button>
-      </div>
 
       {/* Tabella */}
       <div className="rounded-xl border-2 border-border bg-card overflow-hidden">
