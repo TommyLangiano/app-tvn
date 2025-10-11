@@ -135,7 +135,7 @@ export function FatturaAttivaForm({
       // Ricalcola totale con nuova aliquota IVA se c'è un imponibile
       if (formData.importo_imponibile) {
         const imponibileNum = parseFloat(formData.importo_imponibile);
-        const aliquota = parseFloat(cliente.aliquota_iva_predefinita?.toString() || prev.aliquota_iva);
+        const aliquota = parseFloat(cliente.aliquota_iva_predefinita?.toString() || formData.aliquota_iva);
         const iva = (imponibileNum * aliquota) / 100;
         const totale = imponibileNum + iva;
         setFormData(prev => ({
