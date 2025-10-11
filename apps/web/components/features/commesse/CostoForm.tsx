@@ -525,7 +525,6 @@ export function CostoForm({ commessaId, commessaNome, onSuccess, onCancel }: Cos
                           </div>
                         </CommandEmpty>
                         <CommandGroup className="max-h-[200px] overflow-auto">
-                          {console.log('Rendering fornitori (fattura):', fornitori.length)}
                           {fornitori.map((fornitore) => (
                             <CommandItem
                               key={fornitore.id}
