@@ -225,7 +225,7 @@ export default function RapportiniPage() {
             variant="outline"
             size="sm"
             onClick={previousMonth}
-            className="border-2"
+            className="bg-white dark:bg-gray-950 border-2 border-border"
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -236,7 +236,7 @@ export default function RapportiniPage() {
             variant="outline"
             size="sm"
             onClick={nextMonth}
-            className="border-2"
+            className="bg-white dark:bg-gray-950 border-2 border-border"
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
@@ -301,7 +301,7 @@ export default function RapportiniPage() {
           placeholder="Cerca rapportini..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10 border-2"
+          className="pl-10 bg-white dark:bg-gray-950 border-2 border-border"
         />
       </div>
 
