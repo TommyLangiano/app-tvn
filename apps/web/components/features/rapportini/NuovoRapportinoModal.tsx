@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Upload, Briefcase, Calendar, Clock, RotateCcw, FileText } from 'lucide-react';
+import { X, Upload, Briefcase, Calendar, Clock, RotateCcw, FileText, User as UserIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -299,7 +299,7 @@ export function NuovoRapportinoModal({ onClose, onSuccess }: NuovoRapportinoModa
                         className="h-11 w-full justify-between border-2 border-border"
                       >
                         <span className="flex items-center gap-2">
-                          <User className="h-4 w-4 shrink-0" />
+                          <UserIcon className="h-4 w-4 shrink-0" />
                           {formData.user_id
                             ? getUserDisplayName(users.find((u) => u.id === formData.user_id)!)
                             : 'Seleziona operaio...'}
