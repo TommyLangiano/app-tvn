@@ -24,13 +24,13 @@ const menuCategories = [
     label: 'Amministrazione',
     items: [
       { href: '/anagrafica', label: 'Anagrafica', icon: UserCircle },
-      { href: '/utenti', label: 'Gestione Utenti', icon: Users },
+      { href: '/gestione-utenti', label: 'Gestione Utenti', icon: Users },
     ]
   },
   {
     label: 'Configurazione',
     items: [
-      { href: '/settings', label: 'Impostazioni', icon: Settings },
+      { href: '/impostazioni', label: 'Impostazioni', icon: Settings },
     ]
   }
 ];

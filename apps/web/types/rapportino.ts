@@ -2,6 +2,8 @@ export interface Rapportino {
   id: string;
   tenant_id: string;
   user_id: string;
+  user_name?: string;
+  user_email?: string;
   commessa_id: string;
   data_rapportino: string;
   ore_lavorate: number;
@@ -12,13 +14,7 @@ export interface Rapportino {
   created_by: string;
 
   // Joined data
-  user?: {
-    email: string;
-    user_metadata?: {
-      full_name?: string;
-    };
-  };
-  commessa?: {
+  commesse?: {
     titolo: string;
     slug: string;
   };

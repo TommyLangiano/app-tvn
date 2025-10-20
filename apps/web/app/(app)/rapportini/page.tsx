@@ -95,7 +95,7 @@ export default function RapportiniPage() {
         .from('rapportini')
         .select(`
           *,
-          commessa:commesse(titolo, slug)
+          commesse:commessa_id(titolo, slug)
         `)
         .eq('tenant_id', userTenants.tenant_id)
         .gte('data_rapportino', firstDay.toISOString().split('T')[0])
@@ -104,18 +104,7 @@ export default function RapportiniPage() {
 
       if (error) throw error;
 
-      // Fetch user details
-      const rapportiniWithUsers = await Promise.all(
-        (data || []).map(async (r) => {
-          const { data: userData } = await supabase.auth.admin.getUserById(r.user_id);
-          return {
-            ...r,
-            user: userData?.user
-          };
-        })
-      );
-
-      setRapportini(rapportiniWithUsers);
+      setRapportini(data || []);
     } catch (error) {
       console.error('Error loading rapportini:', error);
       toast.error('Errore nel caricamento dei rapportini');
@@ -138,9 +127,7 @@ export default function RapportiniPage() {
   };
 
   const getUserDisplayName = (rapportino: Rapportino) => {
-    if (!rapportino.user) return 'Utente';
-    const metadata = rapportino.user.user_metadata;
-    return metadata?.full_name || rapportino.user.email?.split('@')[0] || 'Utente';
+    return rapportino.user_name || rapportino.user_email?.split('@')[0] || 'Utente';
   };
 
   // Filtri e ordinamento
@@ -152,7 +139,7 @@ export default function RapportiniPage() {
       const searchLower = searchTerm.toLowerCase();
       filtered = filtered.filter(r =>
         getUserDisplayName(r).toLowerCase().includes(searchLower) ||
-        r.commessa?.titolo.toLowerCase().includes(searchLower) ||
+        r.commesse?.titolo.toLowerCase().includes(searchLower) ||
         r.note?.toLowerCase().includes(searchLower)
       );
     }
@@ -567,7 +554,7 @@ export default function RapportiniPage() {
                     <td className="p-4">
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Briefcase className="h-4 w-4" />
-                        <span className="text-sm">{rapportino.commessa?.titolo}</span>
+                        <span className="text-sm">{rapportino.commesse?.titolo}</span>
                       </div>
                     </td>
 

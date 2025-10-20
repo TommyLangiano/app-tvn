@@ -12,9 +12,7 @@ interface InfoRapportinoModalProps {
 
 export function InfoRapportinoModal({ rapportino, onClose }: InfoRapportinoModalProps) {
   const getUserDisplayName = () => {
-    if (!rapportino.user) return 'Utente';
-    const metadata = rapportino.user.user_metadata;
-    return metadata?.full_name || rapportino.user.email?.split('@')[0] || 'Utente';
+    return rapportino.user_name || rapportino.user_email?.split('@')[0] || 'Utente';
   };
 
   return (
@@ -42,8 +40,8 @@ export function InfoRapportinoModal({ rapportino, onClose }: InfoRapportinoModal
               <span className="font-semibold">Operaio</span>
             </div>
             <p className="text-lg pl-6">{getUserDisplayName()}</p>
-            {rapportino.user?.email && (
-              <p className="text-sm text-muted-foreground pl-6">{rapportino.user.email}</p>
+            {rapportino.user_email && (
+              <p className="text-sm text-muted-foreground pl-6">{rapportino.user_email}</p>
             )}
           </div>
 
@@ -69,7 +67,7 @@ export function InfoRapportinoModal({ rapportino, onClose }: InfoRapportinoModal
               <Briefcase className="h-4 w-4" />
               <span className="font-semibold">Commessa</span>
             </div>
-            <p className="text-lg pl-6">{rapportino.commessa?.titolo || 'N/A'}</p>
+            <p className="text-lg pl-6">{rapportino.commesse?.titolo || 'N/A'}</p>
           </div>
 
           {/* Ore Lavorate */}
