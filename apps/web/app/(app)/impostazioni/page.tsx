@@ -28,14 +28,9 @@ function ImpostazioniPageContent() {
 
   return (
     <div className="space-y-6">
-      <Breadcrumb
-        items={[
-          { label: 'Impostazioni' }
-        ]}
-      />
+      <Breadcrumb pageName="Impostazioni" />
 
       <div>
-        <h1 className="text-3xl font-bold">Impostazioni</h1>
         <p className="text-muted-foreground mt-1">
           Gestisci le impostazioni del tuo account e della tua azienda
         </p>

@@ -19,7 +19,9 @@ export function Breadcrumb({ pageName }: BreadcrumbProps) {
     'rapportini': 'Rapportini',
     'commesse': 'Commesse',
     'anagrafica': 'Anagrafica',
+    'gestione-utenti': 'Gestione Utenti',
     'utenti': 'Gestione Utenti',
+    'impostazioni': 'Impostazioni',
     'settings': 'Impostazioni',
   };
 

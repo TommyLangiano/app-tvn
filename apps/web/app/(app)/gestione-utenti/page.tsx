@@ -138,15 +138,10 @@ export default function GestioneUtentiPage() {
 
   return (
     <div className="space-y-6">
-      <Breadcrumb
-        items={[
-          { label: 'Gestione Utenti' }
-        ]}
-      />
+      <Breadcrumb pageName="Gestione Utenti" />
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Gestione Utenti</h1>
           <p className="text-muted-foreground mt-1">
             Gestisci gli utenti della tua azienda
           </p>
