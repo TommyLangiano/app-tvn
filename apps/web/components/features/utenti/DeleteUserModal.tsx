@@ -31,9 +31,10 @@ export function DeleteUserModal({ user, onClose, onSuccess }: DeleteUserModalPro
 
       toast.success('Utente eliminato con successo');
       onSuccess();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error deleting user:', error);
-      toast.error(error.message || 'Errore nell\'eliminazione dell\'utente');
+      const errorMessage = error instanceof Error ? error.message : 'Errore nell\'eliminazione dell\'utente';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -63,11 +64,11 @@ export function DeleteUserModal({ user, onClose, onSuccess }: DeleteUserModalPro
         {/* Content */}
         <div className="p-6 space-y-4">
           <p className="text-muted-foreground">
-            Sei sicuro di voler eliminare l'utente{' '}
+            Sei sicuro di voler eliminare l&apos;utente{' '}
             <strong className="text-foreground">{user.full_name || user.email}</strong>?
           </p>
           <p className="text-sm text-muted-foreground">
-            Questa azione è <strong>irreversibile</strong> e l'utente non potrà più accedere al sistema.
+            Questa azione è <strong>irreversibile</strong> e l&apos;utente non potrà più accedere al sistema.
           </p>
         </div>
 

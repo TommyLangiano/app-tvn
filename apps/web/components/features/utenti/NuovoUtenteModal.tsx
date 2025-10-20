@@ -70,9 +70,10 @@ export function NuovoUtenteModal({ onClose, onSuccess }: NuovoUtenteModalProps) 
 
       toast.success('Utente creato con successo');
       onSuccess();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error creating user:', error);
-      toast.error(error.message || 'Errore nella creazione dell\'utente');
+      const errorMessage = error instanceof Error ? error.message : 'Errore nella creazione dell\'utente';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -183,7 +184,7 @@ export function NuovoUtenteModal({ onClose, onSuccess }: NuovoUtenteModalProps) 
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Comunica questa password all'utente
+                  Comunica questa password all&apos;utente
                 </p>
               </div>
 
@@ -215,7 +216,7 @@ export function NuovoUtenteModal({ onClose, onSuccess }: NuovoUtenteModalProps) 
             {/* Info Box */}
             <div className="bg-blue-50 dark:bg-blue-950/30 border-2 border-blue-200 dark:border-blue-800 rounded-lg p-4">
               <p className="text-sm text-blue-900 dark:text-blue-200">
-                <strong>Nota:</strong> L'utente riceverà le credenziali che hai impostato. Assicurati di comunicargliele in modo sicuro.
+                <strong>Nota:</strong> L&apos;utente riceverà le credenziali che hai impostato. Assicurati di comunicargliele in modo sicuro.
               </p>
             </div>
           </div>

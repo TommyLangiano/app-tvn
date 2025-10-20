@@ -61,9 +61,10 @@ export function ImpostazioniGenerali() {
       if (error) throw error;
 
       toast.success('Profilo aggiornato con successo');
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error saving profile:', error);
-      toast.error(error.message || 'Errore nel salvataggio del profilo');
+      const errorMessage = error instanceof Error ? error.message : 'Errore nel salvataggio del profilo';
+      toast.error(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -98,9 +99,10 @@ export function ImpostazioniGenerali() {
         new_password: '',
         confirm_password: '',
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error changing password:', error);
-      toast.error(error.message || 'Errore nel cambio password');
+      const errorMessage = error instanceof Error ? error.message : 'Errore nel cambio password';
+      toast.error(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -144,7 +146,7 @@ export function ImpostazioniGenerali() {
               className="h-11 border-2 border-border bg-muted cursor-not-allowed"
             />
             <p className="text-xs text-muted-foreground">
-              L'email non può essere modificata
+              L&apos;email non può essere modificata
             </p>
           </div>
 

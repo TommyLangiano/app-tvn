@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Upload, User, Briefcase, Calendar, Clock, RotateCcw, FileText } from 'lucide-react';
+import { X, Upload, Briefcase, Calendar, Clock, RotateCcw, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
