@@ -17,9 +17,7 @@ export function DeleteRapportinoModal({ rapportino, onClose, onDelete }: DeleteR
   const [loading, setLoading] = useState(false);
 
   const getUserDisplayName = () => {
-    if (!rapportino.user) return 'Utente';
-    const metadata = rapportino.user.user_metadata;
-    return metadata?.full_name || rapportino.user.email?.split('@')[0] || 'Utente';
+    return rapportino.user_name || rapportino.user_email?.split('@')[0] || 'Utente';
   };
 
   const handleDelete = async () => {
