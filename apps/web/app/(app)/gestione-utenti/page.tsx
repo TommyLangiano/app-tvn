@@ -67,7 +67,7 @@ export default function GestioneUtentiPage() {
       // Match users with their roles
       const usersWithRoles: UserWithRole[] = tenantUsers
         .map(tu => {
-          const user = allUsers.find((u: any) => u.id === tu.user_id);
+          const user = allUsers.find((u: { id: string }) => u.id === tu.user_id);
           if (!user) return null;
 
           return {

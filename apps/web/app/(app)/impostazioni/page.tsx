@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Settings, Building2, User } from 'lucide-react';
+import { Settings, Building2 } from 'lucide-react';
 import { Breadcrumb } from '@/components/common/Breadcrumb';
 import { ImpostazioniGenerali } from '@/components/features/impostazioni/ImpostazioniGenerali';
 import { ImpostazioniAzienda } from '@/components/features/impostazioni/ImpostazioniAzienda';
