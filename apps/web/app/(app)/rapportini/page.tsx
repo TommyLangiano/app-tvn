@@ -567,7 +567,7 @@ export default function RapportiniPage() {
                     <td className="p-4 text-center">
                       {rapportino.allegato_url && (
                         <button
-                          onClick={(e) => handleAllegatoClick(rapportino.allegato_url, e)}
+                          onClick={(e) => handleAllegatoClick(rapportino.allegato_url || null, e)}
                           className="inline-flex items-center justify-center p-1.5 rounded hover:bg-muted transition-colors"
                         >
                           <FileText className="h-4 w-4 text-primary" />
