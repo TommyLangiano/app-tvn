@@ -70,7 +70,7 @@ export function NewCommessaDialog({ tenantId, onCommessaCreated }: NewCommessaDi
         cliente_commessa: '',
       });
       onCommessaCreated();
-    } catch (error) {
+    } catch {
 
       toast.error('Errore nella creazione della commessa');
     } finally {

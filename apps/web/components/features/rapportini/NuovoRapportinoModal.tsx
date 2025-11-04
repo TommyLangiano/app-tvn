@@ -102,7 +102,7 @@ export function NuovoRapportinoModal({ onClose, onSuccess }: NuovoRapportinoModa
       if (commesseData) {
         setCommesse(commesseData);
       }
-    } catch (error) {
+    } catch {
       toast.error('Errore nel caricamento dei dati');
     } finally {
       setLoadingData(false);
@@ -227,7 +227,7 @@ export function NuovoRapportinoModal({ onClose, onSuccess }: NuovoRapportinoModa
 
       toast.success('Rapportino creato con successo');
       onSuccess();
-    } catch (error) {
+    } catch {
       toast.error('Errore nella creazione del rapportino');
     } finally {
       setLoading(false);

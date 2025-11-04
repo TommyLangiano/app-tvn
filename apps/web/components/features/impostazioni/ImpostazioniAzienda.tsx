@@ -89,7 +89,7 @@ export function ImpostazioniAzienda() {
           ateco: profile.ateco || '',
         });
       }
-    } catch (error) {
+    } catch {
 
       toast.error('Errore nel caricamento del profilo aziendale');
     } finally {
@@ -138,7 +138,7 @@ export function ImpostazioniAzienda() {
       if (error) throw error;
 
       toast.success('Profilo aziendale salvato con successo');
-    } catch (error) {
+    } catch {
 
       toast.error('Errore nel salvataggio del profilo aziendale');
     } finally {

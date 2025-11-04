@@ -42,7 +42,7 @@ export function DeleteRapportinoModal({ rapportino, onClose, onDelete }: DeleteR
 
       toast.success('Rapportino eliminato con successo');
       onDelete();
-    } catch (error) {
+    } catch {
       toast.error('Errore nell&apos;eliminazione del rapportino');
     } finally {
       setLoading(false);

@@ -31,10 +31,6 @@ export function OperaioDashboard({ userId, userName }: { userId: string; userNam
   const [stats, setStats] = useState<DashboardStats>({ oreOggi: 0, oreSettimana: 0, oreMese: 0 });
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadDashboardData();
-  }, [userId]);
-
   const loadDashboardData = async () => {
     try {
       setLoading(true);
@@ -72,11 +68,15 @@ export function OperaioDashboard({ userId, userName }: { userId: string; userNam
 
         setStats({ oreOggi, oreSettimana, oreMese });
       }
-    } catch (error) {
+    } catch {
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [userId, loadDashboardData]);
 
   if (loading) {
     return (
