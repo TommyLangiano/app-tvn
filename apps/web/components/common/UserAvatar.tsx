@@ -26,18 +26,7 @@ const SIZES = {
 export function UserAvatar({ user, size = 'md', className = '' }: UserAvatarProps) {
   const sizeClass = SIZES[size];
 
-  // If user has avatar URL, show image
-  if (user.avatar_url) {
-    return (
-      <img
-        src={user.avatar_url}
-        alt={user.full_name || user.email}
-        className={`${sizeClass} rounded-full object-cover ${className}`}
-      />
-    );
-  }
-
-  // Fallback to initials
+  // Fallback to initials (avatar_url not implemented yet)
   const initials = getUserInitials(user);
 
   return (

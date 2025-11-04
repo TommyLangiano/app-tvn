@@ -45,7 +45,7 @@ export async function GET() {
     const users = usersData.filter(Boolean);
 
     return NextResponse.json({ users });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

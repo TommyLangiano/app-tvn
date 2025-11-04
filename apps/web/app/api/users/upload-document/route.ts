@@ -77,7 +77,7 @@ export async function POST(request: Request) {
       success: true,
       path: uploadData.path,
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
