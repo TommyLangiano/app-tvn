@@ -6,11 +6,10 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Breadcrumb } from '@/components/common/Breadcrumb';
 import { UserForm, type UserFormData } from '@/components/features/utenti/UserForm';
-import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
@@ -23,11 +22,7 @@ export default function EditUserPage({ params }: { params: { id: string } }) {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    loadUser();
-  }, [params.id]);
-
-  const loadUser = async () => {
+  const loadUser = useCallback(async () => {
     try {
       setLoading(true);
       const userData = await getUserWithProfile(params.id);
@@ -37,12 +32,16 @@ export default function EditUserPage({ params }: { params: { id: string } }) {
         return;
       }
       setUser(userData);
-    } catch (error) {
-      toast.error('Errore nel caricamento dell\'utente');
+    } catch {
+      toast.error('Errore nel caricamento dell&apos;utente');
     } finally {
       setLoading(false);
     }
-  };
+  }, [params.id, router]);
+
+  useEffect(() => {
+    loadUser();
+  }, [loadUser]);
 
   const handleSubmit = async (data: UserFormData) => {
     try {
@@ -60,7 +59,7 @@ export default function EditUserPage({ params }: { params: { id: string } }) {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Errore nell\'aggiornamento');
+        throw new Error(error.error || 'Errore nell&apos;aggiornamento');
       }
 
       // Upload document if present
@@ -78,14 +77,15 @@ export default function EditUserPage({ params }: { params: { id: string } }) {
           if (!uploadResponse.ok) {
             toast.warning('Utente aggiornato ma errore nel caricamento del documento');
           }
-        } catch (uploadError) {
+        } catch {
+          // Ignore upload errors
         }
       }
 
       toast.success('Utente aggiornato con successo');
       router.push(`/gestione-utenti/${params.id}`);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Errore nell\'aggiornamento';
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Errore nell&apos;aggiornamento';
       toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);

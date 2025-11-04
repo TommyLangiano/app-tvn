@@ -31,8 +31,9 @@ export async function GET() {
       profiles,
       user_tenants: userTenants,
     });
-  } catch (error: any) {
-    console.error('Error in /api/debug/users:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error in /api/debug/users:', errorMessage);
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

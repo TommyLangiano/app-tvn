@@ -60,7 +60,7 @@ export async function PUT(
     } = await request.json();
 
     // Update user profile including HR fields
-    const profileUpdates: any = {};
+    const profileUpdates: Record<string, string | null> = {};
     if (full_name !== undefined) profileUpdates.full_name = full_name;
     if (phone !== undefined) profileUpdates.phone = phone;
     if (position !== undefined) profileUpdates.position = position;

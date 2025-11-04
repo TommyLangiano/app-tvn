@@ -6,7 +6,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Breadcrumb } from '@/components/common/Breadcrumb';
 import { UserAvatar } from '@/components/common/UserAvatar';
@@ -14,7 +14,7 @@ import { UserStatusBadge } from '@/components/common/UserStatusBadge';
 import { RoleBadge } from '@/components/common/RoleBadge';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { ArrowLeft, Mail, Phone, Briefcase, FileText, Calendar, Edit, Ban, CheckCircle, Trash2, Download, User } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, Briefcase, FileText, Calendar, Edit, Ban, CheckCircle, Trash2, User } from 'lucide-react';
 import Link from 'next/link';
 import { getUserWithProfile } from '@/lib/users/profiles';
 import type { UserWithProfile } from '@/types/user-profile';
@@ -35,11 +35,7 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
   const [loading, setLoading] = useState(true);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  useEffect(() => {
-    loadUser();
-  }, [params.id]);
-
-  const loadUser = async () => {
+  const loadUser = useCallback(async () => {
     try {
       setLoading(true);
       const userData = await getUserWithProfile(params.id);
@@ -49,12 +45,16 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
         return;
       }
       setUser(userData);
-    } catch (error) {
-      toast.error('Errore nel caricamento dell\'utente');
+    } catch {
+      toast.error('Errore nel caricamento dell&apos;utente');
     } finally {
       setLoading(false);
     }
-  };
+  }, [params.id, router]);
+
+  useEffect(() => {
+    loadUser();
+  }, [loadUser]);
 
   const handleToggleStatus = async () => {
     if (!user) return;
@@ -72,7 +72,7 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
 
       toast.success(newStatus ? 'Utente riattivato' : 'Utente disattivato');
       loadUser();
-    } catch (error) {
+    } catch {
       toast.error('Errore nel cambio stato');
     }
   };
@@ -85,13 +85,13 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Errore nell\'eliminazione');
+        throw new Error(error.error || 'Errore nell&apos;eliminazione');
       }
 
       toast.success('Utente eliminato con successo');
       router.push('/gestione-utenti');
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Errore nell\'eliminazione';
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Errore nell&apos;eliminazione';
       toast.error(errorMessage);
     }
   };
@@ -105,7 +105,7 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
       if (!response.ok) throw new Error('Errore invio invito');
 
       toast.success('Email di invito inviata con successo');
-    } catch (error) {
+    } catch {
       toast.error('Errore nell\'invio dell\'email');
     }
   };
@@ -152,7 +152,7 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
 
         <div className="flex-1">
           <h1 className="text-2xl font-bold">Dettaglio Utente</h1>
-          <p className="text-muted-foreground">Visualizza e gestisci le informazioni dell'utente</p>
+          <p className="text-muted-foreground">Visualizza e gestisci le informazioni dell&apos;utente</p>
         </div>
 
         {/* Action Buttons - Stile Tabella */}
@@ -385,7 +385,7 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
                     if (!response.ok) throw new Error('Errore nel caricamento');
                     const { url } = await response.json();
                     window.open(url, '_blank');
-                  } catch (error) {
+                  } catch {
                     toast.error('Impossibile aprire il documento');
                   }
                 }}
@@ -412,7 +412,7 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
               <div className="flex-1">
                 <p className="font-medium text-sm text-orange-900">Reinvia Email di Invito</p>
                 <p className="text-xs text-orange-700/70">
-                  L'utente non ha ancora effettuato il primo accesso
+                  L&apos;utente non ha ancora effettuato il primo accesso
                 </p>
               </div>
               <Button
@@ -434,7 +434,7 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
           <AlertDialogHeader>
             <AlertDialogTitle>Sei sicuro?</AlertDialogTitle>
             <AlertDialogDescription>
-              Questa azione eliminerà permanentemente l'utente <strong>{user.full_name || user.email}</strong>.
+              Questa azione eliminerà permanentemente l&apos;utente <strong>{user.full_name || user.email}</strong>.
               Questa operazione non può essere annullata.
             </AlertDialogDescription>
           </AlertDialogHeader>

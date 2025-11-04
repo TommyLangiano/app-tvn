@@ -94,7 +94,7 @@ export default function CommessePage() {
           setMarginiLordi(marginiMap);
         }
       }
-    } catch (error) {
+    } catch {
     } finally {
       setLoading(false);
     }

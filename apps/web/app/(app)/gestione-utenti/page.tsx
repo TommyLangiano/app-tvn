@@ -25,7 +25,7 @@ import { createClient } from '@/lib/supabase/client';
 
 export default function GestioneUtentiPage() {
   const router = useRouter();
-  const { can, role, isOwner, isAdmin } = usePermissions();
+  const { can } = usePermissions();
 
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<UserListItem[]>([]);
@@ -56,7 +56,7 @@ export default function GestioneUtentiPage() {
       if (user) {
         setCurrentUserId(user.id);
       }
-    } catch (error) {
+    } catch {
     }
   };
 
@@ -65,7 +65,7 @@ export default function GestioneUtentiPage() {
       setLoading(true);
       const usersData = await getTenantUsers();
       setUsers(usersData);
-    } catch (error) {
+    } catch {
       toast.error('Errore nel caricamento degli utenti');
     } finally {
       setLoading(false);

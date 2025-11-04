@@ -107,7 +107,7 @@ export default function CommessaDetailPage() {
 
       setScontrini(scontriniData || []);
 
-    } catch (error) {
+    } catch {
 
       toast.error('Errore nel caricamento dei dati');
     } finally {
@@ -136,7 +136,7 @@ export default function CommessaDetailPage() {
 
       toast.success('Commessa eliminata con successo');
       router.push('/commesse');
-    } catch (error) {
+    } catch {
 
       toast.error('Errore durante l\'eliminazione della commessa');
     }

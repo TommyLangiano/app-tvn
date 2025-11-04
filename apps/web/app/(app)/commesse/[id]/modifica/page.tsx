@@ -79,7 +79,7 @@ export default function ModificaCommessaPage() {
         descrizione: commessaData.descrizione || undefined,
       });
 
-    } catch (error) {
+    } catch {
 
       toast.error('Errore nel caricamento della commessa');
       router.push('/commesse');
@@ -118,7 +118,7 @@ export default function ModificaCommessaPage() {
 
       // Redirect back to detail page
       router.push(`/commesse/${slug}`);
-    } catch (error) {
+    } catch {
 
       toast.error('Errore nell\'aggiornamento della commessa');
     } finally {

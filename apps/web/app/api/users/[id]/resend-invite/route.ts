@@ -66,7 +66,7 @@ export async function POST(
       success: true,
       email: targetUser.user.email,
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -54,7 +54,7 @@ export default function NuovaCommessaPage() {
       if (userTenants) {
         setTenantId(userTenants.tenant_id);
       }
-    } catch (error) {
+    } catch {
 
     }
   };
@@ -104,7 +104,7 @@ export default function NuovaCommessaPage() {
       } else {
         router.push('/commesse');
       }
-    } catch (error) {
+    } catch {
 
       toast.error('Errore nella creazione della commessa');
     } finally {

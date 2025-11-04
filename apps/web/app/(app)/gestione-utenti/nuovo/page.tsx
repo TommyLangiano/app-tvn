@@ -33,7 +33,7 @@ export default function NuovoUtentePage() {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Errore nella creazione dell\'utente');
+        throw new Error(error.error || 'Errore nella creazione dell&apos;utente');
       }
 
       const result = await response.json();
@@ -53,7 +53,8 @@ export default function NuovoUtentePage() {
           if (!uploadResponse.ok) {
             toast.warning('Utente creato ma errore nel caricamento del documento');
           }
-        } catch (uploadError) {
+        } catch {
+          // Ignore upload errors
         }
       }
 
@@ -71,8 +72,8 @@ export default function NuovoUtentePage() {
 
       // Redirect to users list
       router.push('/gestione-utenti');
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Errore nella creazione dell\'utente';
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Errore nella creazione dell&apos;utente';
       toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
