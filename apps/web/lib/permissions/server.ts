@@ -126,7 +126,7 @@ export async function requireWrite(): Promise<AuthContext | NextResponse> {
   try {
     requireWriteAccess(context.role);
     return context;
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       {
         error: 'Write access denied: user has read-only permissions',

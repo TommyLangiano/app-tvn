@@ -12,10 +12,9 @@ import { z } from 'zod';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { RoleSelect } from './RoleSelect';
 import { Button } from '@/components/ui/button';
 import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/select';
-import { ACTIVE_ROLES, ROLE_METADATA, ROLE_PERMISSIONS, PERMISSION_LABELS } from '@/lib/permissions/config';
+import { ACTIVE_ROLES, ROLE_METADATA, ROLE_PERMISSIONS } from '@/lib/permissions/config';
 import { Mail, User, Phone, Briefcase, FileText, Calendar, Upload } from 'lucide-react';
 import { useState } from 'react';
 
@@ -44,7 +43,6 @@ interface UserFormProps {
   isEdit?: boolean;
   isSubmitting?: boolean;
   existingDocument?: string | null;
-  userId?: string;
 }
 
 export function UserForm({
@@ -54,7 +52,6 @@ export function UserForm({
   isEdit = false,
   isSubmitting = false,
   existingDocument = null,
-  userId,
 }: UserFormProps) {
   const {
     register,
@@ -70,53 +67,6 @@ export function UserForm({
   const role = watch('role');
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [currentDocument, setCurrentDocument] = useState<string | null>(existingDocument);
-  const [deletingDocument, setDeletingDocument] = useState(false);
-
-  const roleMetadata = {
-    admin: {
-      label: 'Admin',
-      description: 'Accesso completo alla piattaforma',
-      permissions: [
-        'Gestione completa utenti',
-        'Visualizzazione e modifica rapportini',
-        'Gestione commesse, clienti e fornitori',
-        'Accesso fatture e costi',
-        'Impostazioni azienda'
-      ]
-    },
-    admin_readonly: {
-      label: 'Admin (Sola Lettura)',
-      description: 'Visualizzazione completa, nessuna modifica',
-      permissions: [
-        'Visualizzazione utenti',
-        'Visualizzazione rapportini',
-        'Visualizzazione commesse e clienti',
-        'Visualizzazione fatture e costi',
-        'Nessuna modifica permessa'
-      ]
-    },
-    operaio: {
-      label: 'Operaio',
-      description: 'Accesso dashboard operativa',
-      permissions: [
-        'Creazione e modifica propri rapportini',
-        'Visualizzazione commesse assegnate',
-        'Dashboard operativa',
-        'Accesso limitato ai propri dati'
-      ]
-    },
-    billing_manager: {
-      label: 'Responsabile Fatturazione',
-      description: 'Gestione area amministrativa',
-      permissions: [
-        'Gestione completa fatture',
-        'Gestione costi e spese',
-        'Visualizzazione clienti e fornitori',
-        'Report finanziari',
-        'Nessun accesso a rapportini'
-      ]
-    }
-  };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -124,7 +74,7 @@ export function UserForm({
       <div className="space-y-4">
         <div className="border-b pb-2">
           <h3 className="text-lg font-semibold">Dati Base</h3>
-          <p className="text-sm text-muted-foreground">Informazioni di contatto dell'utente</p>
+          <p className="text-sm text-muted-foreground">Informazioni di contatto dell&apos;utente</p>
         </div>
 
         {/* Email */}
@@ -220,11 +170,11 @@ export function UserForm({
               id="position"
               {...register('position')}
               className="h-11 border-2 border-border pl-10"
-              placeholder="es: Tecnico Senior, Contabile, Project Manager"
+              placeholder="es: Tecnico Senior, Contabile"
             />
           </div>
           <p className="text-xs text-muted-foreground">
-            Ruolo dell'utente all'interno dell'azienda (non correlato ai permessi)
+            Ruolo dell&apos;utente all&apos;interno dell&apos;azienda (non correlato ai permessi)
           </p>
         </div>
 
@@ -329,7 +279,7 @@ export function UserForm({
                     if (!response.ok) throw new Error('Errore nel caricamento');
                     const { url } = await response.json();
                     window.open(url, '_blank');
-                  } catch (error) {
+                  } catch {
                     alert('Impossibile aprire il documento');
                   }
                 }}
@@ -485,7 +435,7 @@ export function UserForm({
                   <div className="flex-1">
                     <p className="font-semibold text-sm">Email di invito automatica</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      L'utente riceverà un'email con un link sicuro per impostare la password (valido 24 ore) e le istruzioni per il primo accesso.
+                      L&apos;utente riceverà un&apos;email con un link sicuro per impostare la password (valido 24 ore) e le istruzioni per il primo accesso.
                     </p>
                   </div>
                 </div>
@@ -509,7 +459,7 @@ export function UserForm({
                   </div>
                   <div className="flex items-center gap-2 text-xs">
                     <span className="text-blue-600">✓</span>
-                    <span className="text-muted-foreground">Password impostata dall'utente</span>
+                    <span className="text-muted-foreground">Password impostata dall&apos;utente</span>
                   </div>
                 </div>
               </div>

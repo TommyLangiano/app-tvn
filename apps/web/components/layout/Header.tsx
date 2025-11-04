@@ -38,8 +38,7 @@ export function Header() {
       toast.success('Logged out successfully');
       router.push('/sign-in');
       router.refresh();
-    } catch (error) {
-
+    } catch {
       toast.error('An unexpected error occurred');
     }
   };
