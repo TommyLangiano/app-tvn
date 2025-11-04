@@ -90,7 +90,7 @@ export function ImpostazioniAzienda() {
         });
       }
     } catch (error) {
-      console.error('Error loading tenant profile:', error);
+
       toast.error('Errore nel caricamento del profilo aziendale');
     } finally {
       setLoading(false);
@@ -139,7 +139,7 @@ export function ImpostazioniAzienda() {
 
       toast.success('Profilo aziendale salvato con successo');
     } catch (error) {
-      console.error('Error saving tenant profile:', error);
+
       toast.error('Errore nel salvataggio del profilo aziendale');
     } finally {
       setSaving(false);

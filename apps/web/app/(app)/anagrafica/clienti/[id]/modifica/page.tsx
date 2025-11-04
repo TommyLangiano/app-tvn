@@ -146,7 +146,7 @@ export default function ModificaClientePage() {
         setNote(cliente.note || '');
       }
     } catch (error) {
-      console.error('Error loading cliente:', error);
+
       toast.error('Errore nel caricamento del cliente');
       router.push('/anagrafica?tab=clienti');
     } finally {
@@ -253,7 +253,7 @@ export default function ModificaClientePage() {
       toast.success('Cliente aggiornato con successo');
       router.push('/anagrafica?tab=clienti');
     } catch (error) {
-      console.error('Error updating cliente:', error);
+
       toast.error('Errore durante l\'aggiornamento del cliente');
     } finally {
       setLoading(false);

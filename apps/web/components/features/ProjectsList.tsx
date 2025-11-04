@@ -44,7 +44,7 @@ export function ProjectsList({ initialProjects, tenantId }: ProjectsListProps) {
         .single();
 
       if (error) {
-        console.error('Error creating project:', error);
+
         toast.error('Failed to create project');
         return;
       }
@@ -54,7 +54,7 @@ export function ProjectsList({ initialProjects, tenantId }: ProjectsListProps) {
       setIsCreating(false);
       toast.success('Project created successfully!');
     } catch (error) {
-      console.error('Unexpected error:', error);
+
       toast.error('An unexpected error occurred');
     } finally {
       setIsLoading(false);
@@ -75,7 +75,7 @@ export function ProjectsList({ initialProjects, tenantId }: ProjectsListProps) {
         .eq('id', projectId);
 
       if (error) {
-        console.error('Error deleting project:', error);
+
         toast.error('Failed to delete project');
         return;
       }
@@ -83,7 +83,7 @@ export function ProjectsList({ initialProjects, tenantId }: ProjectsListProps) {
       setProjects(projects.filter((p) => p.id !== projectId));
       toast.success('Project deleted successfully!');
     } catch (error) {
-      console.error('Unexpected error:', error);
+
       toast.error('An unexpected error occurred');
     }
   };

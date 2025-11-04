@@ -55,7 +55,7 @@ export default function NuovaCommessaPage() {
         setTenantId(userTenants.tenant_id);
       }
     } catch (error) {
-      console.error('Error loading tenant:', error);
+
     }
   };
 
@@ -105,7 +105,7 @@ export default function NuovaCommessaPage() {
         router.push('/commesse');
       }
     } catch (error) {
-      console.error('Error creating commessa:', error);
+
       toast.error('Errore nella creazione della commessa');
     } finally {
       setLoading(false);

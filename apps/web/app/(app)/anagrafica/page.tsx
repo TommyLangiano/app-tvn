@@ -89,7 +89,7 @@ function AnagraficaPageContent() {
       if (error) throw error;
       setClienti(data || []);
     } catch (error) {
-      console.error('Error loading clienti:', error);
+
       toast.error('Errore nel caricamento dei clienti');
     } finally {
       setLoading(false);
@@ -110,7 +110,7 @@ function AnagraficaPageContent() {
       if (error) throw error;
       setFornitori(data || []);
     } catch (error) {
-      console.error('Error loading fornitori:', error);
+
       toast.error('Errore nel caricamento dei fornitori');
     } finally {
       setLoading(false);

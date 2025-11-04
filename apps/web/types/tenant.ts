@@ -46,10 +46,13 @@ export interface TenantProfileFormData {
   ateco: string;
 }
 
+// Import TenantRole from permissions config for consistency
+import type { TenantRole } from '@/lib/permissions';
+
 export interface UserWithRole {
   id: string;
   email: string;
-  role: 'admin' | 'member' | 'operaio';
+  role: TenantRole;
   full_name?: string;
   created_at: string;
 }
@@ -58,5 +61,5 @@ export interface CreateUserFormData {
   email: string;
   password: string;
   full_name: string;
-  role: 'admin' | 'operaio';
+  role: Exclude<TenantRole, 'owner' | 'member' | 'viewer'>; // Only active roles can be created
 }

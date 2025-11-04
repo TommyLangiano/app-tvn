@@ -39,7 +39,7 @@ export function Header() {
       router.push('/sign-in');
       router.refresh();
     } catch (error) {
-      console.error('Logout error:', error);
+
       toast.error('An unexpected error occurred');
     }
   };
@@ -124,7 +124,7 @@ export function Header() {
                   variant="default"
                   onClick={() => {
                     // TODO: Open Stripe Checkout
-                    console.log('Open Stripe Checkout');
+
                   }}
                 >
                   <CreditCard className="mr-2 h-3.5 w-3.5" />

@@ -63,7 +63,7 @@ export function DeleteMovimentoModal({ movimento, onClose, onSuccess }: DeleteMo
       onSuccess();
       onClose();
     } catch (error) {
-      console.error('Error deleting movimento:', error);
+
       toast.error('Errore durante l\'eliminazione del movimento');
     } finally {
       setLoading(false);

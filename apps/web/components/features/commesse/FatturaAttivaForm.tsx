@@ -93,7 +93,7 @@ export function FatturaAttivaForm({
         loadClienti(userTenants.tenant_id);
       }
     } catch (error) {
-      console.error('Error loading tenant:', error);
+
     }
   };
 
@@ -109,7 +109,7 @@ export function FatturaAttivaForm({
       if (error) throw error;
       setClienti(data || []);
     } catch (error) {
-      console.error('Error loading clienti:', error);
+
     }
   };
 
@@ -122,7 +122,7 @@ export function FatturaAttivaForm({
 
   const handleSelectCliente = (clienteId: string) => {
     const cliente = clienti.find(c => c.id === clienteId);
-    console.log('Cliente selezionato:', cliente);
+
     if (cliente) {
       setSelectedClienteId(clienteId);
       setFormData(prev => ({
@@ -269,7 +269,7 @@ export function FatturaAttivaForm({
 
       return data.path;
     } catch (error) {
-      console.error('Error uploading file:', error);
+
       toast.error('Errore durante il caricamento del file');
       return null;
     } finally {
@@ -346,7 +346,7 @@ export function FatturaAttivaForm({
       toast.success('Fattura aggiunta con successo!');
       onSuccess();
     } catch (error) {
-      console.error('Error creating fattura:', error);
+
       if (error && typeof error === 'object' && 'code' in error && error.code === '23505') {
         toast.error('Numero fattura già esistente');
       } else {

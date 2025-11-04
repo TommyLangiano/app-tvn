@@ -38,7 +38,7 @@ export function ImpostazioniGenerali() {
         full_name: user.user_metadata?.full_name || '',
       });
     } catch (error) {
-      console.error('Error loading user data:', error);
+
       toast.error('Errore nel caricamento dei dati');
     } finally {
       setLoading(false);
@@ -62,7 +62,7 @@ export function ImpostazioniGenerali() {
 
       toast.success('Profilo aggiornato con successo');
     } catch (error) {
-      console.error('Error saving profile:', error);
+
       const errorMessage = error instanceof Error ? error.message : 'Errore nel salvataggio del profilo';
       toast.error(errorMessage);
     } finally {
@@ -100,7 +100,7 @@ export function ImpostazioniGenerali() {
         confirm_password: '',
       });
     } catch (error) {
-      console.error('Error changing password:', error);
+
       const errorMessage = error instanceof Error ? error.message : 'Errore nel cambio password';
       toast.error(errorMessage);
     } finally {

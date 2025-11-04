@@ -70,7 +70,6 @@ export function useRole(): UseRoleReturn {
 
         setRole(data?.role as TenantRole || null);
       } catch (err) {
-        console.error('Error fetching role:', err);
         setError(err instanceof Error ? err : new Error('Unknown error'));
       } finally {
         setLoading(false);

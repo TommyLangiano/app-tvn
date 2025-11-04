@@ -36,7 +36,6 @@ export async function GET() {
       tenantUsers.map(async (ut) => {
         const { data, error } = await supabase.auth.admin.getUserById(ut.user_id);
         if (error) {
-          console.error('Error fetching user:', error);
           return null;
         }
         return data?.user;
@@ -47,7 +46,6 @@ export async function GET() {
 
     return NextResponse.json({ users });
   } catch (error) {
-    console.error('Error in /api/users:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

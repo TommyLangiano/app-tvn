@@ -39,7 +39,7 @@ export function CreateTenantForm() {
       });
 
       if (error) {
-        console.error('Error creating tenant:', error);
+
         toast.error('Failed to create tenant');
         return;
       }
@@ -49,7 +49,7 @@ export function CreateTenantForm() {
       // Redirect to dashboard (will reload with new tenant)
       window.location.href = '/dashboard';
     } catch (error) {
-      console.error('Unexpected error:', error);
+
       toast.error('An unexpected error occurred');
     } finally {
       setIsLoading(false);

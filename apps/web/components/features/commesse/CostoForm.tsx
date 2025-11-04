@@ -103,7 +103,7 @@ export function CostoForm({ commessaId, commessaNome, onSuccess, onCancel }: Cos
         loadFornitori(userTenants.tenant_id);
       }
     } catch (error) {
-      console.error('Error loading tenant:', error);
+
     }
   };
 
@@ -117,10 +117,10 @@ export function CostoForm({ commessaId, commessaNome, onSuccess, onCancel }: Cos
         .order('ragione_sociale, cognome, nome');
 
       if (error) throw error;
-      console.log('Fornitori loaded:', data);
+
       setFornitori(data || []);
     } catch (error) {
-      console.error('Error loading fornitori:', error);
+
     }
   };
 
@@ -133,7 +133,7 @@ export function CostoForm({ commessaId, commessaNome, onSuccess, onCancel }: Cos
 
   const handleSelectFornitoreFattura = (fornitoreId: string) => {
     const fornitore = fornitori.find(f => f.id === fornitoreId);
-    console.log('Fornitore selezionato (fattura):', fornitore);
+
     if (fornitore) {
       setSelectedFornitoreIdFattura(fornitoreId);
       setFatturaData(prev => ({
@@ -153,7 +153,7 @@ export function CostoForm({ commessaId, commessaNome, onSuccess, onCancel }: Cos
 
   const handleSelectFornitoreScontrino = (fornitoreId: string) => {
     const fornitore = fornitori.find(f => f.id === fornitoreId);
-    console.log('Fornitore selezionato (scontrino):', fornitore);
+
     if (fornitore) {
       setSelectedFornitoreIdScontrino(fornitoreId);
       setScontrinoData(prev => ({
@@ -286,7 +286,7 @@ export function CostoForm({ commessaId, commessaNome, onSuccess, onCancel }: Cos
       if (error) throw error;
       return data.path;
     } catch (error) {
-      console.error('Error uploading file:', error);
+
       toast.error('Errore durante il caricamento del file');
       return null;
     } finally {
@@ -400,7 +400,7 @@ export function CostoForm({ commessaId, commessaNome, onSuccess, onCancel }: Cos
 
       onSuccess();
     } catch (error) {
-      console.error('Error creating costo:', error);
+
       if (error && typeof error === 'object' && 'code' in error && error.code === '23505') {
         toast.error('Numero fattura già esistente');
       } else {

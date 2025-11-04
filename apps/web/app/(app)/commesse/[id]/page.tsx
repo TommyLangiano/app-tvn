@@ -108,7 +108,7 @@ export default function CommessaDetailPage() {
       setScontrini(scontriniData || []);
 
     } catch (error) {
-      console.error('Error loading commessa data:', error);
+
       toast.error('Errore nel caricamento dei dati');
     } finally {
       setLoading(false);
@@ -137,7 +137,7 @@ export default function CommessaDetailPage() {
       toast.success('Commessa eliminata con successo');
       router.push('/commesse');
     } catch (error) {
-      console.error('Error deleting commessa:', error);
+
       toast.error('Errore durante l\'eliminazione della commessa');
     }
   };

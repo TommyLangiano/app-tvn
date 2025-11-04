@@ -71,7 +71,7 @@ export function NewCommessaDialog({ tenantId, onCommessaCreated }: NewCommessaDi
       });
       onCommessaCreated();
     } catch (error) {
-      console.error('Error creating commessa:', error);
+
       toast.error('Errore nella creazione della commessa');
     } finally {
       setLoading(false);

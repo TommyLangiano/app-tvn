@@ -52,7 +52,7 @@ export function useTenantPlan(): UseTenantPlanReturn {
 
         setPlan(data?.plan_id as PlanId || null);
       } catch (err) {
-        console.error('Error fetching plan:', err);
+
         setError(err instanceof Error ? err : new Error('Unknown error'));
       } finally {
         setLoading(false);

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { CreateTenantForm } from '@/components/features/CreateTenantForm';
 import { PageShell } from '@/components/layout/PageShell';
+import { OperaioDashboard } from '@/components/features/dashboard/OperaioDashboard';
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -19,6 +20,7 @@ export default async function DashboardPage() {
     .from('user_tenants')
     .select(`
       tenant_id,
+      role,
       tenants (
         id,
         name
@@ -34,15 +36,38 @@ export default async function DashboardPage() {
   // Single-tenant setup: Get first tenant
   const tenant = userTenants[0];
   const tenantData = Array.isArray(tenant.tenants) ? tenant.tenants[0] : tenant.tenants;
+  const userRole = tenant.role;
 
-  // User has tenant, show dashboard home
+  // Get user profile for full name
+  const { data: profile } = await supabase
+    .from('user_profiles')
+    .select('full_name')
+    .eq('user_id', user.id)
+    .single();
+
+  const userName = profile?.full_name || user.email?.split('@')[0] || 'Utente';
+
+  // If user is operaio, show operaio dashboard
+  if (userRole === 'operaio') {
+    return (
+      <PageShell title="Dashboard" description="La tua dashboard operativa">
+        <OperaioDashboard userId={user.id} userName={userName} />
+      </PageShell>
+    );
+  }
+
+  // For admin/owner, show placeholder (or redirect to rapportini)
   return (
     <PageShell
       title="Benvenuto!"
       description={tenantData?.name || 'Il tuo workspace'}
     >
       <div className="text-center py-12">
-        <p className="text-muted-foreground">Dashboard in arrivo...</p>
+        <p className="text-muted-foreground">Dashboard amministratore in arrivo...</p>
+        <p className="text-sm text-muted-foreground mt-2">
+          Nel frattempo, visita <a href="/rapportini" className="text-primary underline">Rapportini</a> o{' '}
+          <a href="/gestione-utenti" className="text-primary underline">Gestione Utenti</a>
+        </p>
       </div>
     </PageShell>
   );

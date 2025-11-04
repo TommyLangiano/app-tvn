@@ -94,7 +94,7 @@ export default function MovimentiPage() {
         toast.error('Impossibile aprire l\'allegato');
       }
     } catch (error) {
-      console.error('Error opening allegato:', error);
+
       toast.error('Errore nell\'apertura dell\'allegato');
     }
   };
@@ -208,7 +208,7 @@ export default function MovimentiPage() {
       setMovimenti(movimentiOrdinati);
 
     } catch (error) {
-      console.error('Error loading movimenti:', error);
+
       toast.error('Errore nel caricamento dei movimenti');
     } finally {
       setLoading(false);

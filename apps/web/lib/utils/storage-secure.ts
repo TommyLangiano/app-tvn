@@ -21,12 +21,10 @@ export async function getAuthenticatedFileUrl(path: string | null): Promise<stri
       .download(cleanPath);
 
     if (error) {
-      console.error('Error downloading file:', error);
       return null;
     }
 
     if (!data) {
-      console.error('No data received from storage');
       return null;
     }
 
@@ -34,7 +32,6 @@ export async function getAuthenticatedFileUrl(path: string | null): Promise<stri
     const blobUrl = URL.createObjectURL(data);
     return blobUrl;
   } catch (error) {
-    console.error('Error in getAuthenticatedFileUrl:', error);
     return null;
   }
 }

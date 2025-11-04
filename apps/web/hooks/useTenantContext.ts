@@ -41,8 +41,8 @@ export function useTenantContext(): TenantContext {
           return;
         }
 
-        // Get user's tenant (single-tenant setup)
-        const { data, error: tenantError } = await supabase
+        // Get user's tenants (user might belong to multiple tenants)
+        const { data: tenants, error: tenantError } = await supabase
           .from('user_tenants')
           .select(`
             tenant_id,
@@ -52,7 +52,11 @@ export function useTenantContext(): TenantContext {
             )
           `)
           .eq('user_id', user.id)
-          .maybeSingle();
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        // Take the first (most recent) tenant
+        const data = tenants && tenants.length > 0 ? tenants[0] : null;
 
         if (tenantError) {
           throw tenantError;
@@ -66,7 +70,6 @@ export function useTenantContext(): TenantContext {
           setTenantName(null);
         }
       } catch (err) {
-        console.error('Error fetching tenant:', err);
         setError(err instanceof Error ? err : new Error('Unknown error'));
       } finally {
         setLoading(false);

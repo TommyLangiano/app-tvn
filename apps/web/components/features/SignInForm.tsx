@@ -57,7 +57,7 @@ export function SignInForm() {
         window.location.href = '/dashboard';
       }
     } catch (error) {
-      console.error('Auth error:', error);
+
       toast.error('Si è verificato un errore');
     } finally {
       setIsLoading(false);

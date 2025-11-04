@@ -103,7 +103,6 @@ export function NuovoRapportinoModal({ onClose, onSuccess }: NuovoRapportinoModa
         setCommesse(commesseData);
       }
     } catch (error) {
-      console.error('Error loading data:', error);
       toast.error('Errore nel caricamento dei dati');
     } finally {
       setLoadingData(false);
@@ -229,7 +228,6 @@ export function NuovoRapportinoModal({ onClose, onSuccess }: NuovoRapportinoModa
       toast.success('Rapportino creato con successo');
       onSuccess();
     } catch (error) {
-      console.error('Error creating rapportino:', error);
       toast.error('Errore nella creazione del rapportino');
     } finally {
       setLoading(false);

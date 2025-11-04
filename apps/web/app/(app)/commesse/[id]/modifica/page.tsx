@@ -80,7 +80,7 @@ export default function ModificaCommessaPage() {
       });
 
     } catch (error) {
-      console.error('Error loading commessa:', error);
+
       toast.error('Errore nel caricamento della commessa');
       router.push('/commesse');
     } finally {
@@ -119,7 +119,7 @@ export default function ModificaCommessaPage() {
       // Redirect back to detail page
       router.push(`/commesse/${slug}`);
     } catch (error) {
-      console.error('Error updating commessa:', error);
+
       toast.error('Errore nell\'aggiornamento della commessa');
     } finally {
       setSaving(false);

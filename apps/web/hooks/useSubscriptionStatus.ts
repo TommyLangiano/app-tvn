@@ -57,7 +57,7 @@ export function useSubscriptionStatus(): SubscriptionStatusData {
           setTrialEnd(null);
         }
       } catch (err) {
-        console.error('Error fetching subscription:', err);
+
         setError(err instanceof Error ? err : new Error('Unknown error'));
       } finally {
         setLoading(false);

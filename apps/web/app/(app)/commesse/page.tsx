@@ -55,12 +55,14 @@ export default function CommessePage() {
       if (!user) return;
 
       // Get tenant ID
-      const { data: userTenants } = await supabase
+      const { data: tenants } = await supabase
         .from('user_tenants')
         .select('tenant_id')
         .eq('user_id', user.id)
-        .single();
+        .order('created_at', { ascending: false })
+        .limit(1);
 
+      const userTenants = tenants && tenants.length > 0 ? tenants[0] : null;
       if (!userTenants) return;
 
       // Load commesse
@@ -93,7 +95,6 @@ export default function CommessePage() {
         }
       }
     } catch (error) {
-      console.error('Error loading commesse:', error);
     } finally {
       setLoading(false);
     }

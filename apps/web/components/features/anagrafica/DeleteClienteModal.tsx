@@ -43,7 +43,7 @@ export function DeleteClienteModal({ cliente, onClose, onDelete }: DeleteCliente
       toast.success('Cliente eliminato con successo');
       onDelete();
     } catch (error) {
-      console.error('Error deleting cliente:', error);
+
       toast.error('Errore durante l\'eliminazione del cliente');
     } finally {
       setLoading(false);

@@ -43,7 +43,7 @@ export function DeleteFornitoreModal({ fornitore, onClose, onDelete }: DeleteFor
       toast.success('Fornitore eliminato con successo');
       onDelete();
     } catch (error) {
-      console.error('Error deleting fornitore:', error);
+
       toast.error('Errore durante l\'eliminazione del Fornitore');
     } finally {
       setLoading(false);

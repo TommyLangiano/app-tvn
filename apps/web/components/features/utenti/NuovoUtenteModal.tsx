@@ -71,7 +71,7 @@ export function NuovoUtenteModal({ onClose, onSuccess }: NuovoUtenteModalProps) 
       toast.success('Utente creato con successo');
       onSuccess();
     } catch (error) {
-      console.error('Error creating user:', error);
+
       const errorMessage = error instanceof Error ? error.message : 'Errore nella creazione dell\'utente';
       toast.error(errorMessage);
     } finally {

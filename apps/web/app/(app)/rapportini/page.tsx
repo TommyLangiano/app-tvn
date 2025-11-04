@@ -106,7 +106,6 @@ export default function RapportiniPage() {
 
       setRapportini(data || []);
     } catch (error) {
-      console.error('Error loading rapportini:', error);
       toast.error('Errore nel caricamento dei rapportini');
     } finally {
       setLoading(false);
@@ -193,7 +192,6 @@ export default function RapportiniPage() {
         toast.error('Impossibile aprire l&apos;allegato');
       }
     } catch (error) {
-      console.error('Error opening allegato:', error);
       toast.error('Errore nell&apos;apertura dell&apos;allegato');
     }
   };
@@ -214,7 +212,6 @@ export default function RapportiniPage() {
       setSelectedRapportini(new Set());
       loadRapportini();
     } catch (error) {
-      console.error('Error deleting rapportini:', error);
       toast.error('Errore nell&apos;eliminazione');
     }
   };

@@ -125,7 +125,7 @@ export function EditMovimentoModal({ movimento, onClose, onSuccess }: EditMovime
       if (error) throw error;
       setClientiFornitori(data || []);
     } catch (error) {
-      console.error('Error loading clienti/fornitori:', error);
+
     }
   };
 
@@ -138,7 +138,7 @@ export function EditMovimentoModal({ movimento, onClose, onSuccess }: EditMovime
 
   const handleSelectClienteFornitore = (itemId: string) => {
     const item = clientiFornitori.find(c => c.id === itemId);
-    console.log('Cliente/Fornitore selezionato:', item);
+
     if (item) {
       setSelectedId(itemId);
       setFormData(prev => ({
@@ -235,7 +235,7 @@ export function EditMovimentoModal({ movimento, onClose, onSuccess }: EditMovime
           setRecordMeta(data);
         }
       } catch (error) {
-        console.error('Error fetching movimento metadata:', error);
+
       }
     };
 
@@ -329,7 +329,7 @@ export function EditMovimentoModal({ movimento, onClose, onSuccess }: EditMovime
         meta = data;
         setRecordMeta(data);
       } catch (error) {
-        console.error('Error fetching movimento metadata:', error);
+
         toast.error('Impossibile recuperare le informazioni della commessa per l\'allegato');
         return null;
       }
@@ -355,7 +355,7 @@ export function EditMovimentoModal({ movimento, onClose, onSuccess }: EditMovime
 
       return data.path;
     } catch (error) {
-      console.error('Error uploading file:', error);
+
       toast.error('Errore durante il caricamento del file');
       return null;
     } finally {
@@ -371,10 +371,10 @@ export function EditMovimentoModal({ movimento, onClose, onSuccess }: EditMovime
       const supabase = createClient();
       const { error } = await supabase.storage.from('fatture-documents').remove([storagePath]);
       if (error) {
-        console.error('Error deleting file from storage:', error);
+
       }
     } catch (error) {
-      console.error('Error deleting file from storage:', error);
+
     }
   };
 
@@ -481,7 +481,7 @@ export function EditMovimentoModal({ movimento, onClose, onSuccess }: EditMovime
       onSuccess();
       onClose();
     } catch (error) {
-      console.error('Error updating movimento:', error);
+
       toast.error('Errore durante l\'aggiornamento del movimento');
 
       if (uploadedPath) {

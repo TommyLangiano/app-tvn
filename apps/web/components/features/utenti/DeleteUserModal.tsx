@@ -32,7 +32,7 @@ export function DeleteUserModal({ user, onClose, onSuccess }: DeleteUserModalPro
       toast.success('Utente eliminato con successo');
       onSuccess();
     } catch (error) {
-      console.error('Error deleting user:', error);
+
       const errorMessage = error instanceof Error ? error.message : 'Errore nell\'eliminazione dell\'utente';
       toast.error(errorMessage);
     } finally {

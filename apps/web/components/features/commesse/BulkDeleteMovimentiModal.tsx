@@ -84,7 +84,7 @@ export function BulkDeleteMovimentiModal({
       onSuccess();
       onClose();
     } catch (error) {
-      console.error('Error bulk deleting movimenti:', error);
+
       toast.error('Errore durante l\'eliminazione dei movimenti');
     } finally {
       setLoading(false);
