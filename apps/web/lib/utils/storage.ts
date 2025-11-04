@@ -33,7 +33,7 @@ export async function getSignedUrl(path: string | null): Promise<string | null> 
     // This URL is only valid in this browser session and can't be shared
     const blobUrl = URL.createObjectURL(data);
     return blobUrl;
-  } catch (error) {
+  } catch {
     return null;
   }
 }

@@ -9,7 +9,6 @@ import type {
   UserProfile,
   UserWithProfile,
   UserListItem,
-  CreateUserData,
   UpdateUserData,
   UserStatusUpdate,
 } from '@/types/user-profile';
@@ -173,7 +172,7 @@ export async function getTenantUsers(): Promise<UserListItem[]> {
   // Map profiles by user_id for quick lookup
   const profilesMap = new Map(profiles.map(p => [p.user_id, p]));
 
-  const result = userTenants.map((ut: any) => {
+  const result = userTenants.map((ut) => {
     const profile = profilesMap.get(ut.user_id);
     if (!profile) {
       return null;

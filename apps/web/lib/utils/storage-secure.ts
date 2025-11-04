@@ -31,7 +31,7 @@ export async function getAuthenticatedFileUrl(path: string | null): Promise<stri
     // Create a blob URL from the downloaded data
     const blobUrl = URL.createObjectURL(data);
     return blobUrl;
-  } catch (error) {
+  } catch {
     return null;
   }
 }

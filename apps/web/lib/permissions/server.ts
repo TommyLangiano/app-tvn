@@ -7,7 +7,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
-import { hasPermission, requirePermission, requireWriteAccess, type Permission, type TenantRole } from './index';
+import { hasPermission, requireWriteAccess, type Permission, type TenantRole } from './index';
 
 // ============================================================================
 // TYPES
@@ -38,19 +38,19 @@ export async function getAuthContext(): Promise<AuthContext | null> {
     const supabase = await createClient();
 
     // Get authenticated user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
       return null;
     }
 
     // Get user's tenant and role
-    const { data: userTenant, error: tenantError } = await supabase
+    const { data: userTenant } = await supabase
       .from('user_tenants')
       .select('tenant_id, role')
       .eq('user_id', user.id)
       .single();
 
-    if (tenantError || !userTenant) {
+    if (!userTenant) {
       return null;
     }
 
@@ -59,7 +59,7 @@ export async function getAuthContext(): Promise<AuthContext | null> {
       tenantId: userTenant.tenant_id,
       role: userTenant.role as TenantRole,
     };
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -205,13 +205,13 @@ export async function requireTenantResource(
     const supabase = await createClient();
 
     // Check if resource exists and belongs to user's tenant
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from(table)
       .select('tenant_id')
       .eq(idColumn, resourceId)
       .single();
 
-    if (error || !data) {
+    if (!data) {
       return NextResponse.json(
         { error: 'Resource not found', code: 'NOT_FOUND' },
         { status: 404 }
@@ -226,7 +226,7 @@ export async function requireTenantResource(
     }
 
     return context;
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Internal server error', code: 'INTERNAL_ERROR' },
       { status: 500 }
@@ -251,13 +251,13 @@ export async function requireRapportinoAccess(
     const supabase = await createClient();
 
     // Get rapportino with tenant and user info
-    const { data: rapportino, error } = await supabase
+    const { data: rapportino } = await supabase
       .from('rapportini')
       .select('tenant_id, user_id')
       .eq('id', rapportinoId)
       .single();
 
-    if (error || !rapportino) {
+    if (!rapportino) {
       return NextResponse.json(
         { error: 'Rapportino not found', code: 'NOT_FOUND' },
         { status: 404 }
@@ -297,7 +297,7 @@ export async function requireRapportinoAccess(
     }
 
     return context;
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Internal server error', code: 'INTERNAL_ERROR' },
       { status: 500 }
