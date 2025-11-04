@@ -124,7 +124,7 @@ export function EditMovimentoModal({ movimento, onClose, onSuccess }: EditMovime
 
       if (error) throw error;
       setClientiFornitori(data || []);
-    } catch (error) {
+    } catch {
 
     }
   };
@@ -234,7 +234,7 @@ export function EditMovimentoModal({ movimento, onClose, onSuccess }: EditMovime
         if (active) {
           setRecordMeta(data);
         }
-      } catch (error) {
+      } catch {
 
       }
     };
@@ -328,7 +328,7 @@ export function EditMovimentoModal({ movimento, onClose, onSuccess }: EditMovime
         if (error) throw error;
         meta = data;
         setRecordMeta(data);
-      } catch (error) {
+      } catch {
 
         toast.error('Impossibile recuperare le informazioni della commessa per l\'allegato');
         return null;
@@ -354,7 +354,7 @@ export function EditMovimentoModal({ movimento, onClose, onSuccess }: EditMovime
       if (error) throw error;
 
       return data.path;
-    } catch (error) {
+    } catch {
 
       toast.error('Errore durante il caricamento del file');
       return null;
@@ -373,7 +373,7 @@ export function EditMovimentoModal({ movimento, onClose, onSuccess }: EditMovime
       if (error) {
 
       }
-    } catch (error) {
+    } catch {
 
     }
   };
@@ -480,7 +480,7 @@ export function EditMovimentoModal({ movimento, onClose, onSuccess }: EditMovime
       toast.success('Movimento aggiornato con successo');
       onSuccess();
       onClose();
-    } catch (error) {
+    } catch {
 
       toast.error('Errore durante l\'aggiornamento del movimento');
 

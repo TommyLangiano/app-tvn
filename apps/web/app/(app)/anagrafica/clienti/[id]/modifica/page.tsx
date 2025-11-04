@@ -145,7 +145,7 @@ export default function ModificaClientePage() {
         setCodiceSdi(cliente.codice_sdi || '');
         setNote(cliente.note || '');
       }
-    } catch (error) {
+    } catch {
 
       toast.error('Errore nel caricamento del cliente');
       router.push('/anagrafica?tab=clienti');
@@ -252,7 +252,7 @@ export default function ModificaClientePage() {
 
       toast.success('Cliente aggiornato con successo');
       router.push('/anagrafica?tab=clienti');
-    } catch (error) {
+    } catch {
 
       toast.error('Errore durante l\'aggiornamento del cliente');
     } finally {

@@ -145,7 +145,7 @@ export default function ModificaFornitorePage() {
         setCodiceSdi(Fornitore.codice_sdi || '');
         setNote(Fornitore.note || '');
       }
-    } catch (error) {
+    } catch {
 
       toast.error('Errore nel caricamento del Fornitore');
       router.push('/anagrafica?tab=fornitori');
@@ -252,7 +252,7 @@ export default function ModificaFornitorePage() {
 
       toast.success('Fornitore aggiornato con successo');
       router.push('/anagrafica?tab=fornitori');
-    } catch (error) {
+    } catch {
 
       toast.error('Errore durante l\'aggiornamento del Fornitore');
     } finally {

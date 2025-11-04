@@ -6,7 +6,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Plus, Clock, Calendar, FileText } from 'lucide-react';
@@ -31,7 +31,7 @@ export function OperaioDashboard({ userId, userName }: { userId: string; userNam
   const [stats, setStats] = useState<DashboardStats>({ oreOggi: 0, oreSettimana: 0, oreMese: 0 });
   const [loading, setLoading] = useState(true);
 
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       const supabase = createClient();
@@ -72,11 +72,11 @@ export function OperaioDashboard({ userId, userName }: { userId: string; userNam
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
 
   useEffect(() => {
     loadDashboardData();
-  }, [userId, loadDashboardData]);
+  }, [loadDashboardData]);
 
   if (loading) {
     return (

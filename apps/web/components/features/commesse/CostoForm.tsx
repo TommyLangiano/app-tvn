@@ -102,7 +102,7 @@ export function CostoForm({ commessaId, commessaNome, onSuccess, onCancel }: Cos
         // Load fornitori after getting tenant
         loadFornitori(userTenants.tenant_id);
       }
-    } catch (error) {
+    } catch {
 
     }
   };
@@ -119,7 +119,7 @@ export function CostoForm({ commessaId, commessaNome, onSuccess, onCancel }: Cos
       if (error) throw error;
 
       setFornitori(data || []);
-    } catch (error) {
+    } catch {
 
     }
   };
@@ -285,7 +285,7 @@ export function CostoForm({ commessaId, commessaNome, onSuccess, onCancel }: Cos
 
       if (error) throw error;
       return data.path;
-    } catch (error) {
+    } catch {
 
       toast.error('Errore durante il caricamento del file');
       return null;
@@ -399,7 +399,7 @@ export function CostoForm({ commessaId, commessaNome, onSuccess, onCancel }: Cos
       }
 
       onSuccess();
-    } catch (error) {
+    } catch {
 
       if (error && typeof error === 'object' && 'code' in error && error.code === '23505') {
         toast.error('Numero fattura già esistente');

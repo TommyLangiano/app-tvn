@@ -50,7 +50,7 @@ export function MovimentoForm({ commessaId, tipo, onSuccess, onCancel }: Movimen
       if (userTenants) {
         setTenantId(userTenants.tenant_id);
       }
-    } catch (error) {
+    } catch {
 
     }
   };
@@ -104,7 +104,7 @@ export function MovimentoForm({ commessaId, tipo, onSuccess, onCancel }: Movimen
 
       toast.success(`${tipo === 'ricavo' ? 'Ricavo' : 'Costo'} aggiunto con successo!`);
       onSuccess();
-    } catch (error) {
+    } catch {
 
       toast.error('Errore nell\'aggiunta del movimento');
     } finally {

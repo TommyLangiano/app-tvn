@@ -94,7 +94,7 @@ export default function NuovoClientePage() {
       if (userTenants) {
         setTenantId(userTenants.tenant_id);
       }
-    } catch (error) {
+    } catch {
 
     }
   };
@@ -197,7 +197,7 @@ export default function NuovoClientePage() {
 
       toast.success('Cliente creato con successo');
       router.push('/anagrafica?tab=clienti');
-    } catch (error) {
+    } catch {
 
       toast.error('Errore durante la creazione del cliente');
     } finally {

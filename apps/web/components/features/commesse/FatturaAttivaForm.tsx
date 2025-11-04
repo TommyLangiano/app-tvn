@@ -92,7 +92,7 @@ export function FatturaAttivaForm({
         // Load clienti after getting tenant
         loadClienti(userTenants.tenant_id);
       }
-    } catch (error) {
+    } catch {
 
     }
   };
@@ -108,7 +108,7 @@ export function FatturaAttivaForm({
 
       if (error) throw error;
       setClienti(data || []);
-    } catch (error) {
+    } catch {
 
     }
   };
@@ -268,7 +268,7 @@ export function FatturaAttivaForm({
       if (error) throw error;
 
       return data.path;
-    } catch (error) {
+    } catch {
 
       toast.error('Errore durante il caricamento del file');
       return null;
@@ -345,7 +345,7 @@ export function FatturaAttivaForm({
 
       toast.success('Fattura aggiunta con successo!');
       onSuccess();
-    } catch (error) {
+    } catch {
 
       if (error && typeof error === 'object' && 'code' in error && error.code === '23505') {
         toast.error('Numero fattura già esistente');

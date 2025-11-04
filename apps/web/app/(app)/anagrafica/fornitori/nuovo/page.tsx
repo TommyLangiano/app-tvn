@@ -94,7 +94,7 @@ export default function NuovoFornitorePage() {
       if (userTenants) {
         setTenantId(userTenants.tenant_id);
       }
-    } catch (error) {
+    } catch {
 
     }
   };
@@ -197,7 +197,7 @@ export default function NuovoFornitorePage() {
 
       toast.success('Fornitore creato con successo');
       router.push('/anagrafica?tab=fornitori');
-    } catch (error) {
+    } catch {
 
       toast.error('Errore durante la creazione del Fornitore');
     } finally {
