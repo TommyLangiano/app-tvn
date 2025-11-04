@@ -83,7 +83,7 @@ export function BulkDeleteMovimentiModal({
       toast.success(`${movimentiIds.length} ${movimentiIds.length === 1 ? 'movimento eliminato' : 'movimenti eliminati'} con successo`);
       onSuccess();
       onClose();
-    } catch (error) {
+    } catch {
 
       toast.error('Errore durante l\'eliminazione dei movimenti');
     } finally {

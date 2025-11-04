@@ -53,7 +53,7 @@ export function ProjectsList({ initialProjects, tenantId }: ProjectsListProps) {
       setNewProjectName('');
       setIsCreating(false);
       toast.success('Project created successfully!');
-    } catch (error) {
+    } catch {
 
       toast.error('An unexpected error occurred');
     } finally {
@@ -82,7 +82,7 @@ export function ProjectsList({ initialProjects, tenantId }: ProjectsListProps) {
 
       setProjects(projects.filter((p) => p.id !== projectId));
       toast.success('Project deleted successfully!');
-    } catch (error) {
+    } catch {
 
       toast.error('An unexpected error occurred');
     }

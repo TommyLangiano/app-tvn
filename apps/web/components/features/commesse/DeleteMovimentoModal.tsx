@@ -62,7 +62,7 @@ export function DeleteMovimentoModal({ movimento, onClose, onSuccess }: DeleteMo
       toast.success('Movimento eliminato con successo');
       onSuccess();
       onClose();
-    } catch (error) {
+    } catch {
 
       toast.error('Errore durante l\'eliminazione del movimento');
     } finally {

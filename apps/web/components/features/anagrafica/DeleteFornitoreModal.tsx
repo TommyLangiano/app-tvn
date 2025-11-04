@@ -42,7 +42,7 @@ export function DeleteFornitoreModal({ fornitore, onClose, onDelete }: DeleteFor
 
       toast.success('Fornitore eliminato con successo');
       onDelete();
-    } catch (error) {
+    } catch {
 
       toast.error('Errore durante l\'eliminazione del Fornitore');
     } finally {

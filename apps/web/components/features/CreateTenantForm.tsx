@@ -48,7 +48,7 @@ export function CreateTenantForm() {
 
       // Redirect to dashboard (will reload with new tenant)
       window.location.href = '/dashboard';
-    } catch (error) {
+    } catch {
 
       toast.error('An unexpected error occurred');
     } finally {

@@ -56,7 +56,7 @@ export function SignInForm() {
         toast.success('Accesso effettuato!');
         window.location.href = '/dashboard';
       }
-    } catch (error) {
+    } catch {
 
       toast.error('Si è verificato un errore');
     } finally {

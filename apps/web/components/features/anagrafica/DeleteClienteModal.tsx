@@ -42,7 +42,7 @@ export function DeleteClienteModal({ cliente, onClose, onDelete }: DeleteCliente
 
       toast.success('Cliente eliminato con successo');
       onDelete();
-    } catch (error) {
+    } catch {
 
       toast.error('Errore durante l\'eliminazione del cliente');
     } finally {
