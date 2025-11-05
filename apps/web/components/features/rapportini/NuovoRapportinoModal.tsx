@@ -296,7 +296,7 @@ export function NuovoRapportinoModal({ onClose, onSuccess }: NuovoRapportinoModa
           ) : (
             <div>
               {/* Card Unica */}
-              <div className="p-6 rounded-xl border-2 border-border bg-card shadow-sm space-y-4">
+              <div className="p-6 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Operaio */}
                   <div>
@@ -554,7 +554,7 @@ export function NuovoRapportinoModal({ onClose, onSuccess }: NuovoRapportinoModa
           )}
 
           {/* Footer Actions */}
-          <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-6 mt-6 border-t-2 border-border">
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-6">
             <Button
               type="button"
               variant="outline"
