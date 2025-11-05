@@ -217,16 +217,16 @@ export function EconomiaRiepilogo({
             riepilogo.saldo_iva === 0
               ? 'border-blue-200 bg-blue-50'
               : riepilogo.saldo_iva > 0
-              ? 'border-green-200 bg-green-50'
-              : 'border-red-200 bg-red-50'
+              ? 'border-red-200 bg-red-50'
+              : 'border-green-200 bg-green-50'
           }`}>
             <p className="text-xs sm:text-sm text-muted-foreground mb-1">Saldo IVA</p>
             <p className={`text-xl sm:text-2xl font-bold break-words ${
               riepilogo.saldo_iva === 0
                 ? 'text-blue-600'
                 : riepilogo.saldo_iva > 0
-                ? 'text-green-600'
-                : 'text-red-600'
+                ? 'text-red-600'
+                : 'text-green-600'
             }`}>
               {formatCurrency(riepilogo.saldo_iva)}
             </p>
