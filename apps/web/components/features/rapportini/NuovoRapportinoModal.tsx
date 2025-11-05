@@ -230,11 +230,8 @@ export function NuovoRapportinoModal({ onClose, onSuccess, users, commesse }: Nu
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6">
-          <div>
-              {/* Card Unica */}
-              <div className="p-6 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Operaio */}
                   <div>
                     <Label className="text-foreground font-medium text-sm mb-2 block">
@@ -342,152 +339,150 @@ export function NuovoRapportinoModal({ onClose, onSuccess, users, commesse }: Nu
                   </div>
                 </div>
 
-                {/* Commessa */}
-                <div>
-                  <Label className="text-foreground font-medium text-sm mb-2 block">
-                    Commessa <span className="text-destructive">*</span>
-                  </Label>
-                  <div className="relative">
-                    <Popover open={openCommessaCombobox} onOpenChange={setOpenCommessaCombobox}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={openCommessaCombobox}
-                          className="h-11 w-full justify-between border-2 border-border bg-background"
-                        >
-                          <span className="flex items-center gap-2 truncate">
-                            <Briefcase className="h-4 w-4 shrink-0 text-muted-foreground" />
-                            <span className="truncate">
-                              {formData.commessa_id
-                                ? commesse.find((c) => c.id === formData.commessa_id)?.nome_commessa
-                                : 'Seleziona commessa...'}
-                            </span>
-                          </span>
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[500px] p-0" align="start">
-                        <Command>
-                          <CommandInput placeholder="Cerca commessa..." />
-                          <CommandList>
-                            <CommandEmpty>Nessuna commessa trovata.</CommandEmpty>
-                            <CommandGroup>
-                              {commesse.map((commessa) => (
-                                <CommandItem
-                                  key={commessa.id}
-                                  value={commessa.nome_commessa}
-                                  onSelect={() => {
-                                    setFormData({ ...formData, commessa_id: commessa.id });
-                                    setOpenCommessaCombobox(false);
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      'mr-2 h-4 w-4',
-                                      formData.commessa_id === commessa.id ? 'opacity-100' : 'opacity-0'
-                                    )}
-                                  />
-                                  {commessa.nome_commessa}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                    {formData.commessa_id && (
-                      <button
+          {/* Commessa */}
+          <div>
+            <Label className="text-foreground font-medium text-sm mb-2 block">
+              Commessa <span className="text-destructive">*</span>
+            </Label>
+            <div className="relative">
+              <Popover open={openCommessaCombobox} onOpenChange={setOpenCommessaCombobox}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={openCommessaCombobox}
+                    className="h-11 w-full justify-between border-2 border-border bg-background"
+                  >
+                    <span className="flex items-center gap-2 truncate">
+                      <Briefcase className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <span className="truncate">
+                        {formData.commessa_id
+                          ? commesse.find((c) => c.id === formData.commessa_id)?.nome_commessa
+                          : 'Seleziona commessa...'}
+                      </span>
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[500px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Cerca commessa..." />
+                    <CommandList>
+                      <CommandEmpty>Nessuna commessa trovata.</CommandEmpty>
+                      <CommandGroup>
+                        {commesse.map((commessa) => (
+                          <CommandItem
+                            key={commessa.id}
+                            value={commessa.nome_commessa}
+                            onSelect={() => {
+                              setFormData({ ...formData, commessa_id: commessa.id });
+                              setOpenCommessaCombobox(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                'mr-2 h-4 w-4',
+                                formData.commessa_id === commessa.id ? 'opacity-100' : 'opacity-0'
+                              )}
+                            />
+                            {commessa.nome_commessa}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              {formData.commessa_id && (
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, commessa_id: '' })}
+                  className="absolute right-10 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Row: Note + Upload File */}
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            {/* Note - 3 colonne */}
+            <div className="md:col-span-3">
+              <Label htmlFor="note" className="text-foreground font-medium text-sm mb-2 block">Note</Label>
+              <div className="relative">
+                <FileText className="absolute left-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <Textarea
+                  id="note"
+                  placeholder="Eventuali note sul rapportino..."
+                  rows={5}
+                  value={formData.note}
+                  onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+                  className="border-2 border-border bg-background pl-10 resize-none"
+                />
+              </div>
+            </div>
+
+            {/* Upload File - 2 colonne */}
+            <div className="md:col-span-2">
+              <Label className="text-foreground font-medium text-sm mb-2 block">Allegato</Label>
+              <div
+                className={cn(
+                  'relative border-2 border-dashed rounded-lg p-4 transition-colors cursor-pointer h-[calc(5*1.5rem+2.5rem)]',
+                  dragActive
+                    ? 'border-primary bg-primary/5'
+                    : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                )}
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={handleFileChange}
+                  accept=".pdf,.jpg,.jpeg,.png"
+                />
+                <div className="text-center h-full flex flex-col items-center justify-center">
+                  <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                  {selectedFile ? (
+                    <>
+                      <p className="text-sm font-medium text-foreground mb-1 truncate max-w-full px-2">
+                        {selectedFile.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground mb-2">
+                        {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                      <Button
                         type="button"
-                        onClick={() => setFormData({ ...formData, commessa_id: '' })}
-                        className="absolute right-10 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedFile(null);
+                        }}
+                        className="h-8 text-xs border-2"
                       >
-                        <X className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Row: Note + Upload File */}
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                  {/* Note - 3 colonne */}
-                  <div className="md:col-span-3">
-                    <Label htmlFor="note" className="text-foreground font-medium text-sm mb-2 block">Note</Label>
-                    <div className="relative">
-                      <FileText className="absolute left-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
-                      <Textarea
-                        id="note"
-                        placeholder="Eventuali note sul rapportino..."
-                        rows={5}
-                        value={formData.note}
-                        onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-                        className="border-2 border-border bg-background pl-10 resize-none"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Upload File - 2 colonne */}
-                  <div className="md:col-span-2">
-                    <Label className="text-foreground font-medium text-sm mb-2 block">Allegato</Label>
-                    <div
-                      className={cn(
-                        'relative border-2 border-dashed rounded-lg p-4 transition-colors cursor-pointer h-[calc(5*1.5rem+2.5rem)]',
-                        dragActive
-                          ? 'border-primary bg-primary/5'
-                          : 'border-border hover:border-primary/50 hover:bg-muted/50'
-                      )}
-                      onDragEnter={handleDrag}
-                      onDragLeave={handleDrag}
-                      onDragOver={handleDrag}
-                      onDrop={handleDrop}
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        className="hidden"
-                        onChange={handleFileChange}
-                        accept=".pdf,.jpg,.jpeg,.png"
-                      />
-                      <div className="text-center h-full flex flex-col items-center justify-center">
-                        <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                        {selectedFile ? (
-                          <>
-                            <p className="text-sm font-medium text-foreground mb-1 truncate max-w-full px-2">
-                              {selectedFile.name}
-                            </p>
-                            <p className="text-xs text-muted-foreground mb-2">
-                              {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                            </p>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedFile(null);
-                              }}
-                              className="h-8 text-xs border-2"
-                            >
-                              Rimuovi
-                            </Button>
-                          </>
-                        ) : (
-                          <>
-                            <p className="text-xs text-foreground mb-1 px-2">
-                              Trascina o <span className="text-primary font-medium">clicca</span>
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              PDF, JPG, PNG (max 10MB)
-                            </p>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                        Rimuovi
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-xs text-foreground mb-1 px-2">
+                        Trascina o <span className="text-primary font-medium">clicca</span>
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        PDF, JPG, PNG (max 10MB)
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
+          </div>
 
           {/* Footer Actions */}
           <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-6">
