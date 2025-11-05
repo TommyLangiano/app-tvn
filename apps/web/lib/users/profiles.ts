@@ -222,7 +222,8 @@ export async function updateUserProfile(
   const { error } = await supabase
     .from('user_profiles')
     .update({
-      full_name: updates.full_name,
+      first_name: updates.first_name,
+      last_name: updates.last_name,
       phone: updates.phone,
       avatar_url: updates.avatar_url,
       position: updates.position,
