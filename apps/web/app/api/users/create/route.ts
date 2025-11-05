@@ -141,7 +141,8 @@ export async function POST(request: Request) {
         role,
       },
     });
-  } catch {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Internal server error';
+    return NextResponse.json({ error: errorMessage, details: err }, { status: 500 });
   }
 }
