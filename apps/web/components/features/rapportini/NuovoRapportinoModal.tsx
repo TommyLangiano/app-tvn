@@ -84,11 +84,13 @@ export function NuovoRapportinoModal({ onClose, onSuccess }: NuovoRapportinoModa
 
       if (!userTenants) return;
 
-      // Load users from API route
+      // Load users from API route - filter only operaio role
       const response = await fetch('/api/users');
       if (response.ok) {
         const { users: usersData } = await response.json();
-        setUsers(usersData || []);
+        // Filter only users with role 'operaio'
+        const operai = (usersData || []).filter((u: { role: string }) => u.role === 'operaio');
+        setUsers(operai);
       }
 
       // Load commesse
@@ -239,14 +241,19 @@ export function NuovoRapportinoModal({ onClose, onSuccess }: NuovoRapportinoModa
   };
 
   return (
-    <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+      {/* Backdrop */}
       <div
-        className="bg-background rounded-xl border-2 border-border max-w-4xl w-full max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
+
+      {/* Modal */}
+      <div className="relative z-10 w-full max-w-4xl max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
+        <div
+          className="bg-background rounded-xl border-2 border-border shadow-lg"
+          onClick={(e) => e.stopPropagation()}
+        >
         {/* Header */}
         <div className="flex items-center justify-between p-4 sm:p-6 border-b-2 border-border">
           <h2 className="text-xl font-bold">Nuovo Rapportino</h2>
@@ -527,6 +534,7 @@ export function NuovoRapportinoModal({ onClose, onSuccess }: NuovoRapportinoModa
             </Button>
           </div>
         </form>
+        </div>
       </div>
     </div>
   );
