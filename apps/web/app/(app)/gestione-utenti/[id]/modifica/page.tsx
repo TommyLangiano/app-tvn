@@ -129,13 +129,7 @@ export default function EditUserPage({ params }: { params: { id: string } }) {
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
-      <Breadcrumb
-        items={[
-          { label: 'Gestione Utenti', href: '/gestione-utenti' },
-          { label: user.full_name || user.email, href: `/gestione-utenti/${params.id}` },
-          { label: 'Modifica' },
-        ]}
-      />
+      <Breadcrumb pageName={`Modifica ${user.full_name || user.email}`} />
 
       {/* Header */}
       <div className="flex items-start gap-4">
