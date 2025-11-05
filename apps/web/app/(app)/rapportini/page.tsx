@@ -34,6 +34,10 @@ export default function RapportiniPage() {
   const [loading, setLoading] = useState(true);
   const [rapportini, setRapportini] = useState<Rapportino[]>([]);
 
+  // Data for modal
+  const [users, setUsers] = useState<any[]>([]);
+  const [commesse, setCommesse] = useState<any[]>([]);
+
   // Month navigation state
   const [currentDate, setCurrentDate] = useState(new Date());
   const currentMonth = currentDate.getMonth();
@@ -67,9 +71,50 @@ export default function RapportiniPage() {
   const years = Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i);
 
   useEffect(() => {
+    loadInitialData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
     loadRapportini();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentMonth, currentYear]);
+
+  const loadInitialData = async () => {
+    const supabase = createClient();
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: userTenants } = await supabase
+      .from('user_tenants')
+      .select('tenant_id')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    const userTenant = userTenants && userTenants.length > 0 ? userTenants[0] : null;
+    if (!userTenant) return;
+
+    // Load users (operai only)
+    const response = await fetch('/api/users');
+    if (response.ok) {
+      const { users: usersData } = await response.json();
+      const operai = (usersData || []).filter((u: any) => u.role === 'operaio');
+      setUsers(operai);
+    }
+
+    // Load commesse
+    const { data: commesseData } = await supabase
+      .from('commesse')
+      .select('id, nome_commessa')
+      .eq('tenant_id', userTenant.tenant_id)
+      .order('nome_commessa');
+
+    if (commesseData) {
+      setCommesse(commesseData);
+    }
+  };
 
   const loadRapportini = async () => {
     try {
@@ -687,6 +732,8 @@ export default function RapportiniPage() {
             setShowNuovoModal(false);
             loadRapportini();
           }}
+          users={users}
+          commesse={commesse}
         />
       )}
     </div>

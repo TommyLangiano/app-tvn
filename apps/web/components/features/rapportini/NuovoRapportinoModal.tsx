@@ -29,6 +29,8 @@ import type { RapportinoFormData } from '@/types/rapportino';
 interface NuovoRapportinoModalProps {
   onClose: () => void;
   onSuccess: () => void;
+  users: User[];
+  commesse: Commessa[];
 }
 
 type User = {
@@ -53,73 +55,14 @@ const initialFormData: RapportinoFormData = {
   note: '',
 };
 
-export function NuovoRapportinoModal({ onClose, onSuccess }: NuovoRapportinoModalProps) {
+export function NuovoRapportinoModal({ onClose, onSuccess, users, commesse }: NuovoRapportinoModalProps) {
   const [formData, setFormData] = useState<RapportinoFormData>(initialFormData);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
-  const [users, setUsers] = useState<User[]>([]);
-  const [commesse, setCommesse] = useState<Commessa[]>([]);
   const [loading, setLoading] = useState(false);
-  const [loadingData, setLoadingData] = useState(true);
   const [openUserCombobox, setOpenUserCombobox] = useState(false);
   const [openCommessaCombobox, setOpenCommessaCombobox] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    try {
-      setLoadingData(true);
-      const supabase = createClient();
-
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Get tenant
-      const { data: userTenants } = await supabase
-        .from('user_tenants')
-        .select('tenant_id')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      const userTenant = userTenants && userTenants.length > 0 ? userTenants[0] : null;
-      if (!userTenant) return;
-
-      // Load users from API route - filter only operaio role
-      const response = await fetch('/api/users');
-      if (response.ok) {
-        const { users: usersData } = await response.json();
-
-        // DEBUG: Log all users and their roles
-        console.log('🔍 ALL USERS from API:', usersData);
-        console.log('🔍 User roles:', usersData.map((u: User) => ({ email: u.email, role: u.role })));
-
-        // Filter only users with role 'operaio'
-        const operai = (usersData || []).filter((u: User) => u.role === 'operaio');
-        console.log('✅ FILTERED OPERAI:', operai);
-
-        setUsers(operai);
-      }
-
-      // Load commesse
-      const { data: commesseData } = await supabase
-        .from('commesse')
-        .select('id, nome_commessa')
-        .eq('tenant_id', userTenant.tenant_id)
-        .order('nome_commessa');
-
-      if (commesseData) {
-        setCommesse(commesseData);
-      }
-    } catch {
-      toast.error('Errore nel caricamento dei dati');
-    } finally {
-      setLoadingData(false);
-    }
-  };
 
   const handleReset = () => {
     setFormData(initialFormData);
@@ -288,13 +231,7 @@ export function NuovoRapportinoModal({ onClose, onSuccess }: NuovoRapportinoModa
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6">
-          {loadingData ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-3"></div>
-              Caricamento dati...
-            </div>
-          ) : (
-            <div>
+          <div>
               {/* Card Unica */}
               <div className="p-6 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -551,7 +488,6 @@ export function NuovoRapportinoModal({ onClose, onSuccess }: NuovoRapportinoModa
                 </div>
               </div>
             </div>
-          )}
 
           {/* Footer Actions */}
           <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-6">
@@ -566,7 +502,7 @@ export function NuovoRapportinoModal({ onClose, onSuccess }: NuovoRapportinoModa
             </Button>
             <Button
               type="submit"
-              disabled={loading || loadingData}
+              disabled={loading}
               className="h-11 px-6 font-semibold"
             >
               {loading ? 'Creazione in corso...' : 'Crea Rapportino'}
