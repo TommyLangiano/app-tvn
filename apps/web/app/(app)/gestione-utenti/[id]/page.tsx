@@ -134,12 +134,7 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
-      <Breadcrumb
-        items={[
-          { label: 'Gestione Utenti', href: '/gestione-utenti' },
-          { label: user.full_name || user.email },
-        ]}
-      />
+      <Breadcrumb pageName={user.full_name || user.email} />
 
       {/* Header */}
       <div className="flex items-start gap-4">
