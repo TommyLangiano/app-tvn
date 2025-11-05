@@ -399,9 +399,8 @@ export function CostoForm({ commessaId, commessaNome, onSuccess, onCancel }: Cos
       }
 
       onSuccess();
-    } catch {
-
-      if (error && typeof error === 'object' && 'code' in error && error.code === '23505') {
+    } catch (err) {
+      if (err && typeof err === 'object' && 'code' in err && (err as { code: string }).code === '23505') {
         toast.error('Numero fattura già esistente');
       } else {
         toast.error('Errore nell\'aggiunta del costo');
