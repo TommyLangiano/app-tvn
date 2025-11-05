@@ -480,7 +480,7 @@ export default function MovimentiPage() {
               <SelectContent>
                 <SelectItem value="tutti">Tutti gli stati</SelectItem>
                 <SelectItem value="Pagato">Pagato</SelectItem>
-                <SelectItem value="Da pagare">Da pagare</SelectItem>
+                <SelectItem value="Non Pagato">Non Pagato</SelectItem>
               </SelectContent>
             </Select>
           </div>
