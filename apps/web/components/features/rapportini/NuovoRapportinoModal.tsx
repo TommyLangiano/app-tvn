@@ -294,68 +294,79 @@ export function NuovoRapportinoModal({ onClose, onSuccess }: NuovoRapportinoModa
               Caricamento dati...
             </div>
           ) : (
-            <div className="space-y-6">
+            <div>
               {/* Card Unica */}
-              <div className="space-y-6 p-6 rounded-xl border-2 border-border bg-card shadow-sm">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="p-6 rounded-xl border-2 border-border bg-card shadow-sm space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Operaio */}
-                  <div className="space-y-2">
-                    <Label className="text-foreground font-medium text-sm">
+                  <div>
+                    <Label className="text-foreground font-medium text-sm mb-2 block">
                       Operaio <span className="text-destructive">*</span>
                     </Label>
-                    <Popover open={openUserCombobox} onOpenChange={setOpenUserCombobox}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={openUserCombobox}
-                          className="h-11 w-full justify-between border-2 border-border bg-background"
-                        >
-                          <span className="flex items-center gap-2 truncate">
-                            <UserIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                            <span className="truncate">
-                              {formData.user_id
-                                ? getUserDisplayName(users.find((u) => u.id === formData.user_id)!)
-                                : 'Seleziona operaio...'}
+                    <div className="relative">
+                      <Popover open={openUserCombobox} onOpenChange={setOpenUserCombobox}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={openUserCombobox}
+                            className="h-11 w-full justify-between border-2 border-border bg-background"
+                          >
+                            <span className="flex items-center gap-2 truncate">
+                              <UserIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                              <span className="truncate">
+                                {formData.user_id
+                                  ? getUserDisplayName(users.find((u) => u.id === formData.user_id)!)
+                                  : 'Seleziona operaio...'}
+                              </span>
                             </span>
-                          </span>
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[300px] p-0" align="start">
-                        <Command>
-                          <CommandInput placeholder="Cerca operaio..." />
-                          <CommandList>
-                            <CommandEmpty>Nessun operaio trovato.</CommandEmpty>
-                            <CommandGroup>
-                              {users.map((user) => (
-                                <CommandItem
-                                  key={user.id}
-                                  value={getUserDisplayName(user)}
-                                  onSelect={() => {
-                                    setFormData({ ...formData, user_id: user.id });
-                                    setOpenUserCombobox(false);
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      'mr-2 h-4 w-4',
-                                      formData.user_id === user.id ? 'opacity-100' : 'opacity-0'
-                                    )}
-                                  />
-                                  {getUserDisplayName(user)}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[300px] p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Cerca operaio..." />
+                            <CommandList>
+                              <CommandEmpty>Nessun operaio trovato.</CommandEmpty>
+                              <CommandGroup>
+                                {users.map((user) => (
+                                  <CommandItem
+                                    key={user.id}
+                                    value={getUserDisplayName(user)}
+                                    onSelect={() => {
+                                      setFormData({ ...formData, user_id: user.id });
+                                      setOpenUserCombobox(false);
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        'mr-2 h-4 w-4',
+                                        formData.user_id === user.id ? 'opacity-100' : 'opacity-0'
+                                      )}
+                                    />
+                                    {getUserDisplayName(user)}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                      {formData.user_id && (
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, user_id: '' })}
+                          className="absolute right-10 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Data */}
-                  <div className="space-y-2">
-                    <Label htmlFor="data_rapportino" className="text-foreground font-medium text-sm">
+                  <div>
+                    <Label htmlFor="data_rapportino" className="text-foreground font-medium text-sm mb-2 block">
                       Data Rapportino <span className="text-destructive">*</span>
                     </Label>
                     <div className="relative">
@@ -372,8 +383,8 @@ export function NuovoRapportinoModal({ onClose, onSuccess }: NuovoRapportinoModa
                   </div>
 
                   {/* Ore Lavorate */}
-                  <div className="space-y-2">
-                    <Label htmlFor="ore_lavorate" className="text-foreground font-medium text-sm">
+                  <div>
+                    <Label htmlFor="ore_lavorate" className="text-foreground font-medium text-sm mb-2 block">
                       Ore Lavorate <span className="text-destructive">*</span>
                     </Label>
                     <div className="relative">
@@ -395,65 +406,76 @@ export function NuovoRapportinoModal({ onClose, onSuccess }: NuovoRapportinoModa
                 </div>
 
                 {/* Commessa */}
-                <div className="space-y-2">
-                  <Label className="text-foreground font-medium text-sm">
+                <div>
+                  <Label className="text-foreground font-medium text-sm mb-2 block">
                     Commessa <span className="text-destructive">*</span>
                   </Label>
-                  <Popover open={openCommessaCombobox} onOpenChange={setOpenCommessaCombobox}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={openCommessaCombobox}
-                        className="h-11 w-full justify-between border-2 border-border bg-background"
-                      >
-                        <span className="flex items-center gap-2 truncate">
-                          <Briefcase className="h-4 w-4 shrink-0 text-muted-foreground" />
-                          <span className="truncate">
-                            {formData.commessa_id
-                              ? commesse.find((c) => c.id === formData.commessa_id)?.nome_commessa
-                              : 'Seleziona commessa...'}
+                  <div className="relative">
+                    <Popover open={openCommessaCombobox} onOpenChange={setOpenCommessaCombobox}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={openCommessaCombobox}
+                          className="h-11 w-full justify-between border-2 border-border bg-background"
+                        >
+                          <span className="flex items-center gap-2 truncate">
+                            <Briefcase className="h-4 w-4 shrink-0 text-muted-foreground" />
+                            <span className="truncate">
+                              {formData.commessa_id
+                                ? commesse.find((c) => c.id === formData.commessa_id)?.nome_commessa
+                                : 'Seleziona commessa...'}
+                            </span>
                           </span>
-                        </span>
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[500px] p-0" align="start">
-                      <Command>
-                        <CommandInput placeholder="Cerca commessa..." />
-                        <CommandList>
-                          <CommandEmpty>Nessuna commessa trovata.</CommandEmpty>
-                          <CommandGroup>
-                            {commesse.map((commessa) => (
-                              <CommandItem
-                                key={commessa.id}
-                                value={commessa.nome_commessa}
-                                onSelect={() => {
-                                  setFormData({ ...formData, commessa_id: commessa.id });
-                                  setOpenCommessaCombobox(false);
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    'mr-2 h-4 w-4',
-                                    formData.commessa_id === commessa.id ? 'opacity-100' : 'opacity-0'
-                                  )}
-                                />
-                                {commessa.nome_commessa}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[500px] p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Cerca commessa..." />
+                          <CommandList>
+                            <CommandEmpty>Nessuna commessa trovata.</CommandEmpty>
+                            <CommandGroup>
+                              {commesse.map((commessa) => (
+                                <CommandItem
+                                  key={commessa.id}
+                                  value={commessa.nome_commessa}
+                                  onSelect={() => {
+                                    setFormData({ ...formData, commessa_id: commessa.id });
+                                    setOpenCommessaCombobox(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      'mr-2 h-4 w-4',
+                                      formData.commessa_id === commessa.id ? 'opacity-100' : 'opacity-0'
+                                    )}
+                                  />
+                                  {commessa.nome_commessa}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    {formData.commessa_id && (
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, commessa_id: '' })}
+                        className="absolute right-10 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Row: Note + Upload File */}
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                   {/* Note - 3 colonne */}
-                  <div className="md:col-span-3 space-y-2">
-                    <Label htmlFor="note" className="text-foreground font-medium text-sm">Note</Label>
+                  <div className="md:col-span-3">
+                    <Label htmlFor="note" className="text-foreground font-medium text-sm mb-2 block">Note</Label>
                     <div className="relative">
                       <FileText className="absolute left-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
                       <Textarea
@@ -468,11 +490,11 @@ export function NuovoRapportinoModal({ onClose, onSuccess }: NuovoRapportinoModa
                   </div>
 
                   {/* Upload File - 2 colonne */}
-                  <div className="md:col-span-2 space-y-2">
-                    <Label className="text-foreground font-medium text-sm">Allegato</Label>
+                  <div className="md:col-span-2">
+                    <Label className="text-foreground font-medium text-sm mb-2 block">Allegato</Label>
                     <div
                       className={cn(
-                        'relative border-2 border-dashed rounded-lg p-4 transition-colors cursor-pointer h-[calc(100%-28px)]',
+                        'relative border-2 border-dashed rounded-lg p-4 transition-colors cursor-pointer h-[calc(5*1.5rem+2.5rem)]',
                         dragActive
                           ? 'border-primary bg-primary/5'
                           : 'border-border hover:border-primary/50 hover:bg-muted/50'
