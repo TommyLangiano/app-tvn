@@ -87,12 +87,7 @@ export default function NuovoUtentePage() {
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
-      <Breadcrumb
-        items={[
-          { label: 'Gestione Utenti', href: '/gestione-utenti' },
-          { label: 'Nuovo Utente' },
-        ]}
-      />
+      <Breadcrumb pageName="Nuovo Utente" />
 
       {/* Header */}
       <div className="flex items-center gap-4">
