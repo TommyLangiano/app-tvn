@@ -103,7 +103,7 @@ export default function AcceptInvitePage() {
         router.push('/dashboard');
       }, 1000);
 
-    } catch (err) {
+    } catch {
       toast.error('Errore nell\'impostazione della password');
     } finally {
       setLoading(false);
