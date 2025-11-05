@@ -156,7 +156,6 @@ export default function EditUserPage({ params }: { params: { id: string } }) {
             isEdit
             isSubmitting={isSubmitting}
             existingDocument={user.document_path}
-            userId={params.id}
           />
         </div>
       </div>
