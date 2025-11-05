@@ -369,7 +369,7 @@ export function UserForm({
         {/* Card Info Ruolo con Select integrato - Full Width in Edit Mode */}
         <div className={`${isEdit ? 'w-full' : 'grid grid-cols-1 lg:grid-cols-2 gap-4'}`}>
           <div className="rounded-xl border-2 border-border bg-card overflow-hidden">
-            <Select value={role} onValueChange={(val) => setValue('role', val)}>
+            <Select value={role} onValueChange={(val) => setValue('role', val as 'admin' | 'admin_readonly' | 'operaio' | 'billing_manager')}>
               <SelectTrigger className="h-auto p-4 border-0 border-b rounded-none hover:bg-accent/50 transition-colors [&>svg]:hidden">
                 <div className="w-full flex items-center justify-between">
                   <div className="flex items-start gap-3 flex-1">
