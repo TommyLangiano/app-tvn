@@ -6,7 +6,6 @@
 
 'use client';
 
-import { getUserInitials } from '@/lib/users/profiles';
 import type { UserListItem, UserWithProfile } from '@/types/user-profile';
 
 interface UserAvatarProps {
@@ -23,11 +22,22 @@ const SIZES = {
   '2xl': 'h-20 w-20 text-xl',
 };
 
+function getInitials(user: { full_name?: string; email: string }): string {
+  const name = user.full_name || user.email;
+  const parts = name.split(/\s+/);
+
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+
+  return name.slice(0, 2).toUpperCase();
+}
+
 export function UserAvatar({ user, size = 'md', className = '' }: UserAvatarProps) {
   const sizeClass = SIZES[size];
 
   // Fallback to initials (avatar_url not implemented yet)
-  const initials = getUserInitials(user);
+  const initials = getInitials(user);
 
   return (
     <div
