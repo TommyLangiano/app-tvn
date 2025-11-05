@@ -87,20 +87,20 @@ export default function NuovaCommessaPage() {
         delete dataToInsert.cup;
       }
 
-      // Insert and get the created commessa with slug
+      // Insert and get the created commessa with id
       const { data: newCommessa, error } = await supabase
         .from('commesse')
         .insert(dataToInsert)
-        .select('slug')
+        .select('id')
         .single();
 
       if (error) throw error;
 
       toast.success('Commessa creata con successo!');
 
-      // Redirect to the new commessa detail page using slug
-      if (newCommessa?.slug) {
-        router.push(`/commesse/${newCommessa.slug}`);
+      // Redirect to the new commessa detail page using id
+      if (newCommessa?.id) {
+        router.push(`/commesse/${newCommessa.id}`);
       } else {
         router.push('/commesse');
       }
