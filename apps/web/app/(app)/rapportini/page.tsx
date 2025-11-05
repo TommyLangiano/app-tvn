@@ -30,13 +30,27 @@ const MESI = [
   'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
 ];
 
+type User = {
+  id: string;
+  email: string;
+  role: string;
+  user_metadata?: {
+    full_name?: string;
+  };
+};
+
+type Commessa = {
+  id: string;
+  nome_commessa: string;
+};
+
 export default function RapportiniPage() {
   const [loading, setLoading] = useState(true);
   const [rapportini, setRapportini] = useState<Rapportino[]>([]);
 
   // Data for modal
-  const [users, setUsers] = useState<any[]>([]);
-  const [commesse, setCommesse] = useState<any[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [commesse, setCommesse] = useState<Commessa[]>([]);
 
   // Month navigation state
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -100,7 +114,7 @@ export default function RapportiniPage() {
     const response = await fetch('/api/users');
     if (response.ok) {
       const { users: usersData } = await response.json();
-      const operai = (usersData || []).filter((u: any) => u.role === 'operaio');
+      const operai = (usersData || []).filter((u: User) => u.role === 'operaio');
       setUsers(operai);
     }
 
