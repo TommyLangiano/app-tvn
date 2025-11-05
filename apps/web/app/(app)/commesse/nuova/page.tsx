@@ -49,10 +49,11 @@ export default function NuovaCommessaPage() {
         .from('user_tenants')
         .select('tenant_id')
         .eq('user_id', user.id)
-        .single();
+        .order('created_at', { ascending: false })
+        .limit(1);
 
-      if (userTenants) {
-        setTenantId(userTenants.tenant_id);
+      if (userTenants && userTenants.length > 0) {
+        setTenantId(userTenants[0].tenant_id);
       }
     } catch {
 
