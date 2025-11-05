@@ -295,15 +295,8 @@ export function NuovoRapportinoModal({ onClose, onSuccess }: NuovoRapportinoModa
             </div>
           ) : (
             <div className="space-y-6">
-              {/* Sezione Dati Principali */}
+              {/* Card Unica */}
               <div className="space-y-6 p-6 rounded-xl border-2 border-border bg-card shadow-sm">
-                <div className="border-b-2 border-border pb-3">
-                  <h3 className="text-lg font-semibold">Dati Principali</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Informazioni base del rapportino
-                  </p>
-                </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {/* Operaio */}
                   <div className="space-y-2">
@@ -456,85 +449,82 @@ export function NuovoRapportinoModal({ onClose, onSuccess }: NuovoRapportinoModa
                   </Popover>
                 </div>
 
-                {/* Note */}
-                <div className="space-y-2">
-                  <Label htmlFor="note" className="text-foreground font-medium text-sm">Note</Label>
-                  <div className="relative">
-                    <FileText className="absolute left-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
-                    <Textarea
-                      id="note"
-                      placeholder="Eventuali note sul rapportino..."
-                      rows={3}
-                      value={formData.note}
-                      onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-                      className="border-2 border-border bg-background pl-10 resize-none"
-                    />
+                {/* Row: Note + Upload File */}
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+                  {/* Note - 3 colonne */}
+                  <div className="md:col-span-3 space-y-2">
+                    <Label htmlFor="note" className="text-foreground font-medium text-sm">Note</Label>
+                    <div className="relative">
+                      <FileText className="absolute left-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+                      <Textarea
+                        id="note"
+                        placeholder="Eventuali note sul rapportino..."
+                        rows={5}
+                        value={formData.note}
+                        onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+                        className="border-2 border-border bg-background pl-10 resize-none"
+                      />
+                    </div>
                   </div>
-                </div>
-              </div>
 
-              {/* Sezione Upload */}
-              <div className="space-y-6 p-6 rounded-xl border-2 border-border bg-card shadow-sm">
-                <div className="border-b-2 border-border pb-3">
-                  <h3 className="text-lg font-semibold">Allegato</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Carica un file opzionale (PDF, JPG, PNG)
-                  </p>
-                </div>
-
-                <div
-                  className={cn(
-                    'relative border-2 border-dashed rounded-lg p-8 transition-colors cursor-pointer',
-                    dragActive
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border hover:border-primary/50 hover:bg-muted/50'
-                  )}
-                  onDragEnter={handleDrag}
-                  onDragLeave={handleDrag}
-                  onDragOver={handleDrag}
-                  onDrop={handleDrop}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    className="hidden"
-                    onChange={handleFileChange}
-                    accept=".pdf,.jpg,.jpeg,.png"
-                  />
-                  <div className="text-center">
-                    <Upload className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
-                    {selectedFile ? (
-                      <>
-                        <p className="text-sm font-medium text-foreground mb-1">
-                          {selectedFile.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground mb-3">
-                          {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                        </p>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedFile(null);
-                          }}
-                          className="h-9 border-2"
-                        >
-                          Rimuovi file
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-sm text-foreground mb-1">
-                          Trascina qui il tuo file o <span className="text-primary font-medium">clicca per selezionare</span>
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          PDF, JPG, PNG fino a 10MB
-                        </p>
-                      </>
-                    )}
+                  {/* Upload File - 2 colonne */}
+                  <div className="md:col-span-2 space-y-2">
+                    <Label className="text-foreground font-medium text-sm">Allegato</Label>
+                    <div
+                      className={cn(
+                        'relative border-2 border-dashed rounded-lg p-4 transition-colors cursor-pointer h-[calc(100%-28px)]',
+                        dragActive
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                      )}
+                      onDragEnter={handleDrag}
+                      onDragLeave={handleDrag}
+                      onDragOver={handleDrag}
+                      onDrop={handleDrop}
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        className="hidden"
+                        onChange={handleFileChange}
+                        accept=".pdf,.jpg,.jpeg,.png"
+                      />
+                      <div className="text-center h-full flex flex-col items-center justify-center">
+                        <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                        {selectedFile ? (
+                          <>
+                            <p className="text-sm font-medium text-foreground mb-1 truncate max-w-full px-2">
+                              {selectedFile.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground mb-2">
+                              {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                            </p>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedFile(null);
+                              }}
+                              className="h-8 text-xs border-2"
+                            >
+                              Rimuovi
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-xs text-foreground mb-1 px-2">
+                              Trascina o <span className="text-primary font-medium">clicca</span>
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              PDF, JPG, PNG (max 10MB)
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
