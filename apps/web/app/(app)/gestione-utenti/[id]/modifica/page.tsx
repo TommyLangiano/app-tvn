@@ -109,6 +109,9 @@ export default function EditUserPage({ params }: { params: { id: string } }) {
   }
 
   // Prepare default values for form
+  // Map owner to admin for form (owner role can't be changed via form)
+  const formRole = user.role === 'owner' ? 'admin' : user.role;
+
   const defaultValues: Partial<UserFormData> = {
     email: user.email,
     first_name: user.full_name?.split(' ')[0] || '',
@@ -116,7 +119,7 @@ export default function EditUserPage({ params }: { params: { id: string } }) {
     phone: user.phone || '',
     position: user.position || '',
     notes: user.notes || '',
-    role: user.role,
+    role: formRole as 'admin' | 'admin_readonly' | 'operaio' | 'billing_manager',
     birth_date: user.birth_date || '',
     hire_date: user.hire_date || '',
     medical_checkup_date: user.medical_checkup_date || '',
