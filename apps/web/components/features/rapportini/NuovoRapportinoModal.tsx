@@ -92,8 +92,15 @@ export function NuovoRapportinoModal({ onClose, onSuccess }: NuovoRapportinoModa
       const response = await fetch('/api/users');
       if (response.ok) {
         const { users: usersData } = await response.json();
+
+        // DEBUG: Log all users and their roles
+        console.log('🔍 ALL USERS from API:', usersData);
+        console.log('🔍 User roles:', usersData.map((u: User) => ({ email: u.email, role: u.role })));
+
         // Filter only users with role 'operaio'
         const operai = (usersData || []).filter((u: User) => u.role === 'operaio');
+        console.log('✅ FILTERED OPERAI:', operai);
+
         setUsers(operai);
       }
 
@@ -247,7 +254,7 @@ export function NuovoRapportinoModal({ onClose, onSuccess }: NuovoRapportinoModa
 
   return (
     <ModalWrapper onClose={onClose}>
-      <div className="max-w-4xl w-full max-h-[90vh] overflow-y-auto rounded-xl border-2 border-border bg-card shadow-lg animate-in zoom-in-95 duration-200">
+      <div className="max-w-4xl w-full mx-auto max-h-[90vh] overflow-y-auto rounded-xl border-2 border-border bg-card shadow-lg animate-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b-2 border-border sticky top-0 bg-card z-10">
           <div>
