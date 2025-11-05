@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { X, Upload, Briefcase, Calendar, Clock, RotateCcw, FileText, User as UserIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { ModalWrapper } from '@/components/common/ModalWrapper';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import { Check, ChevronsUpDown } from 'lucide-react';
@@ -33,6 +34,7 @@ interface NuovoRapportinoModalProps {
 type User = {
   id: string;
   email: string;
+  role: string;
   user_metadata?: {
     full_name?: string;
   };
@@ -40,8 +42,7 @@ type User = {
 
 type Commessa = {
   id: string;
-  titolo: string;
-  slug: string;
+  nome_commessa: string;
 };
 
 const initialFormData: RapportinoFormData = {
@@ -62,6 +63,7 @@ export function NuovoRapportinoModal({ onClose, onSuccess }: NuovoRapportinoModa
   const [loadingData, setLoadingData] = useState(true);
   const [openUserCombobox, setOpenUserCombobox] = useState(false);
   const [openCommessaCombobox, setOpenCommessaCombobox] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadData();
@@ -80,26 +82,27 @@ export function NuovoRapportinoModal({ onClose, onSuccess }: NuovoRapportinoModa
         .from('user_tenants')
         .select('tenant_id')
         .eq('user_id', user.id)
-        .single();
+        .order('created_at', { ascending: false })
+        .limit(1);
 
-      if (!userTenants) return;
+      const userTenant = userTenants && userTenants.length > 0 ? userTenants[0] : null;
+      if (!userTenant) return;
 
       // Load users from API route - filter only operaio role
       const response = await fetch('/api/users');
       if (response.ok) {
         const { users: usersData } = await response.json();
         // Filter only users with role 'operaio'
-        const operai = (usersData || []).filter((u: { role: string }) => u.role === 'operaio');
+        const operai = (usersData || []).filter((u: User) => u.role === 'operaio');
         setUsers(operai);
       }
 
       // Load commesse
       const { data: commesseData } = await supabase
         .from('commesse')
-        .select('id, titolo, slug')
-        .eq('tenant_id', userTenants.tenant_id)
-        .eq('archiviata', false)
-        .order('titolo');
+        .select('id, nome_commessa')
+        .eq('tenant_id', userTenant.tenant_id)
+        .order('nome_commessa');
 
       if (commesseData) {
         setCommesse(commesseData);
@@ -183,9 +186,11 @@ export function NuovoRapportinoModal({ onClose, onSuccess }: NuovoRapportinoModa
         .from('user_tenants')
         .select('tenant_id')
         .eq('user_id', user.id)
-        .single();
+        .order('created_at', { ascending: false })
+        .limit(1);
 
-      if (!userTenants) throw new Error('No tenant found');
+      const userTenant = userTenants && userTenants.length > 0 ? userTenants[0] : null;
+      if (!userTenant) throw new Error('No tenant found');
 
       let allegato_url = null;
 
@@ -193,7 +198,7 @@ export function NuovoRapportinoModal({ onClose, onSuccess }: NuovoRapportinoModa
       if (selectedFile) {
         const fileExt = selectedFile.name.split('.').pop();
         const fileName = `${Date.now()}.${fileExt}`;
-        const filePath = `${userTenants.tenant_id}/rapportini/${formData.user_id}/${fileName}`;
+        const filePath = `${userTenant.tenant_id}/rapportini/${formData.user_id}/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
           .from('fatture-documents')
@@ -213,7 +218,7 @@ export function NuovoRapportinoModal({ onClose, onSuccess }: NuovoRapportinoModa
       const { error } = await supabase
         .from('rapportini')
         .insert({
-          tenant_id: userTenants.tenant_id,
+          tenant_id: userTenant.tenant_id,
           user_id: formData.user_id,
           user_name,
           user_email,
@@ -241,38 +246,32 @@ export function NuovoRapportinoModal({ onClose, onSuccess }: NuovoRapportinoModa
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      />
-
-      {/* Modal */}
-      <div className="relative z-10 w-full max-w-4xl max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
-        <div
-          className="bg-background rounded-xl border-2 border-border shadow-lg"
-          onClick={(e) => e.stopPropagation()}
-        >
+    <ModalWrapper onClose={onClose}>
+      <div className="max-w-4xl w-full max-h-[90vh] overflow-y-auto rounded-xl border-2 border-border bg-card shadow-lg animate-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 sm:p-6 border-b-2 border-border">
-          <h2 className="text-xl font-bold">Nuovo Rapportino</h2>
+        <div className="flex items-center justify-between p-6 border-b-2 border-border sticky top-0 bg-card z-10">
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold">Nuovo Rapportino</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Compila i dati del rapportino giornaliero
+            </p>
+          </div>
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
               onClick={handleReset}
-              className="h-8 border-2 gap-1.5"
+              className="h-9 border-2 gap-1.5"
               type="button"
             >
-              <RotateCcw className="h-3.5 w-3.5" />
-              <span className="text-xs">Reset Dati</span>
+              <RotateCcw className="h-4 w-4" />
+              <span className="hidden sm:inline">Reset</span>
             </Button>
             <Button
               variant="outline"
               size="icon"
               onClick={onClose}
-              className="h-8 w-8 border-2"
+              className="h-9 w-9 border-2"
               type="button"
             >
               <X className="h-4 w-4" />
@@ -281,59 +280,166 @@ export function NuovoRapportinoModal({ onClose, onSuccess }: NuovoRapportinoModa
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-4 sm:p-6">
+        <form onSubmit={handleSubmit} className="p-6">
           {loadingData ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Caricamento...
+            <div className="text-center py-12 text-muted-foreground">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-3"></div>
+              Caricamento dati...
             </div>
           ) : (
-            <div className="space-y-4 sm:space-y-6">
-              {/* Row 1: Operaio, Data, Ore Lavorate */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                {/* Operaio */}
+            <div className="space-y-6">
+              {/* Sezione Dati Principali */}
+              <div className="space-y-6 p-6 rounded-xl border-2 border-border bg-card shadow-sm">
+                <div className="border-b-2 border-border pb-3">
+                  <h3 className="text-lg font-semibold">Dati Principali</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Informazioni base del rapportino
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Operaio */}
+                  <div className="space-y-2">
+                    <Label className="text-foreground font-medium text-sm">
+                      Operaio <span className="text-destructive">*</span>
+                    </Label>
+                    <Popover open={openUserCombobox} onOpenChange={setOpenUserCombobox}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={openUserCombobox}
+                          className="h-11 w-full justify-between border-2 border-border bg-background"
+                        >
+                          <span className="flex items-center gap-2 truncate">
+                            <UserIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                            <span className="truncate">
+                              {formData.user_id
+                                ? getUserDisplayName(users.find((u) => u.id === formData.user_id)!)
+                                : 'Seleziona operaio...'}
+                            </span>
+                          </span>
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[300px] p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Cerca operaio..." />
+                          <CommandList>
+                            <CommandEmpty>Nessun operaio trovato.</CommandEmpty>
+                            <CommandGroup>
+                              {users.map((user) => (
+                                <CommandItem
+                                  key={user.id}
+                                  value={getUserDisplayName(user)}
+                                  onSelect={() => {
+                                    setFormData({ ...formData, user_id: user.id });
+                                    setOpenUserCombobox(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      'mr-2 h-4 w-4',
+                                      formData.user_id === user.id ? 'opacity-100' : 'opacity-0'
+                                    )}
+                                  />
+                                  {getUserDisplayName(user)}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  {/* Data */}
+                  <div className="space-y-2">
+                    <Label htmlFor="data_rapportino" className="text-foreground font-medium text-sm">
+                      Data Rapportino <span className="text-destructive">*</span>
+                    </Label>
+                    <div className="relative">
+                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                      <Input
+                        id="data_rapportino"
+                        type="date"
+                        value={formData.data_rapportino}
+                        onChange={(e) => setFormData({ ...formData, data_rapportino: e.target.value })}
+                        className="h-11 border-2 border-border bg-background pl-10"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {/* Ore Lavorate */}
+                  <div className="space-y-2">
+                    <Label htmlFor="ore_lavorate" className="text-foreground font-medium text-sm">
+                      Ore Lavorate <span className="text-destructive">*</span>
+                    </Label>
+                    <div className="relative">
+                      <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                      <Input
+                        id="ore_lavorate"
+                        type="number"
+                        step="0.5"
+                        min="0"
+                        max="24"
+                        placeholder="8"
+                        value={formData.ore_lavorate}
+                        onChange={(e) => setFormData({ ...formData, ore_lavorate: e.target.value })}
+                        className="h-11 border-2 border-border bg-background pl-10"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Commessa */}
                 <div className="space-y-2">
-                  <Label>
-                    Operaio <span className="text-destructive">*</span>
+                  <Label className="text-foreground font-medium text-sm">
+                    Commessa <span className="text-destructive">*</span>
                   </Label>
-                  <Popover open={openUserCombobox} onOpenChange={setOpenUserCombobox}>
+                  <Popover open={openCommessaCombobox} onOpenChange={setOpenCommessaCombobox}>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
                         role="combobox"
-                        aria-expanded={openUserCombobox}
-                        className="h-11 w-full justify-between border-2 border-border"
+                        aria-expanded={openCommessaCombobox}
+                        className="h-11 w-full justify-between border-2 border-border bg-background"
                       >
-                        <span className="flex items-center gap-2">
-                          <UserIcon className="h-4 w-4 shrink-0" />
-                          {formData.user_id
-                            ? getUserDisplayName(users.find((u) => u.id === formData.user_id)!)
-                            : 'Seleziona operaio...'}
+                        <span className="flex items-center gap-2 truncate">
+                          <Briefcase className="h-4 w-4 shrink-0 text-muted-foreground" />
+                          <span className="truncate">
+                            {formData.commessa_id
+                              ? commesse.find((c) => c.id === formData.commessa_id)?.nome_commessa
+                              : 'Seleziona commessa...'}
+                          </span>
                         </span>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-[300px] p-0" align="start">
+                    <PopoverContent className="w-[500px] p-0" align="start">
                       <Command>
-                        <CommandInput placeholder="Cerca operaio..." />
+                        <CommandInput placeholder="Cerca commessa..." />
                         <CommandList>
-                          <CommandEmpty>Nessun operaio trovato.</CommandEmpty>
+                          <CommandEmpty>Nessuna commessa trovata.</CommandEmpty>
                           <CommandGroup>
-                            {users.map((user) => (
+                            {commesse.map((commessa) => (
                               <CommandItem
-                                key={user.id}
-                                value={getUserDisplayName(user)}
+                                key={commessa.id}
+                                value={commessa.nome_commessa}
                                 onSelect={() => {
-                                  setFormData({ ...formData, user_id: user.id });
-                                  setOpenUserCombobox(false);
+                                  setFormData({ ...formData, commessa_id: commessa.id });
+                                  setOpenCommessaCombobox(false);
                                 }}
                               >
                                 <Check
                                   className={cn(
                                     'mr-2 h-4 w-4',
-                                    formData.user_id === user.id ? 'opacity-100' : 'opacity-0'
+                                    formData.commessa_id === commessa.id ? 'opacity-100' : 'opacity-0'
                                   )}
                                 />
-                                {getUserDisplayName(user)}
+                                {commessa.nome_commessa}
                               </CommandItem>
                             ))}
                           </CommandGroup>
@@ -343,146 +449,60 @@ export function NuovoRapportinoModal({ onClose, onSuccess }: NuovoRapportinoModa
                   </Popover>
                 </div>
 
-                {/* Data */}
+                {/* Note */}
                 <div className="space-y-2">
-                  <Label htmlFor="data_rapportino">
-                    Data Rapportino <span className="text-destructive">*</span>
-                  </Label>
+                  <Label htmlFor="note" className="text-foreground font-medium text-sm">Note</Label>
                   <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                    <Input
-                      id="data_rapportino"
-                      type="date"
-                      value={formData.data_rapportino}
-                      onChange={(e) => setFormData({ ...formData, data_rapportino: e.target.value })}
-                      className="h-11 border-2 border-border pl-10"
-                      required
-                    />
-                  </div>
-                </div>
-
-                {/* Ore Lavorate */}
-                <div className="space-y-2">
-                  <Label htmlFor="ore_lavorate">
-                    Ore Lavorate <span className="text-destructive">*</span>
-                  </Label>
-                  <div className="relative">
-                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                    <Input
-                      id="ore_lavorate"
-                      type="number"
-                      step="0.5"
-                      min="0"
-                      max="24"
-                      placeholder="8"
-                      value={formData.ore_lavorate}
-                      onChange={(e) => setFormData({ ...formData, ore_lavorate: e.target.value })}
-                      className="h-11 border-2 border-border pl-10"
-                      required
+                    <FileText className="absolute left-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+                    <Textarea
+                      id="note"
+                      placeholder="Eventuali note sul rapportino..."
+                      rows={3}
+                      value={formData.note}
+                      onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+                      className="border-2 border-border bg-background pl-10 resize-none"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Row 2: Commessa */}
-              <div className="space-y-2">
-                <Label>
-                  Commessa <span className="text-destructive">*</span>
-                </Label>
-                <Popover open={openCommessaCombobox} onOpenChange={setOpenCommessaCombobox}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={openCommessaCombobox}
-                      className="h-11 w-full justify-between border-2 border-border"
-                    >
-                      <span className="flex items-center gap-2">
-                        <Briefcase className="h-4 w-4 shrink-0" />
-                        {formData.commessa_id
-                          ? commesse.find((c) => c.id === formData.commessa_id)?.titolo
-                          : 'Seleziona commessa...'}
-                      </span>
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[500px] p-0" align="start">
-                    <Command>
-                      <CommandInput placeholder="Cerca commessa..." />
-                      <CommandList>
-                        <CommandEmpty>Nessuna commessa trovata.</CommandEmpty>
-                        <CommandGroup>
-                          {commesse.map((commessa) => (
-                            <CommandItem
-                              key={commessa.id}
-                              value={commessa.titolo}
-                              onSelect={() => {
-                                setFormData({ ...formData, commessa_id: commessa.id });
-                                setOpenCommessaCombobox(false);
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  'mr-2 h-4 w-4',
-                                  formData.commessa_id === commessa.id ? 'opacity-100' : 'opacity-0'
-                                )}
-                              />
-                              {commessa.titolo}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              {/* Row 3: Note */}
-              <div className="space-y-2">
-                <Label htmlFor="note">Note</Label>
-                <div className="relative">
-                  <FileText className="absolute left-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
-                  <Textarea
-                    id="note"
-                    placeholder="Eventuali note sul rapportino..."
-                    rows={3}
-                    value={formData.note}
-                    onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-                    className="border-2 border-border pl-10 resize-none"
-                  />
+              {/* Sezione Upload */}
+              <div className="space-y-6 p-6 rounded-xl border-2 border-border bg-card shadow-sm">
+                <div className="border-b-2 border-border pb-3">
+                  <h3 className="text-lg font-semibold">Allegato</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Carica un file opzionale (PDF, JPG, PNG)
+                  </p>
                 </div>
-              </div>
 
-              {/* Row 4: File Upload */}
-              <div className="space-y-2">
-                <Label>Carica File</Label>
                 <div
                   className={cn(
-                    'relative border-2 border-dashed rounded-lg p-6 transition-colors',
+                    'relative border-2 border-dashed rounded-lg p-8 transition-colors cursor-pointer',
                     dragActive
                       ? 'border-primary bg-primary/5'
-                      : 'border-border hover:border-primary/50'
+                      : 'border-border hover:border-primary/50 hover:bg-muted/50'
                   )}
                   onDragEnter={handleDrag}
                   onDragLeave={handleDrag}
                   onDragOver={handleDrag}
                   onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
                 >
                   <input
+                    ref={fileInputRef}
                     type="file"
-                    id="file-upload"
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    className="hidden"
                     onChange={handleFileChange}
                     accept=".pdf,.jpg,.jpeg,.png"
                   />
                   <div className="text-center">
-                    <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+                    <Upload className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
                     {selectedFile ? (
                       <>
                         <p className="text-sm font-medium text-foreground mb-1">
                           {selectedFile.name}
                         </p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-muted-foreground mb-3">
                           {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
                         </p>
                         <Button
@@ -493,15 +513,15 @@ export function NuovoRapportinoModal({ onClose, onSuccess }: NuovoRapportinoModa
                             e.stopPropagation();
                             setSelectedFile(null);
                           }}
-                          className="mt-2 h-8 text-xs"
+                          className="h-9 border-2"
                         >
                           Rimuovi file
                         </Button>
                       </>
                     ) : (
                       <>
-                        <p className="text-sm text-muted-foreground mb-1">
-                          Trascina qui il tuo file o <span className="text-primary">clicca per selezionare</span>
+                        <p className="text-sm text-foreground mb-1">
+                          Trascina qui il tuo file o <span className="text-primary font-medium">clicca per selezionare</span>
                         </p>
                         <p className="text-xs text-muted-foreground">
                           PDF, JPG, PNG fino a 10MB
@@ -514,28 +534,27 @@ export function NuovoRapportinoModal({ onClose, onSuccess }: NuovoRapportinoModa
             </div>
           )}
 
-          {/* Footer */}
+          {/* Footer Actions */}
           <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-6 mt-6 border-t-2 border-border">
             <Button
               type="button"
               variant="outline"
               onClick={onClose}
               disabled={loading}
-              className="border-2"
+              className="border-2 h-11 px-6 font-semibold"
             >
               Annulla
             </Button>
             <Button
               type="submit"
               disabled={loading || loadingData}
-              className="border-2"
+              className="h-11 px-6 font-semibold"
             >
-              {loading ? 'Creazione...' : 'Crea Rapportino'}
+              {loading ? 'Creazione in corso...' : 'Crea Rapportino'}
             </Button>
           </div>
         </form>
-        </div>
       </div>
-    </div>
+    </ModalWrapper>
   );
 }

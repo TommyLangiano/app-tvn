@@ -21,24 +21,25 @@ export async function GET() {
       return NextResponse.json({ error: 'No tenant found' }, { status: 404 });
     }
 
-    // Load users from tenant
+    // Load users from tenant with roles
     const { data: tenantUsers } = await supabase
       .from('user_tenants')
-      .select('user_id')
+      .select('user_id, role')
       .eq('tenant_id', userTenants.tenant_id);
 
     if (!tenantUsers) {
       return NextResponse.json({ users: [] });
     }
 
-    // Fetch user details using admin API
+    // Fetch user details using admin API and merge with role
     const usersData = await Promise.all(
       tenantUsers.map(async (ut) => {
         const { data, error } = await supabase.auth.admin.getUserById(ut.user_id);
         if (error) {
           return null;
         }
-        return data?.user;
+        // Merge auth user data with role from user_tenants
+        return data?.user ? { ...data.user, role: ut.role } : null;
       })
     );
 
