@@ -373,7 +373,7 @@ export default function MovimentiPage() {
         <Button
           variant="outline"
           size="icon"
-          onClick={() => router.back()}
+          onClick={() => router.push(`/commesse/${slug}`)}
           className="h-10 w-10 border-2 border-border"
         >
           <ArrowLeft className="h-5 w-5" />
