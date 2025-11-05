@@ -122,100 +122,117 @@ function AcceptInviteContent() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md">
-        <div className="rounded-xl border-2 border-border bg-card p-8 shadow-sm">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4 sm:p-6">
+      <div className="w-full max-w-2xl">
+        <div className="rounded-xl border-2 border-border bg-card shadow-sm">
           {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold mb-2">Benvenuto!</h1>
+          <div className="border-b-2 border-border bg-card p-6 sm:p-8">
+            <h1 className="text-2xl sm:text-3xl font-bold mb-2">Benvenuto! 👋</h1>
             <p className="text-muted-foreground">
-              Sei stato invitato a unirsi alla piattaforma
+              Sei stato invitato a unirti alla piattaforma
             </p>
             {email && (
-              <p className="text-sm text-muted-foreground mt-2">
-                Account: <span className="font-medium">{email}</span>
-              </p>
+              <div className="mt-4 p-3 rounded-lg bg-blue-50 border-2 border-blue-200">
+                <p className="text-sm font-medium text-blue-900">
+                  Account: <span className="font-bold">{email}</span>
+                </p>
+              </div>
             )}
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSetPassword} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="password">Imposta la tua password</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Minimo 8 caratteri"
-                  required
-                  className="pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </button>
+          <form onSubmit={handleSetPassword} className="p-6 sm:p-8 space-y-6">
+            {/* Sezione Password */}
+            <div className="space-y-6 p-6 rounded-xl border-2 border-border bg-card shadow-sm">
+              <div className="border-b-2 border-border pb-3">
+                <h3 className="text-lg font-semibold">Imposta la tua Password</h3>
+                <p className="text-sm text-muted-foreground">
+                  Scegli una password sicura per il tuo account
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground">
-                La password deve contenere almeno 8 caratteri
-              </p>
+
+              {/* Password */}
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-foreground font-medium text-sm">
+                  Password <span className="text-destructive">*</span>
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Minimo 8 caratteri"
+                    required
+                    className="h-11 bg-background border-2 border-border rounded-lg px-4 text-base pr-12"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1 rounded"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  La password deve contenere almeno 8 caratteri
+                </p>
+              </div>
+
+              {/* Conferma Password */}
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword" className="text-foreground font-medium text-sm">
+                  Conferma Password <span className="text-destructive">*</span>
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Ripeti la password"
+                    required
+                    className="h-11 bg-background border-2 border-border rounded-lg px-4 text-base pr-12"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1 rounded"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Conferma password</Label>
-              <div className="relative">
-                <Input
-                  id="confirmPassword"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Ripeti la password"
-                  required
-                  className="pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full h-11 text-base font-semibold"
-            >
-              {loading ? 'Impostazione in corso...' : 'Imposta password e accedi'}
-            </Button>
-          </form>
-
-          {/* Footer */}
-          <div className="mt-6 text-center text-sm text-muted-foreground">
-            <p>
-              Hai già un account?{' '}
-              <button
+            {/* Actions */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <Button
+                type="button"
+                variant="outline"
                 onClick={() => router.push('/sign-in')}
-                className="text-primary hover:underline font-medium"
+                disabled={loading}
+                className="flex-1 sm:flex-initial border-2 border-border h-11 px-6 font-semibold"
               >
-                Accedi qui
-              </button>
-            </p>
-          </div>
+                Ho già un account
+              </Button>
+              <Button
+                type="submit"
+                disabled={loading}
+                className="flex-1 h-11 px-6 text-base font-semibold"
+              >
+                {loading ? 'Impostazione in corso...' : 'Imposta password e accedi'}
+              </Button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
