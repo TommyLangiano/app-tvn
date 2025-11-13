@@ -105,24 +105,6 @@ export function CommessaCard({ commessa, margineLordo = 0 }: CommessaCardProps) 
     return '*'.repeat(length);
   };
 
-  const formatImporto = (value?: number) => {
-    if (!value) return 'N/D';
-    return new Intl.NumberFormat('it-IT', {
-      style: 'currency',
-      currency: 'EUR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(value);
-  };
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'N/D';
-    return new Date(dateString).toLocaleDateString('it-IT', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  };
 
   return (
     <div

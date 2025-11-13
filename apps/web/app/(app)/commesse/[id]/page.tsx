@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, MapPin, Edit, Trash2, Plus, TrendingUp, TrendingDown, FileText, Users, FolderOpen, Info, Settings, Search, ArrowUpCircle, ArrowDownCircle, Pencil, ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, X, MoreVertical } from 'lucide-react';
+import { MapPin, Edit, Trash2, Plus, TrendingUp, TrendingDown, FileText, Users, FolderOpen, Info, Settings, Search, ArrowUpCircle, ArrowDownCircle, ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, X, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
@@ -50,7 +50,7 @@ export default function CommessaDetailPage() {
   const [periodoFiltro, setPeriodoFiltro] = useState<string>('tutti');
   const [rangeImportoFiltro, setRangeImportoFiltro] = useState<string>('tutti');
   const [ordinamento, setOrdinamento] = useState<'data_desc' | 'data_asc' | 'importo_desc' | 'importo_asc' | 'cliente_asc' | 'cliente_desc' | 'stato_asc' | 'stato_desc'>('data_desc');
-  const [selectedMovimento, setSelectedMovimento] = useState<any>(null);
+  const [selectedMovimento, setSelectedMovimento] = useState<Movimento | null>(null);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteMovimentoModal, setShowDeleteMovimentoModal] = useState(false);
