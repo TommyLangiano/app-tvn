@@ -146,7 +146,7 @@ export default function OnboardingStep1() {
             <Building2 className="h-6 w-6" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-foreground">Dati dell'Azienda</h2>
+            <h2 className="text-2xl font-bold text-foreground">Dati dell&apos;Azienda</h2>
             <p className="text-sm text-muted">
               Completa i dati fiscali e legali della tua azienda
             </p>

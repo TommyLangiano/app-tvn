@@ -275,7 +275,7 @@ export default function OnboardingStep2() {
         <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
           <p className="text-sm text-foreground">
             <strong>💡 Suggerimento:</strong> Il logo verrà utilizzato in fatture, documenti,
-            email e nell'interfaccia dell'applicazione. Puoi sempre modificarlo successivamente
+            email e nell&apos;interfaccia dell&apos;applicazione. Puoi sempre modificarlo successivamente
             dalle impostazioni aziendali.
           </p>
         </div>
