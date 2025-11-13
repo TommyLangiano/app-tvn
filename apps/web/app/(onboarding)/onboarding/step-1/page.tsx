@@ -132,7 +132,8 @@ export default function OnboardingStep1() {
 
     } catch (error: unknown) {
       console.error('Error saving data:', error);
-      toast.error(error.message || 'Errore nel salvataggio');
+      const errorMessage = error instanceof Error ? error.message : 'Errore nel salvataggio';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

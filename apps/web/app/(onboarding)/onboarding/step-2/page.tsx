@@ -120,7 +120,8 @@ export default function OnboardingStep2() {
 
     } catch (error: unknown) {
       console.error('Error uploading logo:', error);
-      toast.error(error.message || 'Errore nel caricamento del logo');
+      const errorMessage = error instanceof Error ? error.message : 'Errore nel caricamento del logo';
+      toast.error(errorMessage);
       setPreviewUrl('');
     } finally {
       setUploading(false);
@@ -159,7 +160,8 @@ export default function OnboardingStep2() {
 
     } catch (error: unknown) {
       console.error('Error completing onboarding:', error);
-      toast.error(error.message || 'Errore nel completamento');
+      const errorMessage = error instanceof Error ? error.message : 'Errore nel completamento';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -188,7 +190,8 @@ export default function OnboardingStep2() {
 
     } catch (error: unknown) {
       console.error('Error completing onboarding:', error);
-      toast.error(error.message || 'Errore nel completamento');
+      const errorMessage = error instanceof Error ? error.message : 'Errore nel completamento';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

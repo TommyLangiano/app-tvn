@@ -51,7 +51,8 @@ export default function SignupPage() {
 
     } catch (error: unknown) {
       console.error('Signup error:', error);
-      toast.error(error.message || 'Errore durante la registrazione');
+      const errorMessage = error instanceof Error ? error.message : 'Errore durante la registrazione';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
