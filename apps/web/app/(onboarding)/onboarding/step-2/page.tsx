@@ -118,7 +118,7 @@ export default function OnboardingStep2() {
       setLogoUrl(urlData.publicUrl);
       toast.success('Logo caricato con successo');
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error uploading logo:', error);
       toast.error(error.message || 'Errore nel caricamento del logo');
       setPreviewUrl('');
@@ -157,7 +157,7 @@ export default function OnboardingStep2() {
       toast.success('Configurazione completata!');
       router.push('/dashboard');
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error completing onboarding:', error);
       toast.error(error.message || 'Errore nel completamento');
     } finally {
@@ -186,7 +186,7 @@ export default function OnboardingStep2() {
       toast.success('Configurazione completata!');
       router.push('/dashboard');
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error completing onboarding:', error);
       toast.error(error.message || 'Errore nel completamento');
     } finally {

@@ -49,7 +49,7 @@ export default function SignupPage() {
       toast.success('Registrazione completata! Effettua il login.');
       router.push('/sign-in');
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Signup error:', error);
       toast.error(error.message || 'Errore durante la registrazione');
     } finally {

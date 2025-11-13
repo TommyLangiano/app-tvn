@@ -35,7 +35,6 @@ export default async function DashboardPage() {
 
   // Single-tenant setup: Get first tenant
   const tenant = userTenants[0];
-  const tenantData = Array.isArray(tenant.tenants) ? tenant.tenants[0] : tenant.tenants;
   const userRole = tenant.role;
 
   // Get user profile for full name

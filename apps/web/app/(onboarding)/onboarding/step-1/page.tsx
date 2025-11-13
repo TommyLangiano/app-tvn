@@ -130,7 +130,7 @@ export default function OnboardingStep1() {
       toast.success('Dati salvati con successo');
       router.push('/onboarding/step-2');
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error saving data:', error);
       toast.error(error.message || 'Errore nel salvataggio');
     } finally {
