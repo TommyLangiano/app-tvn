@@ -224,12 +224,13 @@ export function Sidebar() {
             {menuStructure.map((item, index) => {
               if (item.type === 'single') {
                 const Icon = item.icon;
-                const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+                const href = item.href!; // Type assertion: single items always have href
+                const isActive = pathname === href || pathname.startsWith(href + '/');
 
                 return (
                   <Link
-                    key={item.href}
-                    href={item.href}
+                    key={href}
+                    href={href}
                     className={cn(
                       'group flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200',
                       isActive
