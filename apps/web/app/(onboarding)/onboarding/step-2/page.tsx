@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { ArrowRight, Upload, Image as ImageIcon, X, Check } from 'lucide-react';
+import { Upload, Image as ImageIcon, X, Check } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 export default function OnboardingStep2() {

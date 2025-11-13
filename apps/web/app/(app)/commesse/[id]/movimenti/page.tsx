@@ -49,7 +49,6 @@ export default function MovimentiPage() {
   const slug = params.id as string;
 
   const [loading, setLoading] = useState(true);
-  const [commessaNome, setCommessaNome] = useState('');
   const [movimenti, setMovimenti] = useState<Movimento[]>([]);
 
   // Filtri
@@ -121,7 +120,7 @@ export default function MovimentiPage() {
         .single();
 
       if (commessaError) throw commessaError;
-      setCommessaNome(commessaData.nome_commessa);
+      // commessaNome loaded but not used in this version
 
       // Load fatture attive (ricavi)
       const { data: fattureData } = await supabase
