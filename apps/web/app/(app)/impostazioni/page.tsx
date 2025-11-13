@@ -3,7 +3,6 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Settings, Building2 } from 'lucide-react';
-import { Breadcrumb } from '@/components/common/Breadcrumb';
 import { ImpostazioniGenerali } from '@/components/features/impostazioni/ImpostazioniGenerali';
 import { ImpostazioniAzienda } from '@/components/features/impostazioni/ImpostazioniAzienda';
 
@@ -28,7 +27,6 @@ function ImpostazioniPageContent() {
 
   return (
     <div className="space-y-6">
-      <Breadcrumb pageName="Impostazioni" />
 
       <div>
         <p className="text-muted-foreground mt-1">

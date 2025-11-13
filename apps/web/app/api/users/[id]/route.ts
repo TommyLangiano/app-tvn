@@ -175,7 +175,7 @@ export async function DELETE(
     if (profile?.document_path) {
       try {
         const { error: storageError } = await supabase.storage
-          .from('fatture-documents')
+          .from('app-storage')
           .remove([profile.document_path]);
 
         if (storageError) {

@@ -277,7 +277,7 @@ export function CostoForm({ commessaId, commessaNome, onSuccess, onCancel }: Cos
       const filePath = `${tenantId}/${folderType}/${commessaId}/${fileName}`;
 
       const { data, error } = await supabase.storage
-        .from('fatture-documents')
+        .from('app-storage')
         .upload(filePath, selectedFile, {
           cacheControl: '3600',
           upsert: false,

@@ -41,9 +41,9 @@ export async function POST(request: Request) {
     const fileName = `${timestamp}_${Math.random().toString(36).substring(7)}.${fileExt}`;
     const filePath = `${userTenant.tenant_id}/users/${userId}/documents/${fileName}`;
 
-    // Upload to Supabase Storage in fatture-documents bucket (same as invoices)
+    // Upload to Supabase Storage in app-storage bucket (same as invoices)
     const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('fatture-documents')
+      .from('app-storage')
       .upload(filePath, file, {
         cacheControl: '3600',
         upsert: false,
@@ -53,7 +53,7 @@ export async function POST(request: Request) {
       return NextResponse.json({
         error: 'Failed to upload file',
         details: uploadError.message,
-        bucket: 'fatture-documents',
+        bucket: 'app-storage',
         path: filePath
       }, { status: 500 });
     }

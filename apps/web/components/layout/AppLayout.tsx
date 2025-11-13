@@ -1,8 +1,9 @@
 'use client';
 
 import { Sidebar } from './Sidebar';
-import { Header } from './Header';
+import { Navbar } from './Navbar';
 import { SidebarProvider, useSidebar } from '@/contexts/SidebarContext';
+import { UserProvider } from '@/contexts/UserContext';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -13,16 +14,18 @@ function AppLayoutContent({ children }: AppLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <Sidebar />
 
-      {/* Main content area */}
+      {/* Main content area with integrated navbar */}
       <main
-        className={`mt-16 min-h-[calc(100vh-4rem)] bg-background transition-all duration-300 ${
-          isOpen ? 'ml-64' : 'ml-0'
+        className={`min-h-screen transition-all duration-300 ${
+          isOpen ? 'ml-80' : 'ml-0'
         }`}
       >
-        <div className="px-8 py-8">
+        <div className="px-6 pt-4 pb-6 lg:px-8 lg:pt-6 lg:pb-8">
+          {/* Navbar integrata nel contenuto */}
+          <Navbar />
+          {/* Page Content */}
           {children}
         </div>
       </main>
@@ -33,7 +36,9 @@ function AppLayoutContent({ children }: AppLayoutProps) {
 export function AppLayout({ children }: AppLayoutProps) {
   return (
     <SidebarProvider>
-      <AppLayoutContent>{children}</AppLayoutContent>
+      <UserProvider>
+        <AppLayoutContent>{children}</AppLayoutContent>
+      </UserProvider>
     </SidebarProvider>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Calendar, FileText, CreditCard, User, Hash, Tag, CheckCircle, Clock } from 'lucide-react';
+import { X, Calendar, FileText, CreditCard, User, Hash, Tag, CheckCircle, Clock, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ModalWrapper } from '@/components/common/ModalWrapper';
 import { getSignedUrl } from '@/lib/utils/storage';
@@ -30,9 +30,11 @@ type Movimento = {
 interface InfoMovimentoModalProps {
   movimento: Movimento;
   onClose: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }
 
-export function InfoMovimentoModal({ movimento, onClose }: InfoMovimentoModalProps) {
+export function InfoMovimentoModal({ movimento, onClose, onEdit, onDelete }: InfoMovimentoModalProps) {
   const [allegatoUrl, setAllegatoUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -93,15 +95,14 @@ export function InfoMovimentoModal({ movimento, onClose }: InfoMovimentoModalPro
               <p className="text-sm text-muted-foreground">Dettagli Pagamento</p>
             </div>
           </div>
-          <Button
+          <button
             type="button"
             onClick={onClose}
-            variant="outline"
-            size="icon"
-            className="border-2 border-border bg-white text-foreground hover:bg-white/90"
+            className="h-11 w-11 flex items-center justify-center bg-surface border border-border rounded-lg hover:border-primary/20 hover:bg-primary/5 transition-all flex-shrink-0"
+            title="Chiudi"
           >
             <X className="h-5 w-5" />
-          </Button>
+          </button>
         </div>
 
         {/* Content */}
@@ -256,7 +257,7 @@ export function InfoMovimentoModal({ movimento, onClose }: InfoMovimentoModalPro
         </div>
 
         {/* Footer */}
-        <div className="flex justify-between items-center p-6 border-t-2 border-border">
+        <div className="flex items-center justify-between p-6 border-t-2 border-border">
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
             {movimento.created_at && (
               <div className="flex items-center gap-1.5">
@@ -271,13 +272,27 @@ export function InfoMovimentoModal({ movimento, onClose }: InfoMovimentoModalPro
               </div>
             )}
           </div>
-          <Button
-            variant="outline"
-            onClick={onClose}
-            className="border-2 border-border bg-white text-foreground hover:bg-white/90"
-          >
-            Chiudi
-          </Button>
+
+          <div className="flex gap-2">
+            {onEdit && (
+              <button
+                onClick={onEdit}
+                className="h-10 px-4 flex items-center gap-2 bg-orange-100 border border-orange-300 rounded-lg hover:border-orange-400 hover:bg-orange-200 transition-all text-orange-700 font-medium"
+              >
+                <Edit className="h-4 w-4" />
+                Modifica
+              </button>
+            )}
+            {onDelete && (
+              <button
+                onClick={onDelete}
+                className="h-10 px-4 flex items-center gap-2 bg-red-100 border border-red-300 rounded-lg hover:border-red-400 hover:bg-red-200 transition-all text-red-700 font-medium"
+              >
+                <Trash2 className="h-4 w-4" />
+                Elimina
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </ModalWrapper>

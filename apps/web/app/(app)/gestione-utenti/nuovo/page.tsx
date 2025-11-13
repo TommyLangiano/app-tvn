@@ -8,7 +8,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Breadcrumb } from '@/components/common/Breadcrumb';
 import { UserForm, type UserFormData } from '@/components/features/utenti/UserForm';
 import { toast } from 'sonner';
 import { ArrowLeft } from 'lucide-react';
@@ -87,7 +86,6 @@ export default function NuovoUtentePage() {
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
-      <Breadcrumb pageName="Nuovo Utente" />
 
       {/* Header */}
       <div className="flex items-center gap-4">

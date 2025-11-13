@@ -41,7 +41,7 @@ export function UserAvatar({ user, size = 'md', className = '' }: UserAvatarProp
 
   return (
     <div
-      className={`${sizeClass} rounded-full bg-primary/10 flex items-center justify-center font-semibold text-primary border-2 border-primary/20 ${className}`}
+      className={`${sizeClass} rounded-lg bg-primary/10 flex items-center justify-center font-semibold text-primary border-2 border-primary/20 ${className}`}
       title={user.full_name || user.email}
       style={{ letterSpacing: '0.05em' }}
     >

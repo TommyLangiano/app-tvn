@@ -151,7 +151,7 @@ export function NuovoRapportinoModal({ onClose, onSuccess, users, commesse }: Nu
         const filePath = `${userTenant.tenant_id}/rapportini/${formData.user_id}/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
-          .from('fatture-documents')
+          .from('app-storage')
           .upload(filePath, selectedFile);
 
         if (uploadError) throw uploadError;

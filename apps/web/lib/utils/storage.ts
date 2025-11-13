@@ -13,12 +13,12 @@ export async function getSignedUrl(path: string | null): Promise<string | null> 
   try {
     const supabase = createClient();
 
-    // Remove any leading slashes or "fatture-documents/" prefix
-    const cleanPath = path.replace(/^\/+/, '').replace(/^fatture-documents\//, '');
+    // Remove any leading slashes or "app-storage/" prefix
+    const cleanPath = path.replace(/^\/+/, '').replace(/^app-storage\//, '');
 
     // Download the file as a blob (requires active authentication + RLS check)
     const { data, error } = await supabase.storage
-      .from('fatture-documents')
+      .from('app-storage')
       .download(cleanPath);
 
     if (error) {

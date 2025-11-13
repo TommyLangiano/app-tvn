@@ -21,7 +21,7 @@ export async function GET(request: Request) {
 
     // Get signed URL for download
     const { data, error } = await supabase.storage
-      .from('fatture-documents')
+      .from('app-storage')
       .createSignedUrl(documentPath, 60); // Valid for 60 seconds
 
     if (error) {

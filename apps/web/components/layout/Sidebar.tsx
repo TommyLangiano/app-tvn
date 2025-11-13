@@ -1,90 +1,457 @@
 'use client';
 
-import { Home, FileText, Briefcase, Users, UserCircle, Settings } from 'lucide-react';
-import { usePathname } from 'next/navigation';
+import {
+  LayoutDashboard,
+  FileText,
+  Briefcase,
+  Users,
+  UserCircle,
+  Settings,
+  Building2,
+  LogOut,
+  MoreVertical,
+  UserCheck,
+  Clock,
+  CalendarX,
+  Wrench,
+  UserPlus,
+  Wallet,
+  Truck,
+  Package,
+  Receipt,
+  DollarSign,
+  Calendar,
+  BarChart3,
+  Shield,
+  ChevronRight,
+  FolderOpen
+} from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useSidebar } from '@/contexts/SidebarContext';
+import { useUser } from '@/contexts/UserContext';
+import { useState } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import { UserAvatar } from '@/components/common/UserAvatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
-const menuCategories = [
+// Menu structure con categorie
+const menuStructure = [
   {
+    type: 'single',
+    href: '/dashboard',
     label: 'Dashboard',
+    icon: LayoutDashboard
+  },
+  {
+    type: 'single',
+    href: '/report',
+    label: 'Report',
+    icon: BarChart3
+  },
+  {
+    type: 'single',
+    href: '/calendario',
+    label: 'Calendario',
+    icon: Calendar
+  },
+  {
+    type: 'category',
+    label: 'Personale',
+    icon: Users,
     items: [
-      { href: '/dashboard', label: 'Home', icon: Home },
+      { href: '/anagrafica', label: 'Anagrafica', icon: UserCheck },
+      { href: '/presenze', label: 'Presenze', icon: Clock },
+      { href: '/assenze-ferie', label: 'Assenze & Ferie', icon: CalendarX },
+      { href: '/assunzioni', label: 'Assunzioni', icon: UserPlus },
+      { href: '/gestione-hr', label: 'Gestione HR', icon: Wrench },
     ]
   },
   {
-    label: 'Gestione Operativa',
+    type: 'single',
+    href: '/stipendi',
+    label: 'Stipendi',
+    icon: Wallet
+  },
+  {
+    type: 'single',
+    href: '/commesse',
+    label: 'Commesse',
+    icon: Briefcase
+  },
+  {
+    type: 'single',
+    href: '/rapportini',
+    label: 'Rapportini',
+    icon: FileText
+  },
+  {
+    type: 'category',
+    label: 'Fatture',
+    icon: Receipt,
     items: [
-      { href: '/rapportini', label: 'Rapportini', icon: FileText },
-      { href: '/commesse', label: 'Commesse', icon: Briefcase },
+      { href: '/fatture/attive', label: 'Attive', icon: Receipt },
+      { href: '/fatture/passive', label: 'Passive', icon: Receipt },
+      { href: '/fatture/f24', label: 'F24', icon: Receipt },
+      { href: '/fatture/movimenti', label: 'Movimenti', icon: DollarSign },
     ]
   },
   {
-    label: 'Amministrazione',
+    type: 'single',
+    href: '/mezzi-attrezzature',
+    label: 'Mezzi & Attrezzature',
+    icon: Truck
+  },
+  {
+    type: 'single',
+    href: '/magazzino',
+    label: 'Magazzino',
+    icon: Package
+  },
+  {
+    type: 'category',
+    label: 'Clienti & Fornitori',
+    icon: UserCircle,
     items: [
-      { href: '/anagrafica', label: 'Anagrafica', icon: UserCircle },
-      { href: '/gestione-utenti', label: 'Gestione Utenti', icon: Users },
+      { href: '/clienti-fornitori?tab=clienti', label: 'Clienti', icon: UserCircle },
+      { href: '/clienti-fornitori?tab=fornitori', label: 'Fornitori', icon: Package },
     ]
   },
   {
-    label: 'Configurazione',
+    type: 'single',
+    href: '/documenti',
+    label: 'Documenti',
+    icon: FolderOpen
+  },
+  {
+    type: 'category',
+    label: 'Sistema',
+    icon: Settings,
     items: [
       { href: '/impostazioni', label: 'Impostazioni', icon: Settings },
+      { href: '/gestione-utenti', label: 'Utenti & Ruoli', icon: Shield },
     ]
-  }
+  },
 ];
+
+
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { isOpen } = useSidebar();
+  const { user, tenant, loading } = useUser();
+  const [userStatus, setUserStatus] = useState<'online' | 'away' | 'offline'>('online');
+  const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
+
+  // All data now comes from UserContext - no more API calls!
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push('/auth/signin');
+  };
+
+  const getStatusColor = () => {
+    switch (userStatus) {
+      case 'online':
+        return 'bg-primary';
+      case 'away':
+        return 'bg-yellow-500';
+      case 'offline':
+        return 'bg-red-500';
+      default:
+        return 'bg-primary';
+    }
+  };
+
+  const toggleCategory = (label: string) => {
+    setExpandedCategories(prev =>
+      prev.includes(label)
+        ? prev.filter(cat => cat !== label)
+        : [...prev, label]
+    );
+  };
 
   return (
     <aside className={cn(
-      "fixed left-0 top-16 z-50 h-[calc(100vh-4rem)] w-64 bg-surface border-r border-border/50 transition-transform duration-300 overflow-y-auto",
+      "fixed left-0 top-0 z-50 h-screen w-80 bg-white dark:bg-surface border-r border-border transition-transform duration-300 overflow-y-auto",
       isOpen ? "translate-x-0" : "-translate-x-full"
     )}>
-      {/* Navigation */}
-      <nav className="p-4 space-y-6">
-        {menuCategories.map((category, idx) => (
-          <div key={idx}>
-            {/* Category Label */}
-            <h3 className="px-3 mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              {category.label}
-            </h3>
+      <div className="flex flex-col h-full">
 
-            {/* Category Items */}
-            <div className="space-y-1">
-              {category.items.map((item) => {
+        {/* Header - Logo e nome azienda orizzontale */}
+        <div className="px-6 pt-12 pb-6">
+          <div className="flex items-center gap-4">
+            {/* Logo azienda */}
+            <div className={cn(
+              "w-12 h-12 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0",
+              tenant?.logoUrl ? "bg-transparent" : "bg-primary/10"
+            )}>
+              {tenant?.logoUrl ? (
+                <img src={tenant.logoUrl} alt="Logo" className="h-full w-full object-contain" />
+              ) : (
+                <Building2 className="h-6 w-6 text-primary" />
+              )}
+            </div>
+
+            {/* Nome azienda con testo dinamico */}
+            <div className="flex-1 min-w-0">
+              {loading ? (
+                <div className="h-5 w-full bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              ) : (
+                <h1 className="font-bold uppercase tracking-wide text-foreground leading-tight" style={{
+                  fontSize: 'clamp(0.75rem, 1.5vw + 0.5rem, 1rem)',
+                  wordBreak: 'break-word'
+                }}>
+                  {tenant?.ragioneSociale || 'LA MIA AZIENDA'}
+                </h1>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 px-4 pt-8 pb-2 overflow-y-auto">
+          <div className="space-y-1">
+            {menuStructure.map((item, index) => {
+              if (item.type === 'single') {
                 const Icon = item.icon;
-                const isActive = pathname === item.href;
+                const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
 
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      'group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 relative',
+                      'group flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200',
                       isActive
-                        ? 'bg-primary/10 text-primary shadow-sm'
-                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-primary/5'
                     )}
                   >
-                    {isActive && (
-                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-7 bg-primary rounded-r-full" />
-                    )}
                     <Icon className={cn(
-                      "h-4.5 w-4.5 transition-all flex-shrink-0",
-                      isActive ? "text-primary" : "text-muted-foreground group-hover:text-accent-foreground"
+                      "h-4 w-4 flex-shrink-0",
+                      isActive ? "text-primary" : "text-gray-500 dark:text-gray-400 group-hover:text-primary"
                     )} />
                     <span>{item.label}</span>
                   </Link>
                 );
-              })}
-            </div>
+              }
+
+              if (item.type === 'category') {
+                const Icon = item.icon;
+                const isExpanded = expandedCategories.includes(item.label);
+                const hasActiveChild = item.items?.some(child =>
+                  pathname === child.href || pathname.startsWith(child.href + '/')
+                );
+
+                return (
+                  <div key={index}>
+                    {/* Category Header */}
+                    <button
+                      onClick={() => toggleCategory(item.label)}
+                      className={cn(
+                        'w-full group flex items-center justify-between gap-3 px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200',
+                        hasActiveChild
+                          ? 'bg-primary/5 text-primary'
+                          : 'text-gray-700 dark:text-gray-300 hover:bg-primary/5'
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon className={cn(
+                          "h-4 w-4 flex-shrink-0",
+                          hasActiveChild ? "text-primary" : "text-gray-500 dark:text-gray-400 group-hover:text-primary"
+                        )} />
+                        <span>{item.label}</span>
+                      </div>
+                      <ChevronRight className={cn(
+                        "h-4 w-4 transition-transform duration-200",
+                        isExpanded && "rotate-90"
+                      )} />
+                    </button>
+
+                    {/* Category Items con animazione */}
+                    <div className={cn(
+                      "overflow-hidden transition-all duration-300 ease-in-out",
+                      isExpanded ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+                    )}>
+                      <div className="mt-1 ml-6 space-y-1">
+                        {item.items && item.items.map((subItem, subIndex) => {
+                          const SubIcon = subItem.icon;
+                          const isActive = pathname === subItem.href || pathname.startsWith(subItem.href + '/');
+
+                          return (
+                            <Link
+                              key={subItem.href}
+                              href={subItem.href}
+                              className={cn(
+                                'group flex items-center gap-3 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200',
+                                isActive
+                                  ? 'bg-primary/10 text-primary'
+                                  : 'text-gray-600 dark:text-gray-400 hover:bg-primary/5 hover:text-gray-900 dark:hover:text-gray-200'
+                              )}
+                              style={{
+                                animationDelay: `${subIndex * 50}ms`,
+                                animation: isExpanded ? 'slideIn 0.3s ease-out forwards' : 'none'
+                              }}
+                            >
+                              <SubIcon className={cn(
+                                "h-3.5 w-3.5 flex-shrink-0",
+                                isActive ? "text-primary" : "text-gray-400 dark:text-gray-500 group-hover:text-primary"
+                              )} />
+                              <span>{subItem.label}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              return null;
+            })}
           </div>
-        ))}
-      </nav>
+        </nav>
+
+        {/* Footer - Profilo utente */}
+        <div className="px-4 pb-8 pt-4">
+          {/* Profilo utente */}
+          <div className="flex items-center gap-3 px-3 py-3">
+            <div className="relative flex-shrink-0">
+              {user ? (
+                <UserAvatar user={{ full_name: user?.fullName || "", email: user?.email || "", avatar_url: undefined }} size="md" />
+              ) : (
+                <div className="h-10 w-10 rounded-lg bg-gray-200 dark:bg-gray-700 animate-pulse" />
+              )}
+              <div className={cn(
+                "absolute -top-0.5 -right-0.5 h-3 w-3 border-2 border-white dark:border-surface rounded-full",
+                getStatusColor()
+              )} />
+            </div>
+
+            <div className="flex-1 min-w-0">
+              {loading ? (
+                <>
+                  <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded mb-1 animate-pulse" />
+                  <div className="h-3 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-semibold text-foreground truncate leading-tight">
+                    {user?.fullName}
+                  </p>
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
+                    {user?.role === 'admin' ? 'Amministratore' :
+                     user?.role === 'manager' ? 'Manager' :
+                     user?.role === 'operaio' ? 'Operaio' :
+                     'Utente'}
+                  </p>
+                </>
+              )}
+            </div>
+
+            {/* Menu dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="p-1 hover:bg-primary/5 rounded-lg transition-colors focus:outline-none data-[state=open]:bg-transparent">
+                  <MoreVertical className="h-5 w-5 text-gray-500 dark:text-gray-400 hover:text-primary" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="right" align="end" className="w-64 p-2" sideOffset={8}>
+                <div className="px-3 py-2 mb-2">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Stato</p>
+                </div>
+
+                <DropdownMenuItem
+                  onClick={() => setUserStatus('online')}
+                  className={cn(
+                    "cursor-pointer rounded-lg px-3 py-2.5 mb-1 hover:bg-primary/5 focus:bg-primary/5",
+                    userStatus === 'online' && "bg-primary/5"
+                  )}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center gap-3">
+                      <div className="h-2.5 w-2.5 rounded-full bg-primary" />
+                      <span className="font-medium">Online</span>
+                    </div>
+                    {userStatus === 'online' && (
+                      <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                    )}
+                  </div>
+                </DropdownMenuItem>
+
+                <DropdownMenuItem
+                  onClick={() => setUserStatus('away')}
+                  className={cn(
+                    "cursor-pointer rounded-lg px-3 py-2.5 mb-1 hover:bg-primary/5 focus:bg-primary/5",
+                    userStatus === 'away' && "bg-primary/5"
+                  )}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center gap-3">
+                      <div className="h-2.5 w-2.5 rounded-full bg-yellow-500" />
+                      <span className="font-medium">Non Disponibile</span>
+                    </div>
+                    {userStatus === 'away' && (
+                      <div className="h-1.5 w-1.5 rounded-full bg-yellow-500" />
+                    )}
+                  </div>
+                </DropdownMenuItem>
+
+                <DropdownMenuItem
+                  onClick={() => setUserStatus('offline')}
+                  className={cn(
+                    "cursor-pointer rounded-lg px-3 py-2.5 mb-2 hover:bg-primary/5 focus:bg-primary/5",
+                    userStatus === 'offline' && "bg-primary/5"
+                  )}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center gap-3">
+                      <div className="h-2.5 w-2.5 rounded-full bg-red-500" />
+                      <span className="font-medium">Offline</span>
+                    </div>
+                    {userStatus === 'offline' && (
+                      <div className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                    )}
+                  </div>
+                </DropdownMenuItem>
+
+                <DropdownMenuSeparator className="my-2" />
+
+                <DropdownMenuItem
+                  onClick={() => router.push('/impostazioni/profilo')}
+                  className="cursor-pointer rounded-lg px-3 py-2.5 font-medium hover:bg-primary/5 focus:bg-primary/5 mb-1"
+                >
+                  <div className="flex items-center gap-3">
+                    <UserCircle className="h-4 w-4" />
+                    <span>Profilo</span>
+                  </div>
+                </DropdownMenuItem>
+
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className="cursor-pointer text-red-600 dark:text-red-400 rounded-lg px-3 py-2.5 font-medium hover:bg-red-50 dark:hover:bg-red-950/20 focus:bg-red-50 dark:focus:bg-red-950/20"
+                >
+                  <div className="flex items-center gap-3">
+                    <LogOut className="h-4 w-4" />
+                    <span>Esci</span>
+                  </div>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+
+      </div>
     </aside>
   );
 }

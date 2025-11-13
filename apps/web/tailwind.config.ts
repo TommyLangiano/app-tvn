@@ -9,6 +9,9 @@ const config: Config = {
   ],
   theme: {
   	extend: {
+  		fontFamily: {
+  			sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
+  		},
   		colors: {
   			// Modern SaaS Design System
   			background: 'rgb(var(--bg) / <alpha-value>)',

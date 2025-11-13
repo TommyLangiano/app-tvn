@@ -28,7 +28,7 @@ export function DeleteRapportinoModal({ rapportino, onClose, onDelete }: DeleteR
       // Delete file if exists
       if (rapportino.allegato_url) {
         await supabase.storage
-          .from('fatture-documents')
+          .from('app-storage')
           .remove([rapportino.allegato_url]);
       }
 

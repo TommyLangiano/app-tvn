@@ -259,7 +259,7 @@ export function FatturaAttivaForm({
 
       // Upload to Supabase Storage
       const { data, error } = await supabase.storage
-        .from('fatture-documents')
+        .from('app-storage')
         .upload(filePath, selectedFile, {
           cacheControl: '3600',
           upsert: false,

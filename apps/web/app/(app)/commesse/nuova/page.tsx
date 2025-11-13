@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
-import { Breadcrumb } from '@/components/common/Breadcrumb';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -115,7 +114,6 @@ export default function NuovaCommessaPage() {
 
   return (
     <div className="space-y-6">
-      <Breadcrumb pageName="Nuova Commessa" />
 
       {/* Header with back button */}
       <div className="flex items-center gap-4">

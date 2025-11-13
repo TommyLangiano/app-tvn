@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, Search, ArrowUpCircle, ArrowDownCircle, FileText, Info, Pencil, Trash2, ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, X } from 'lucide-react';
-import { Breadcrumb } from '@/components/common/Breadcrumb';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -366,7 +365,6 @@ export default function MovimentiPage() {
 
   return (
     <div className="space-y-6">
-      <Breadcrumb pageName={`Movimenti: ${commessaNome}`} />
 
       {/* Header with back button */}
       <div className="flex items-center gap-4">

@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
-import { Breadcrumb } from '@/components/common/Breadcrumb';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -136,7 +135,6 @@ export default function ModificaCommessaPage() {
 
   return (
     <div className="space-y-6">
-      <Breadcrumb pageName={`Modifica: ${formData.nome_commessa}`} />
 
       {/* Header with back button */}
       <div className="flex items-center gap-4">

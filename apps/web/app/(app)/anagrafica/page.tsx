@@ -3,7 +3,6 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Users, Building2, Landmark, Plus, Search, Info, Edit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Breadcrumb } from '@/components/common/Breadcrumb';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -267,7 +266,6 @@ function AnagraficaPageContent() {
 
   return (
     <div className="space-y-6">
-      <Breadcrumb pageName="Anagrafica" />
 
       {/* Header */}
       <div>

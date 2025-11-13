@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Breadcrumb } from '@/components/common/Breadcrumb';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { CommessaCard } from '@/components/features/commesse/CommessaCard';
@@ -26,26 +25,54 @@ export default function CommessePage() {
   const [marginiLordi, setMarginiLordi] = useState<Record<string, number>>({});
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [tipologiaClienteFilter, setTipologiaClienteFilter] = useState<string>('all');
+  const [tipologiaCommessaFilter, setTipologiaCommessaFilter] = useState<string>('all');
+  const [statoFilter, setStatoFilter] = useState<string>('all');
 
   useEffect(() => {
     loadCommesse();
   }, []);
 
   useEffect(() => {
-    if (searchQuery.trim() === '') {
-      setFilteredCommesse(commesse);
-    } else {
-      const filtered = commesse.filter(
+    let filtered = commesse;
+
+    // Filtro ricerca
+    if (searchQuery.trim() !== '') {
+      filtered = filtered.filter(
         (commessa) =>
           commessa.nome_commessa.toLowerCase().includes(searchQuery.toLowerCase()) ||
           commessa.cliente_commessa.toLowerCase().includes(searchQuery.toLowerCase()) ||
           commessa.codice_commessa?.toLowerCase().includes(searchQuery.toLowerCase())
       );
-      setFilteredCommesse(filtered);
     }
-    // Reset to page 1 when search changes
+
+    // Filtro tipologia cliente
+    if (tipologiaClienteFilter !== 'all') {
+      filtered = filtered.filter(c => c.tipologia_cliente === tipologiaClienteFilter);
+    }
+
+    // Filtro tipologia commessa
+    if (tipologiaCommessaFilter !== 'all') {
+      filtered = filtered.filter(c => c.tipologia_commessa === tipologiaCommessaFilter);
+    }
+
+    // Filtro stato
+    if (statoFilter !== 'all') {
+      const today = new Date();
+      filtered = filtered.filter(c => {
+        const hasStarted = c.data_inizio ? new Date(c.data_inizio) <= today : false;
+        const hasEnded = c.data_fine_prevista ? new Date(c.data_fine_prevista) < today : false;
+
+        if (statoFilter === 'in-corso') return hasStarted && !hasEnded;
+        if (statoFilter === 'completate') return hasEnded;
+        if (statoFilter === 'da-iniziare') return !hasStarted;
+        return true;
+      });
+    }
+
+    setFilteredCommesse(filtered);
     setCurrentPage(1);
-  }, [searchQuery, commesse]);
+  }, [searchQuery, commesse, tipologiaClienteFilter, tipologiaCommessaFilter, statoFilter]);
 
   const loadCommesse = async () => {
     try {
@@ -119,11 +146,10 @@ export default function CommessePage() {
 
   return (
     <div className="space-y-6">
-      <Breadcrumb pageName="Commesse" />
 
-      {/* Search and New Button */}
+      {/* Search, Filters and New Button */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-        <div className="relative flex-1 w-full ">
+        <div className="relative flex-1 w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Cerca commesse..."
@@ -132,6 +158,46 @@ export default function CommessePage() {
             className="pl-10 h-11 border-2 border-border rounded-lg bg-card w-full"
           />
         </div>
+
+        {/* Filtro Tipologia Cliente */}
+        <Select value={tipologiaClienteFilter} onValueChange={setTipologiaClienteFilter}>
+          <SelectTrigger className="w-full sm:w-[180px] h-11 border-2 border-border rounded-lg bg-card">
+            <SelectValue placeholder="Tipologia Cliente" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tutte le Tipologie</SelectItem>
+            <SelectItem value="Privato">Privato</SelectItem>
+            <SelectItem value="Pubblico">Pubblico</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Filtro Tipo Commessa */}
+        <Select value={tipologiaCommessaFilter} onValueChange={setTipologiaCommessaFilter}>
+          <SelectTrigger className="w-full sm:w-[180px] h-11 border-2 border-border rounded-lg bg-card">
+            <SelectValue placeholder="Tipo Commessa" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tutti i Tipi</SelectItem>
+            <SelectItem value="Appalto">Appalto</SelectItem>
+            <SelectItem value="ATI">ATI</SelectItem>
+            <SelectItem value="Sub Appalto">Sub Appalto</SelectItem>
+            <SelectItem value="Sub Affidamento">Sub Affidamento</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Filtro Stato */}
+        <Select value={statoFilter} onValueChange={setStatoFilter}>
+          <SelectTrigger className="w-full sm:w-[180px] h-11 border-2 border-border rounded-lg bg-card">
+            <SelectValue placeholder="Stato" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tutti gli Stati</SelectItem>
+            <SelectItem value="da-iniziare">Da Iniziare</SelectItem>
+            <SelectItem value="in-corso">In Corso</SelectItem>
+            <SelectItem value="completate">Completate</SelectItem>
+          </SelectContent>
+        </Select>
+
         <Button onClick={() => router.push('/commesse/nuova')} className="gap-2 h-11 whitespace-nowrap">
           <Plus className="h-4 w-4" />
           <span className="hidden sm:inline">Nuova Commessa</span>
@@ -145,7 +211,9 @@ export default function CommessePage() {
       ) : filteredCommesse.length === 0 ? (
         <div className="text-center py-12 rounded-lg border border-dashed border-border bg-card/50">
           <p className="text-muted-foreground">
-            {searchQuery ? 'Nessuna commessa trovata' : 'Nessuna commessa presente'}
+            {searchQuery || tipologiaClienteFilter !== 'all' || tipologiaCommessaFilter !== 'all' || statoFilter !== 'all'
+              ? 'Nessuna commessa trovata con i filtri selezionati'
+              : 'Nessuna commessa presente'}
           </p>
         </div>
       ) : (

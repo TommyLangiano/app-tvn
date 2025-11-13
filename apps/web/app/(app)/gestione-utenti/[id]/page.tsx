@@ -8,7 +8,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Breadcrumb } from '@/components/common/Breadcrumb';
 import { UserAvatar } from '@/components/common/UserAvatar';
 import { UserStatusBadge } from '@/components/common/UserStatusBadge';
 import { RoleBadge } from '@/components/common/RoleBadge';
@@ -134,7 +133,6 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
-      <Breadcrumb pageName={user.full_name || user.email} />
 
       {/* Header */}
       <div className="flex items-start gap-4">

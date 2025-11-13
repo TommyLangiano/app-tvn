@@ -8,7 +8,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Breadcrumb } from '@/components/common/Breadcrumb';
 import { UserForm, type UserFormData } from '@/components/features/utenti/UserForm';
 import { toast } from 'sonner';
 import { ArrowLeft } from 'lucide-react';
@@ -129,7 +128,6 @@ export default function EditUserPage({ params }: { params: { id: string } }) {
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
-      <Breadcrumb pageName={`Modifica ${user.full_name || user.email}`} />
 
       {/* Header */}
       <div className="flex items-start gap-4">

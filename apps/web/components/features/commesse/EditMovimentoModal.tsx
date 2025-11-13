@@ -194,9 +194,9 @@ export function EditMovimentoModal({ movimento, onClose, onSuccess }: EditMovime
     if (url.includes('/object/public/')) {
       const [, path] = url.split('/object/public/');
       if (!path) return null;
-      return path.replace(/^fatture-documents\//, '');
+      return path.replace(/^app-storage\//, '');
     }
-    return url.replace(/^fatture-documents\//, '');
+    return url.replace(/^app-storage\//, '');
   };
 
   const buildPublicUrl = (path: string | null) => {
@@ -204,8 +204,8 @@ export function EditMovimentoModal({ movimento, onClose, onSuccess }: EditMovime
     if (path.startsWith('http')) return path;
     const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     if (!baseUrl) return path;
-    const normalized = path.replace(/^\/+/, '').replace(/^fatture-documents\//, '');
-    return `${baseUrl}/storage/v1/object/public/fatture-documents/${normalized}`;
+    const normalized = path.replace(/^\/+/, '').replace(/^app-storage\//, '');
+    return `${baseUrl}/storage/v1/object/public/app-storage/${normalized}`;
   };
 
   const getFileName = (path: string | null) => {
@@ -213,7 +213,7 @@ export function EditMovimentoModal({ movimento, onClose, onSuccess }: EditMovime
     const normalized = path.includes('/object/public/')
       ? path.split('/object/public/')[1] ?? path
       : path;
-    const clean = normalized.replace(/^fatture-documents\//, '');
+    const clean = normalized.replace(/^app-storage\//, '');
     const lastSegment = clean.split('/').pop() ?? clean;
     return lastSegment.split('?')[0];
   };
@@ -345,7 +345,7 @@ export function EditMovimentoModal({ movimento, onClose, onSuccess }: EditMovime
       const filePath = `${meta!.tenant_id}/${getStorageFolder()}/${meta!.commessa_id}/${fileName}`;
 
       const { data, error } = await supabase.storage
-        .from('fatture-documents')
+        .from('app-storage')
         .upload(filePath, selectedFile, {
           cacheControl: '3600',
           upsert: false,
@@ -369,7 +369,7 @@ export function EditMovimentoModal({ movimento, onClose, onSuccess }: EditMovime
 
     try {
       const supabase = createClient();
-      const { error } = await supabase.storage.from('fatture-documents').remove([storagePath]);
+      const { error } = await supabase.storage.from('app-storage').remove([storagePath]);
       if (error) {
 
       }

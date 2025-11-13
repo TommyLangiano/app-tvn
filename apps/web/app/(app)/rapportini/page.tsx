@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Search, FileText, Info, Trash2, ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Plus, User, Calendar, Clock, Briefcase } from 'lucide-react';
-import { Breadcrumb } from '@/components/common/Breadcrumb';
+import { Search, FileText, Info, Trash2, ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Plus, User, Calendar, Clock, Briefcase, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -277,7 +276,6 @@ export default function RapportiniPage() {
 
   return (
     <div className="space-y-6">
-      <Breadcrumb pageName="Rapportini" />
 
       {/* Header con navigazione mese e bottone nuovo */}
       <div className="flex items-center justify-between">
@@ -554,22 +552,22 @@ export default function RapportiniPage() {
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-border">
+            <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-muted-foreground">
+                  <td colSpan={7} className="text-center py-12 text-muted-foreground">
                     Caricamento...
                   </td>
                 </tr>
               ) : rapportiniPaginati.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-muted-foreground">
+                  <td colSpan={7} className="text-center py-12 text-muted-foreground">
                     Nessun rapportino trovato
                   </td>
                 </tr>
               ) : (
                 rapportiniPaginati.map((rapportino) => (
-                  <tr key={rapportino.id} className="hover:bg-muted/50 transition-colors">
+                  <tr key={rapportino.id} className="border-b border-border hover:bg-muted/10 transition-colors">
                     <td className="p-4 text-center">
                       <input
                         type="checkbox"
@@ -632,26 +630,26 @@ export default function RapportiniPage() {
                     </td>
 
                     <td className="p-4">
-                      <div className="flex items-center justify-center gap-1">
+                      <div className="flex items-center justify-center gap-2">
                         <button
                           onClick={() => {
                             setSelectedRapportino(rapportino);
                             setShowInfoModal(true);
                           }}
-                          className="p-2 rounded hover:bg-muted transition-colors"
+                          className="p-2 rounded-lg border-2 border-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors"
                           title="Info"
                         >
-                          <Info className="h-4 w-4 text-muted-foreground" />
+                          <Info className="h-4 w-4 text-blue-600" />
                         </button>
                         <button
                           onClick={() => {
                             setSelectedRapportino(rapportino);
                             setShowDeleteModal(true);
                           }}
-                          className="p-2 rounded hover:bg-muted transition-colors"
+                          className="p-2 rounded-lg border-2 border-red-200 bg-red-50 hover:bg-red-100 transition-colors"
                           title="Elimina"
                         >
-                          <Trash2 className="h-4 w-4 text-muted-foreground" />
+                          <Trash2 className="h-4 w-4 text-red-600" />
                         </button>
                       </div>
                     </td>

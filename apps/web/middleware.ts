@@ -59,21 +59,75 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // If user is not logged in and trying to access dashboard, redirect to sign-in
-  if (!user && request.nextUrl.pathname.startsWith('/dashboard')) {
+  const pathname = request.nextUrl.pathname;
+
+  // If user is not logged in and trying to access protected routes
+  if (!user && (pathname.startsWith('/dashboard') || pathname.startsWith('/onboarding'))) {
     const redirectUrl = new URL('/sign-in', request.url);
     return NextResponse.redirect(redirectUrl);
   }
 
-  // If user is logged in and trying to access sign-in, redirect to dashboard
-  if (user && request.nextUrl.pathname.startsWith('/sign-in')) {
-    const redirectUrl = new URL('/dashboard', request.url);
-    return NextResponse.redirect(redirectUrl);
+  // If user is logged in
+  if (user) {
+    // Skip onboarding check for signup and sign-in pages
+    if (pathname.startsWith('/sign-in') || pathname.startsWith('/signup')) {
+      // Check if user needs onboarding
+      const { data: userTenant } = await supabase
+        .from('user_tenants')
+        .select('tenant_id, role')
+        .eq('user_id', user.id)
+        .single();
+
+      if (userTenant) {
+        const { data: profile } = await supabase
+          .from('tenant_profiles')
+          .select('onboarding_completed')
+          .eq('tenant_id', userTenant.tenant_id)
+          .limit(1);
+
+        const needsOnboarding = !profile?.[0]?.onboarding_completed;
+
+        if (needsOnboarding) {
+          return NextResponse.redirect(new URL('/onboarding/step-1', request.url));
+        } else {
+          return NextResponse.redirect(new URL('/dashboard', request.url));
+        }
+      }
+    }
+
+    // Check if user needs to complete onboarding
+    if (!pathname.startsWith('/onboarding') && !pathname.startsWith('/api')) {
+      const { data: userTenant } = await supabase
+        .from('user_tenants')
+        .select('tenant_id, role')
+        .eq('user_id', user.id)
+        .single();
+
+      if (userTenant) {
+        const { data: profile } = await supabase
+          .from('tenant_profiles')
+          .select('onboarding_completed')
+          .eq('tenant_id', userTenant.tenant_id)
+          .limit(1);
+
+        const needsOnboarding = !profile?.[0]?.onboarding_completed;
+
+        if (needsOnboarding) {
+          return NextResponse.redirect(new URL('/onboarding/step-1', request.url));
+        }
+      }
+    }
   }
 
   return response;
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/sign-in'],
+  matcher: [
+    '/dashboard/:path*',
+    '/sign-in',
+    '/signup',
+    '/onboarding/:path*',
+    '/(app)/:path*'
+  ],
 };

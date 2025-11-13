@@ -8,10 +8,10 @@
 -- {tenant_id}/profili/{user_id}/{filename}
 
 -- Drop existing policies
-DROP POLICY IF EXISTS "Users can view fatture documents in their tenant" ON storage.objects;
-DROP POLICY IF EXISTS "Users can upload fatture documents to their tenant" ON storage.objects;
-DROP POLICY IF EXISTS "Users can update fatture documents in their tenant" ON storage.objects;
-DROP POLICY IF EXISTS "Users can delete fatture documents in their tenant" ON storage.objects;
+DROP POLICY IF EXISTS "Users can view files in their tenant" ON storage.objects;
+DROP POLICY IF EXISTS "Users can upload files to their tenant" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update files in their tenant" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete files in their tenant" ON storage.objects;
 
 -- Recreate policies with support for subfolder structure
 -- The first folder is always tenant_id, so we check that
@@ -21,7 +21,7 @@ CREATE POLICY "Users can view documents in their tenant"
   ON storage.objects
   FOR SELECT
   USING (
-    bucket_id = 'fatture-documents'
+    bucket_id = 'app-storage'
     AND (storage.foldername(name))[1] IN (
       SELECT tenant_id::text FROM user_tenants WHERE user_id = auth.uid()
     )
@@ -32,7 +32,7 @@ CREATE POLICY "Users can upload documents to their tenant"
   ON storage.objects
   FOR INSERT
   WITH CHECK (
-    bucket_id = 'fatture-documents'
+    bucket_id = 'app-storage'
     AND (storage.foldername(name))[1] IN (
       SELECT tenant_id::text FROM user_tenants WHERE user_id = auth.uid()
     )
@@ -43,7 +43,7 @@ CREATE POLICY "Users can update documents in their tenant"
   ON storage.objects
   FOR UPDATE
   USING (
-    bucket_id = 'fatture-documents'
+    bucket_id = 'app-storage'
     AND (storage.foldername(name))[1] IN (
       SELECT tenant_id::text FROM user_tenants WHERE user_id = auth.uid()
     )
@@ -54,7 +54,7 @@ CREATE POLICY "Users can delete documents in their tenant"
   ON storage.objects
   FOR DELETE
   USING (
-    bucket_id = 'fatture-documents'
+    bucket_id = 'app-storage'
     AND (storage.foldername(name))[1] IN (
       SELECT tenant_id::text FROM user_tenants WHERE user_id = auth.uid()
     )

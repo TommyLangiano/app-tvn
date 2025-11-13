@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, Plus, ChevronDown, ChevronUp, X, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Breadcrumb } from '@/components/common/Breadcrumb';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -141,7 +140,6 @@ export default function GestioneUtentiPage() {
 
   return (
     <div className="space-y-6">
-      <Breadcrumb pageName="Gestione Utenti" />
 
       {/* Header */}
       <div className="flex items-center justify-between">

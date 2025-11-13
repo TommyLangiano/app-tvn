@@ -58,17 +58,12 @@ export default async function DashboardPage() {
 
   // For admin/owner, show placeholder (or redirect to rapportini)
   return (
-    <PageShell
-      title="Benvenuto!"
-      description={tenantData?.name || 'Il tuo workspace'}
-    >
-      <div className="text-center py-12">
-        <p className="text-muted-foreground">Dashboard amministratore in arrivo...</p>
-        <p className="text-sm text-muted-foreground mt-2">
-          Nel frattempo, visita <a href="/rapportini" className="text-primary underline">Rapportini</a> o{' '}
-          <a href="/gestione-utenti" className="text-primary underline">Gestione Utenti</a>
-        </p>
-      </div>
-    </PageShell>
+    <div className="text-center py-12">
+      <p className="text-muted-foreground">Dashboard amministratore in arrivo...</p>
+      <p className="text-sm text-muted-foreground mt-2">
+        Nel frattempo, visita <a href="/rapportini" className="text-primary underline">Rapportini</a> o{' '}
+        <a href="/gestione-utenti" className="text-primary underline">Gestione Utenti</a>
+      </p>
+    </div>
   );
 }

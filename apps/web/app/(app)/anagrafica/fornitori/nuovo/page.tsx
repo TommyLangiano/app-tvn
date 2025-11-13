@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
-import { Breadcrumb } from '@/components/common/Breadcrumb';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -207,7 +206,6 @@ export default function NuovoFornitorePage() {
 
   return (
     <div className="space-y-6">
-      <Breadcrumb pageName="Nuovo Fornitore" />
 
       {/* Header */}
       <div className="flex items-center gap-4">

@@ -141,24 +141,25 @@ export function SignInForm() {
             </Button>
 
             <div className="text-center">
-              <button
-                type="button"
-                onClick={() => setIsSignUp(!isSignUp)}
-                className="text-sm text-muted hover:text-foreground transition-colors"
-                disabled={isLoading}
-              >
-                {isSignUp ? (
-                  <>
-                    Hai già un account?{' '}
-                    <span className="font-medium text-primary">Accedi</span>
-                  </>
-                ) : (
-                  <>
-                    Non hai un account?{' '}
-                    <span className="font-medium text-primary">Registrati</span>
-                  </>
-                )}
-              </button>
+              {isSignUp ? (
+                <button
+                  type="button"
+                  onClick={() => setIsSignUp(false)}
+                  className="text-sm text-muted hover:text-foreground transition-colors"
+                  disabled={isLoading}
+                >
+                  Hai già un account?{' '}
+                  <span className="font-medium text-primary">Accedi</span>
+                </button>
+              ) : (
+                <a
+                  href="/signup"
+                  className="text-sm text-muted hover:text-foreground transition-colors"
+                >
+                  Non hai un account?{' '}
+                  <span className="font-medium text-primary">Crea la tua azienda</span>
+                </a>
+              )}
             </div>
           </form>
 
