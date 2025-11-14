@@ -327,32 +327,30 @@ export default function OnboardingStep2() {
 
       {/* Action Buttons */}
       <div className="flex items-center justify-between pt-4 border-t border-border">
-        <Button
+        <button
           type="button"
-          variant="ghost"
           onClick={() => router.push('/onboarding/step-1')}
           disabled={loading || uploading}
-          className="h-12 px-6 text-base"
+          className="h-11 px-6 flex items-center justify-center gap-2 bg-surface border border-border rounded-lg hover:border-primary/20 hover:bg-primary/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <ArrowLeft className="h-5 w-5 mr-2" />
-          Indietro
-        </Button>
+          <ArrowLeft className="h-5 w-5" />
+          <span className="text-sm font-medium">Indietro</span>
+        </button>
 
         <div className="flex items-center gap-3">
-          <Button
+          <button
             type="button"
-            variant="outline"
             onClick={handleSkip}
             disabled={loading || uploading}
-            className="h-12 px-6 text-base"
+            className="h-11 px-6 flex items-center justify-center gap-2 bg-surface border border-border rounded-lg hover:border-primary/20 hover:bg-primary/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Salta per ora
-          </Button>
+            <span className="text-sm font-medium">Salta per ora</span>
+          </button>
 
           <Button
             onClick={handleComplete}
             disabled={loading || uploading || !logoUrl}
-            className="h-12 px-8 text-base font-medium"
+            className="h-11 px-8 text-sm font-medium"
           >
             {loading ? (
               <span className="flex items-center gap-2">

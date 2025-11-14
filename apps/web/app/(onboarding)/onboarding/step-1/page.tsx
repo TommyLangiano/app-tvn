@@ -364,7 +364,7 @@ export default function OnboardingStep1() {
         <Button
           type="submit"
           disabled={loading}
-          className="h-12 px-8 text-base font-medium"
+          className="h-11 px-8 text-sm font-medium"
         >
           {loading ? (
             <span className="flex items-center gap-2">
