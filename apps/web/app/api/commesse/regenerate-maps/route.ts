@@ -38,9 +38,17 @@ export async function POST() {
       });
     }
 
+    type CommessaAddress = {
+      via?: string | null;
+      civico?: string | null;
+      cap?: string | null;
+      citta?: string | null;
+      provincia?: string | null;
+    };
+
     // Funzione per costruire l'indirizzo
-    const buildAddress = (commessa: any) => {
-      const parts = [];
+    const buildAddress = (commessa: CommessaAddress) => {
+      const parts: string[] = [];
       if (commessa.via) parts.push(commessa.via);
       if (commessa.civico) parts.push(commessa.civico);
       if (commessa.cap) parts.push(commessa.cap);
@@ -50,7 +58,7 @@ export async function POST() {
     };
 
     // Funzione per generare URL mappa statica
-    const generateStaticMapUrl = (commessa: any) => {
+    const generateStaticMapUrl = (commessa: CommessaAddress) => {
       const address = buildAddress(commessa);
       if (!address) return null;
 

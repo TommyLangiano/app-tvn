@@ -5,9 +5,23 @@ import { Button } from '@/components/ui/button';
 import { Map, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
+type MapResult = {
+  success: boolean;
+  message: string;
+  count: number;
+  commesse?: Array<{
+    id: string;
+    nome: string;
+    indirizzo: string;
+    mapUrl: string | null;
+    hasAddress: boolean;
+  }>;
+  info?: string;
+};
+
 export function ImpostazioniUtilita() {
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<MapResult | null>(null);
 
   const handleRegenerateMaps = async () => {
     setLoading(true);
@@ -123,7 +137,7 @@ export function ImpostazioniUtilita() {
                           Commesse con mappe valide:
                         </p>
                         <ul className="space-y-1">
-                          {result.commesse.slice(0, 5).map((commessa: any) => (
+                          {result.commesse.slice(0, 5).map((commessa) => (
                             <li key={commessa.id} className="text-xs text-green-700">
                               • {commessa.nome} - {commessa.indirizzo}
                             </li>
