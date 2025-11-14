@@ -22,10 +22,11 @@ export default function OnboardingLayout({
       {/* Header */}
       <div className="border-b border-border bg-surface">
         <div className="mx-auto max-w-4xl px-6 py-8">
-          {/* Logo e Titolo - Allineati a Sinistra */}
-          <div className="mb-8">
+          {/* Header con Logo a Sinistra e Steps al Centro - Stessa Riga */}
+          <div className="flex items-center justify-between">
+            {/* Logo e Titolo - Sinistra */}
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground flex-shrink-0">
                 <span className="text-xl font-bold">TVN</span>
               </div>
               <div>
@@ -33,61 +34,61 @@ export default function OnboardingLayout({
                 <p className="text-sm text-muted">Completa i dati della tua azienda</p>
               </div>
             </div>
-          </div>
 
-          {/* Steps Indicator - Numero Sopra, Nome Sotto */}
-          <nav aria-label="Progress">
-            <ol className="flex items-start justify-center gap-16">
-              {steps.map((step, stepIdx) => (
-                <li
-                  key={step.name}
-                  className="relative flex flex-col items-center"
-                >
-                  {/* Connector Line tra gli step */}
-                  {stepIdx !== steps.length - 1 && (
-                    <div
-                      className="absolute top-5 left-[calc(50%+20px)] w-[calc(4rem+1px)] h-0.5 bg-border"
-                      aria-hidden="true"
-                    >
-                      <div
-                        className={`h-full transition-all duration-500 ${
-                          currentStep > step.id ? 'bg-primary' : 'bg-transparent'
+            {/* Steps Indicator - Centro */}
+            <nav aria-label="Progress" className="flex-1 max-w-md ml-12">
+              <ol className="flex items-start justify-center relative">
+                {steps.map((step, stepIdx) => (
+                  <li
+                    key={step.name}
+                    className="flex flex-col items-center relative flex-1"
+                  >
+                    {/* Step Circle con numero */}
+                    <div className="relative z-10 mb-3">
+                      <span
+                        className={`flex h-12 w-12 items-center justify-center rounded-full border-2 transition-all duration-300 ${
+                          currentStep > step.id
+                            ? 'border-primary bg-primary text-white'
+                            : currentStep === step.id
+                            ? 'border-primary bg-primary text-white'
+                            : 'border-border bg-background text-muted'
                         }`}
-                      />
+                      >
+                        {currentStep > step.id ? (
+                          <Check className="h-5 w-5" />
+                        ) : (
+                          <span className="text-base font-semibold">{step.id}</span>
+                        )}
+                      </span>
                     </div>
-                  )}
 
-                  {/* Step Circle con numero */}
-                  <div className="relative z-10 mb-3">
+                    {/* Nome dello step sotto */}
                     <span
-                      className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all duration-300 ${
-                        currentStep > step.id
-                          ? 'border-primary bg-primary text-white'
-                          : currentStep === step.id
-                          ? 'border-primary bg-primary text-white'
-                          : 'border-border bg-background text-muted'
+                      className={`text-sm font-medium text-center transition-colors ${
+                        currentStep >= step.id ? 'text-foreground' : 'text-muted'
                       }`}
                     >
-                      {currentStep > step.id ? (
-                        <Check className="h-5 w-5" />
-                      ) : (
-                        <span className="text-sm font-semibold">{step.id}</span>
-                      )}
+                      {step.name}
                     </span>
-                  </div>
 
-                  {/* Nome dello step sotto */}
-                  <span
-                    className={`text-sm font-medium text-center transition-colors ${
-                      currentStep >= step.id ? 'text-foreground' : 'text-muted'
-                    }`}
-                  >
-                    {step.name}
-                  </span>
-                </li>
-              ))}
-            </ol>
-          </nav>
+                    {/* Connector Line - DOPO il primo step */}
+                    {stepIdx < steps.length - 1 && (
+                      <div
+                        className="absolute top-6 left-1/2 w-full h-0.5 bg-border z-0"
+                        aria-hidden="true"
+                      >
+                        <div
+                          className={`h-full transition-all duration-500 ${
+                            currentStep > step.id ? 'bg-primary w-full' : 'bg-transparent w-0'
+                          }`}
+                        />
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            </nav>
+          </div>
         </div>
       </div>
 
