@@ -164,7 +164,7 @@ export default function OnboardingStep1() {
               onChange={(e) => handleChange('ragione_sociale', e.target.value)}
               placeholder="Es. Costruzioni Edili SRL"
               required
-              className="mt-2 h-11"
+              className="mt-2 h-11 bg-white border-gray-300"
             />
           </div>
 
@@ -179,7 +179,7 @@ export default function OnboardingStep1() {
               placeholder="12345678901"
               maxLength={11}
               required
-              className="mt-2 h-11"
+              className="mt-2 h-11 bg-white border-gray-300"
             />
           </div>
 
@@ -193,7 +193,7 @@ export default function OnboardingStep1() {
               onChange={(e) => handleChange('codice_fiscale', e.target.value)}
               placeholder="12345678901"
               maxLength={16}
-              className="mt-2 h-11"
+              className="mt-2 h-11 bg-white border-gray-300"
             />
           </div>
 
@@ -205,7 +205,7 @@ export default function OnboardingStep1() {
               value={formData.forma_giuridica}
               onValueChange={(value) => handleChange('forma_giuridica', value)}
             >
-              <SelectTrigger className="mt-2 h-11">
+              <SelectTrigger className="mt-2 h-11 bg-white border-gray-300">
                 <SelectValue placeholder="Seleziona forma giuridica" />
               </SelectTrigger>
               <SelectContent>
@@ -227,7 +227,7 @@ export default function OnboardingStep1() {
               value={formData.settore_attivita}
               onChange={(e) => handleChange('settore_attivita', e.target.value)}
               placeholder="Es. Costruzioni Edili, Ristrutturazioni"
-              className="mt-2 h-11"
+              className="mt-2 h-11 bg-white border-gray-300"
             />
           </div>
         </div>
@@ -257,7 +257,7 @@ export default function OnboardingStep1() {
               onChange={(e) => handleChange('pec', e.target.value)}
               placeholder="azienda@pec.it"
               required
-              className="mt-2 h-11"
+              className="mt-2 h-11 bg-white border-gray-300"
             />
           </div>
 
@@ -271,7 +271,7 @@ export default function OnboardingStep1() {
               value={formData.telefono}
               onChange={(e) => handleChange('telefono', e.target.value)}
               placeholder="+39 012 345 6789"
-              className="mt-2 h-11"
+              className="mt-2 h-11 bg-white border-gray-300"
             />
           </div>
         </div>
@@ -299,7 +299,7 @@ export default function OnboardingStep1() {
               value={formData.sede_legale_via}
               onChange={(e) => handleChange('sede_legale_via', e.target.value)}
               placeholder="Via Roma"
-              className="mt-2 h-11"
+              className="mt-2 h-11 bg-white border-gray-300"
             />
           </div>
 
@@ -312,7 +312,7 @@ export default function OnboardingStep1() {
               value={formData.sede_legale_civico}
               onChange={(e) => handleChange('sede_legale_civico', e.target.value)}
               placeholder="123"
-              className="mt-2 h-11"
+              className="mt-2 h-11 bg-white border-gray-300"
             />
           </div>
 
@@ -326,7 +326,7 @@ export default function OnboardingStep1() {
               onChange={(e) => handleChange('sede_legale_cap', e.target.value)}
               placeholder="00100"
               maxLength={5}
-              className="mt-2 h-11"
+              className="mt-2 h-11 bg-white border-gray-300"
             />
           </div>
 
@@ -339,7 +339,7 @@ export default function OnboardingStep1() {
               value={formData.sede_legale_citta}
               onChange={(e) => handleChange('sede_legale_citta', e.target.value)}
               placeholder="Roma"
-              className="mt-2 h-11"
+              className="mt-2 h-11 bg-white border-gray-300"
             />
           </div>
 
@@ -353,7 +353,7 @@ export default function OnboardingStep1() {
               onChange={(e) => handleChange('sede_legale_provincia', e.target.value)}
               placeholder="RM"
               maxLength={2}
-              className="mt-2 h-11 uppercase"
+              className="mt-2 h-11 bg-white border-gray-300 uppercase"
             />
           </div>
         </div>

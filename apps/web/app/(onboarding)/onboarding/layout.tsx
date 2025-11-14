@@ -22,28 +22,31 @@ export default function OnboardingLayout({
       {/* Header */}
       <div className="border-b border-border bg-surface">
         <div className="mx-auto max-w-4xl px-6 py-8">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-              <span className="text-xl font-bold">TVN</span>
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-foreground">Configurazione Iniziale</h1>
-              <p className="text-sm text-muted">Completa i dati della tua azienda</p>
+          {/* Logo e Titolo - Allineati a Sinistra */}
+          <div className="mb-8">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                <span className="text-xl font-bold">TVN</span>
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-foreground">Configurazione Iniziale</h1>
+                <p className="text-sm text-muted">Completa i dati della tua azienda</p>
+              </div>
             </div>
           </div>
 
-          {/* Steps Indicator */}
+          {/* Steps Indicator - Numero Sopra, Nome Sotto */}
           <nav aria-label="Progress">
-            <ol className="flex items-center">
+            <ol className="flex items-start justify-center gap-16">
               {steps.map((step, stepIdx) => (
                 <li
                   key={step.name}
-                  className={`relative ${stepIdx !== steps.length - 1 ? 'pr-20 flex-1' : ''}`}
+                  className="relative flex flex-col items-center"
                 >
-                  {/* Connector Line */}
+                  {/* Connector Line tra gli step */}
                   {stepIdx !== steps.length - 1 && (
                     <div
-                      className="absolute top-5 left-12 right-0 h-0.5 bg-border"
+                      className="absolute top-5 left-[calc(50%+20px)] w-[calc(4rem+1px)] h-0.5 bg-border"
                       aria-hidden="true"
                     >
                       <div
@@ -54,8 +57,8 @@ export default function OnboardingLayout({
                     </div>
                   )}
 
-                  {/* Step Circle */}
-                  <div className="relative flex items-center group">
+                  {/* Step Circle con numero */}
+                  <div className="relative z-10 mb-3">
                     <span
                       className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all duration-300 ${
                         currentStep > step.id
@@ -71,14 +74,16 @@ export default function OnboardingLayout({
                         <span className="text-sm font-semibold">{step.id}</span>
                       )}
                     </span>
-                    <span
-                      className={`ml-4 text-sm font-medium transition-colors ${
-                        currentStep >= step.id ? 'text-foreground' : 'text-muted'
-                      }`}
-                    >
-                      {step.name}
-                    </span>
                   </div>
+
+                  {/* Nome dello step sotto */}
+                  <span
+                    className={`text-sm font-medium text-center transition-colors ${
+                      currentStep >= step.id ? 'text-foreground' : 'text-muted'
+                    }`}
+                  >
+                    {step.name}
+                  </span>
                 </li>
               ))}
             </ol>
