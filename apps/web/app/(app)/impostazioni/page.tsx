@@ -2,11 +2,12 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Settings, Building2 } from 'lucide-react';
+import { Settings, Building2, Wrench } from 'lucide-react';
 import { ImpostazioniGenerali } from '@/components/features/impostazioni/ImpostazioniGenerali';
 import { ImpostazioniAzienda } from '@/components/features/impostazioni/ImpostazioniAzienda';
+import { ImpostazioniUtilita } from '@/components/features/impostazioni/ImpostazioniUtilita';
 
-type TabType = 'generali' | 'azienda';
+type TabType = 'generali' | 'azienda' | 'utilita';
 
 function ImpostazioniPageContent() {
   const router = useRouter();
@@ -15,7 +16,7 @@ function ImpostazioniPageContent() {
 
   useEffect(() => {
     const tab = searchParams.get('tab') as TabType;
-    if (tab && (tab === 'generali' || tab === 'azienda')) {
+    if (tab && (tab === 'generali' || tab === 'azienda' || tab === 'utilita')) {
       setActiveTab(tab);
     }
   }, [searchParams]);
@@ -59,12 +60,24 @@ function ImpostazioniPageContent() {
             <Building2 className="h-5 w-5 transition-transform duration-[450ms] ease-in-out" />
             Azienda
           </button>
+          <button
+            onClick={() => handleTabChange('utilita')}
+            className={`flex-1 flex items-center justify-center gap-2 p-4 font-semibold transition-all duration-[450ms] ease-in-out ${
+              activeTab === 'utilita'
+                ? 'bg-emerald-50 text-emerald-600 border-emerald-600 border-b-4'
+                : 'text-muted-foreground hover:bg-muted/20 border-b-4 border-transparent'
+            }`}
+          >
+            <Wrench className="h-5 w-5 transition-transform duration-[450ms] ease-in-out" />
+            Utilità
+          </button>
         </div>
 
         {/* Tab Content */}
         <div className="p-6">
           {activeTab === 'generali' && <ImpostazioniGenerali />}
           {activeTab === 'azienda' && <ImpostazioniAzienda />}
+          {activeTab === 'utilita' && <ImpostazioniUtilita />}
         </div>
       </div>
     </div>
