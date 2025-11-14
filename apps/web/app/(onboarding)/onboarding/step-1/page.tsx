@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { ArrowRight, Building2 } from 'lucide-react';
+import { ArrowRight, Building2, Mail, Phone, MapPin, FileText } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 const formeGiuridiche = [
@@ -140,207 +140,245 @@ export default function OnboardingStep1() {
   };
 
   return (
-    <div className="bg-surface border border-border rounded-xl p-8">
-      <div className="mb-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <Building2 className="h-6 w-6" />
+    <form onSubmit={handleSubmit} className="space-y-8">
+      {/* Dati Fiscali */}
+      <div className="bg-surface border border-border rounded-xl p-8">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 border border-blue-200">
+            <FileText className="h-6 w-6 text-blue-600" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-foreground">Dati dell&apos;Azienda</h2>
-            <p className="text-sm text-muted">
-              Completa i dati fiscali e legali della tua azienda
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Dati Fiscali */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-foreground">Dati Fiscali</h3>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="ragione_sociale">
-                Ragione Sociale <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="ragione_sociale"
-                value={formData.ragione_sociale}
-                onChange={(e) => handleChange('ragione_sociale', e.target.value)}
-                placeholder="Es. Costruzioni Edili SRL"
-                required
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="forma_giuridica">Forma Giuridica</Label>
-              <Select
-                value={formData.forma_giuridica}
-                onValueChange={(value) => handleChange('forma_giuridica', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleziona forma giuridica" />
-                </SelectTrigger>
-                <SelectContent>
-                  {formeGiuridiche.map((forma) => (
-                    <SelectItem key={forma} value={forma}>
-                      {forma}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="partita_iva">
-                Partita IVA <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="partita_iva"
-                value={formData.partita_iva}
-                onChange={(e) => handleChange('partita_iva', e.target.value)}
-                placeholder="Es. 12345678901"
-                maxLength={11}
-                required
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="codice_fiscale">Codice Fiscale</Label>
-              <Input
-                id="codice_fiscale"
-                value={formData.codice_fiscale}
-                onChange={(e) => handleChange('codice_fiscale', e.target.value)}
-                placeholder="Es. 12345678901"
-              />
-            </div>
+            <h3 className="text-lg font-semibold text-foreground">Dati Fiscali</h3>
+            <p className="text-sm text-muted-foreground">Informazioni legali e fiscali dell&apos;azienda</p>
           </div>
         </div>
 
-        {/* Contatti */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-foreground">Contatti</h3>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="pec">
-                PEC <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="pec"
-                type="email"
-                value={formData.pec}
-                onChange={(e) => handleChange('pec', e.target.value)}
-                placeholder="Es. azienda@pec.it"
-                required
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="telefono">Telefono Aziendale</Label>
-              <Input
-                id="telefono"
-                type="tel"
-                value={formData.telefono}
-                onChange={(e) => handleChange('telefono', e.target.value)}
-                placeholder="Es. +39 012 345 6789"
-              />
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="md:col-span-2">
+            <Label htmlFor="ragione_sociale" className="text-sm font-medium">
+              Ragione Sociale <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="ragione_sociale"
+              value={formData.ragione_sociale}
+              onChange={(e) => handleChange('ragione_sociale', e.target.value)}
+              placeholder="Es. Costruzioni Edili SRL"
+              required
+              className="mt-2 h-11"
+            />
           </div>
-        </div>
-
-        {/* Settore */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-foreground">Attività</h3>
 
           <div>
-            <Label htmlFor="settore_attivita">Settore Attività</Label>
+            <Label htmlFor="partita_iva" className="text-sm font-medium">
+              Partita IVA <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="partita_iva"
+              value={formData.partita_iva}
+              onChange={(e) => handleChange('partita_iva', e.target.value)}
+              placeholder="12345678901"
+              maxLength={11}
+              required
+              className="mt-2 h-11"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="codice_fiscale" className="text-sm font-medium">
+              Codice Fiscale
+            </Label>
+            <Input
+              id="codice_fiscale"
+              value={formData.codice_fiscale}
+              onChange={(e) => handleChange('codice_fiscale', e.target.value)}
+              placeholder="12345678901"
+              maxLength={16}
+              className="mt-2 h-11"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="forma_giuridica" className="text-sm font-medium">
+              Forma Giuridica
+            </Label>
+            <Select
+              value={formData.forma_giuridica}
+              onValueChange={(value) => handleChange('forma_giuridica', value)}
+            >
+              <SelectTrigger className="mt-2 h-11">
+                <SelectValue placeholder="Seleziona forma giuridica" />
+              </SelectTrigger>
+              <SelectContent>
+                {formeGiuridiche.map((forma) => (
+                  <SelectItem key={forma} value={forma}>
+                    {forma}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="settore_attivita" className="text-sm font-medium">
+              Settore Attività
+            </Label>
             <Input
               id="settore_attivita"
               value={formData.settore_attivita}
               onChange={(e) => handleChange('settore_attivita', e.target.value)}
-              placeholder="Es. Costruzioni Edili, Ristrutturazioni, ecc."
+              placeholder="Es. Costruzioni Edili, Ristrutturazioni"
+              className="mt-2 h-11"
             />
           </div>
         </div>
+      </div>
 
-        {/* Sede Legale */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-foreground">Sede Legale</h3>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2">
-              <Label htmlFor="sede_legale_via">Via</Label>
-              <Input
-                id="sede_legale_via"
-                value={formData.sede_legale_via}
-                onChange={(e) => handleChange('sede_legale_via', e.target.value)}
-                placeholder="Es. Via Roma"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="sede_legale_civico">Civico</Label>
-              <Input
-                id="sede_legale_civico"
-                value={formData.sede_legale_civico}
-                onChange={(e) => handleChange('sede_legale_civico', e.target.value)}
-                placeholder="Es. 123"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="sede_legale_cap">CAP</Label>
-              <Input
-                id="sede_legale_cap"
-                value={formData.sede_legale_cap}
-                onChange={(e) => handleChange('sede_legale_cap', e.target.value)}
-                placeholder="Es. 00100"
-                maxLength={5}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="sede_legale_citta">Città</Label>
-              <Input
-                id="sede_legale_citta"
-                value={formData.sede_legale_citta}
-                onChange={(e) => handleChange('sede_legale_citta', e.target.value)}
-                placeholder="Es. Roma"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="sede_legale_provincia">Provincia</Label>
-              <Input
-                id="sede_legale_provincia"
-                value={formData.sede_legale_provincia}
-                onChange={(e) => handleChange('sede_legale_provincia', e.target.value)}
-                placeholder="Es. RM"
-                maxLength={2}
-              />
-            </div>
+      {/* Contatti */}
+      <div className="bg-surface border border-border rounded-xl p-8">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-100 border border-green-200">
+            <Mail className="h-6 w-6 text-green-600" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-foreground">Contatti</h3>
+            <p className="text-sm text-muted-foreground">Informazioni di contatto aziendali</p>
           </div>
         </div>
 
-        {/* Submit Button */}
-        <div className="flex justify-end pt-4">
-          <Button
-            type="submit"
-            disabled={loading}
-            className="h-11 px-8"
-          >
-            {loading ? 'Salvataggio...' : (
-              <>
-                Continua
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </>
-            )}
-          </Button>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <Label htmlFor="pec" className="text-sm font-medium">
+              PEC <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="pec"
+              type="email"
+              value={formData.pec}
+              onChange={(e) => handleChange('pec', e.target.value)}
+              placeholder="azienda@pec.it"
+              required
+              className="mt-2 h-11"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="telefono" className="text-sm font-medium">
+              Telefono Aziendale
+            </Label>
+            <Input
+              id="telefono"
+              type="tel"
+              value={formData.telefono}
+              onChange={(e) => handleChange('telefono', e.target.value)}
+              placeholder="+39 012 345 6789"
+              className="mt-2 h-11"
+            />
+          </div>
         </div>
-      </form>
-    </div>
+      </div>
+
+      {/* Sede Legale */}
+      <div className="bg-surface border border-border rounded-xl p-8">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-100 border border-purple-200">
+            <MapPin className="h-6 w-6 text-purple-600" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-foreground">Sede Legale</h3>
+            <p className="text-sm text-muted-foreground">Indirizzo della sede legale dell&apos;azienda</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="md:col-span-3">
+            <Label htmlFor="sede_legale_via" className="text-sm font-medium">
+              Via
+            </Label>
+            <Input
+              id="sede_legale_via"
+              value={formData.sede_legale_via}
+              onChange={(e) => handleChange('sede_legale_via', e.target.value)}
+              placeholder="Via Roma"
+              className="mt-2 h-11"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="sede_legale_civico" className="text-sm font-medium">
+              Civico
+            </Label>
+            <Input
+              id="sede_legale_civico"
+              value={formData.sede_legale_civico}
+              onChange={(e) => handleChange('sede_legale_civico', e.target.value)}
+              placeholder="123"
+              className="mt-2 h-11"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="sede_legale_cap" className="text-sm font-medium">
+              CAP
+            </Label>
+            <Input
+              id="sede_legale_cap"
+              value={formData.sede_legale_cap}
+              onChange={(e) => handleChange('sede_legale_cap', e.target.value)}
+              placeholder="00100"
+              maxLength={5}
+              className="mt-2 h-11"
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <Label htmlFor="sede_legale_citta" className="text-sm font-medium">
+              Città
+            </Label>
+            <Input
+              id="sede_legale_citta"
+              value={formData.sede_legale_citta}
+              onChange={(e) => handleChange('sede_legale_citta', e.target.value)}
+              placeholder="Roma"
+              className="mt-2 h-11"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="sede_legale_provincia" className="text-sm font-medium">
+              Provincia
+            </Label>
+            <Input
+              id="sede_legale_provincia"
+              value={formData.sede_legale_provincia}
+              onChange={(e) => handleChange('sede_legale_provincia', e.target.value)}
+              placeholder="RM"
+              maxLength={2}
+              className="mt-2 h-11 uppercase"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Submit Button */}
+      <div className="flex justify-end pt-4">
+        <Button
+          type="submit"
+          disabled={loading}
+          className="h-12 px-8 text-base font-medium"
+        >
+          {loading ? (
+            <span className="flex items-center gap-2">
+              <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              Salvataggio...
+            </span>
+          ) : (
+            <span className="flex items-center gap-2">
+              Continua
+              <ArrowRight className="h-5 w-5" />
+            </span>
+          )}
+        </Button>
+      </div>
+    </form>
   );
 }

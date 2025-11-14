@@ -3,9 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Upload, Image as ImageIcon, X, Check } from 'lucide-react';
+import { Upload, Image as ImageIcon, X, Check, ArrowLeft, Sparkles } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 export default function OnboardingStep2() {
@@ -137,6 +136,11 @@ export default function OnboardingStep2() {
   };
 
   const handleComplete = async () => {
+    if (!logoUrl) {
+      toast.error('Carica un logo prima di completare');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -146,7 +150,7 @@ export default function OnboardingStep2() {
       const { error } = await supabase
         .from('tenant_profiles')
         .update({
-          logo_url: logoUrl || null,
+          logo_url: logoUrl,
           onboarding_completed: true,
           onboarding_completed_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
@@ -177,6 +181,7 @@ export default function OnboardingStep2() {
       const { error } = await supabase
         .from('tenant_profiles')
         .update({
+          logo_url: null,
           onboarding_completed: true,
           onboarding_completed_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
@@ -198,30 +203,26 @@ export default function OnboardingStep2() {
   };
 
   return (
-    <div className="bg-surface border border-border rounded-xl p-8">
-      <div className="mb-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <ImageIcon className="h-6 w-6" />
+    <div className="space-y-8">
+      {/* Logo Upload Card */}
+      <div className="bg-surface border border-border rounded-xl p-8">
+        <div className="flex items-center gap-3 mb-8">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-orange-100 to-pink-100 border border-orange-200">
+            <ImageIcon className="h-6 w-6 text-orange-600" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-foreground">Logo & Branding</h2>
-            <p className="text-sm text-muted">
-              Carica il logo della tua azienda (opzionale)
-            </p>
+            <h3 className="text-lg font-semibold text-foreground">Logo Aziendale</h3>
+            <p className="text-sm text-muted-foreground">Personalizza l&apos;identità visiva della tua azienda</p>
           </div>
         </div>
-      </div>
 
-      <div className="space-y-6">
-        {/* Logo Upload */}
-        <div className="space-y-4">
-          <Label>Logo Azienda</Label>
-
-          <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-border rounded-xl bg-background">
-            {previewUrl ? (
-              <div className="relative">
-                <div className="w-48 h-48 rounded-xl bg-white border border-border p-4 flex items-center justify-center">
+        {/* Upload Area */}
+        <div className="relative">
+          {previewUrl ? (
+            // Preview State
+            <div className="flex flex-col items-center gap-6">
+              <div className="relative group">
+                <div className="w-64 h-64 rounded-2xl bg-white border-2 border-border p-8 flex items-center justify-center shadow-lg">
                   <img
                     src={previewUrl}
                     alt="Logo preview"
@@ -230,66 +231,120 @@ export default function OnboardingStep2() {
                 </div>
                 <button
                   onClick={handleRemoveLogo}
-                  className="absolute -top-2 -right-2 p-1 rounded-full bg-destructive text-white hover:bg-destructive/90 transition-colors"
                   disabled={uploading}
+                  className="absolute -top-3 -right-3 h-10 w-10 flex items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Rimuovi logo"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-5 w-5" />
                 </button>
               </div>
-            ) : (
-              <div className="text-center">
-                <Upload className="mx-auto h-12 w-12 text-muted mb-4" />
-                <p className="text-sm text-muted mb-1">
-                  Trascina qui il tuo logo oppure
-                </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading}
-                  className="mt-2"
-                >
-                  Seleziona File
-                </Button>
+
+              {uploading && (
+                <div className="flex items-center gap-2 text-primary">
+                  <span className="h-4 w-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                  <span className="text-sm font-medium">Caricamento in corso...</span>
+                </div>
+              )}
+
+              {!uploading && logoUrl && (
+                <div className="flex items-center gap-2 text-green-600">
+                  <Check className="h-5 w-5" />
+                  <span className="text-sm font-medium">Logo caricato con successo</span>
+                </div>
+              )}
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="h-11 px-6"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Cambia Logo
+              </Button>
+            </div>
+          ) : (
+            // Empty State
+            <div
+              onClick={() => !uploading && fileInputRef.current?.click()}
+              className={`relative border-2 border-dashed border-border rounded-2xl p-12 flex flex-col items-center justify-center gap-6 transition-all ${
+                uploading ? 'opacity-50 cursor-not-allowed' : 'hover:border-primary/50 hover:bg-primary/5 cursor-pointer'
+              }`}
+            >
+              <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/10 to-primary/20 border border-primary/20">
+                <Upload className="h-10 w-10 text-primary" />
               </div>
-            )}
 
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-          </div>
+              <div className="text-center space-y-2">
+                <p className="text-base font-medium text-foreground">
+                  Trascina qui il logo oppure clicca per selezionare
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Formati supportati: PNG, JPG, SVG • Massimo 2MB
+                </p>
+              </div>
 
-          <p className="text-xs text-muted text-center">
-            Formati supportati: PNG, JPG, SVG • Massimo 2MB
-          </p>
-
-          {uploading && (
-            <p className="text-sm text-primary text-center animate-pulse">
-              Caricamento in corso...
-            </p>
+              {uploading && (
+                <div className="flex items-center gap-2 text-primary">
+                  <span className="h-4 w-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                  <span className="text-sm font-medium">Caricamento in corso...</span>
+                </div>
+              )}
+            </div>
           )}
-        </div>
 
-        {/* Info Box */}
-        <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-          <p className="text-sm text-foreground">
-            <strong>💡 Suggerimento:</strong> Il logo verrà utilizzato in fatture, documenti,
-            email e nell&apos;interfaccia dell&apos;applicazione. Puoi sempre modificarlo successivamente
-            dalle impostazioni aziendali.
-          </p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
         </div>
+      </div>
 
-        {/* Action Buttons */}
-        <div className="flex justify-between pt-4">
+      {/* Info Box */}
+      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6">
+        <div className="flex gap-4">
+          <div className="flex-shrink-0">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900">
+              <Sparkles className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+              Perché è importante avere un logo?
+            </h4>
+            <p className="text-sm text-blue-700 dark:text-blue-300">
+              Il tuo logo verrà utilizzato su fatture, documenti, email e nell&apos;interfaccia dell&apos;applicazione.
+              Conferisce professionalità e rafforza l&apos;identità della tua azienda. Potrai sempre modificarlo
+              successivamente dalle impostazioni.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex items-center justify-between pt-4 border-t border-border">
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => router.push('/onboarding/step-1')}
+          disabled={loading || uploading}
+          className="h-12 px-6 text-base"
+        >
+          <ArrowLeft className="h-5 w-5 mr-2" />
+          Indietro
+        </Button>
+
+        <div className="flex items-center gap-3">
           <Button
             type="button"
-            variant="ghost"
+            variant="outline"
             onClick={handleSkip}
             disabled={loading || uploading}
+            className="h-12 px-6 text-base"
           >
             Salta per ora
           </Button>
@@ -297,13 +352,18 @@ export default function OnboardingStep2() {
           <Button
             onClick={handleComplete}
             disabled={loading || uploading || !logoUrl}
-            className="h-11 px-8"
+            className="h-12 px-8 text-base font-medium"
           >
-            {loading ? 'Completamento...' : (
-              <>
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Completamento...
+              </span>
+            ) : (
+              <span className="flex items-center gap-2">
                 Completa Configurazione
-                <Check className="ml-2 h-4 w-4" />
-              </>
+                <Check className="h-5 w-5" />
+              </span>
             )}
           </Button>
         </div>
