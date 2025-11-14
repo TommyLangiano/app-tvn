@@ -25,7 +25,7 @@ export async function POST() {
     // Ottieni tutte le commesse del tenant che hanno un indirizzo
     const { data: commesse, error: commesseError } = await supabase
       .from('commesse')
-      .select('id, nome, via, civico, cap, citta, provincia')
+      .select('id, nome_commessa, via, civico, cap, citta, provincia')
       .eq('tenant_id', userTenant.tenant_id)
       .not('via', 'is', null);
 
@@ -39,6 +39,7 @@ export async function POST() {
     }
 
     type CommessaAddress = {
+      nome_commessa?: string | null;
       via?: string | null;
       civico?: string | null;
       cap?: string | null;
@@ -79,7 +80,7 @@ export async function POST() {
     // Genera info per tutte le commesse con indirizzo
     const mapInfo = commesse.map(commessa => ({
       id: commessa.id,
-      nome: commessa.nome,
+      nome: commessa.nome_commessa || 'Senza nome',
       indirizzo: buildAddress(commessa),
       mapUrl: generateStaticMapUrl(commessa),
       hasAddress: !!(commessa.via || commessa.citta)
