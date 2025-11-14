@@ -141,6 +141,11 @@ export default function OnboardingStep2() {
       return;
     }
 
+    if (!tenantId) {
+      toast.error('Errore: tenant non trovato. Ricarica la pagina.');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -172,6 +177,11 @@ export default function OnboardingStep2() {
   };
 
   const handleSkip = async () => {
+    if (!tenantId) {
+      toast.error('Errore: tenant non trovato. Ricarica la pagina.');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -201,6 +211,18 @@ export default function OnboardingStep2() {
       setLoading(false);
     }
   };
+
+  // Mostra loading se tenantId non è ancora caricato
+  if (!tenantId) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center space-y-3">
+          <div className="h-8 w-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin mx-auto" />
+          <p className="text-sm text-muted-foreground">Caricamento...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
