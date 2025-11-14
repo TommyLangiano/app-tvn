@@ -2,6 +2,8 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 interface UserData {
   userId: string;
@@ -35,6 +37,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserData | null>(null);
   const [tenant, setTenant] = useState<TenantData | null>(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   const loadUserData = async () => {
     try {
@@ -51,34 +54,55 @@ export function UserProvider({ children }: { children: ReactNode }) {
       }
 
       // Get user profile
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
         .select('full_name')
         .eq('user_id', authUser.id)
         .single();
 
       // Get user tenant and role
-      const { data: userTenant } = await supabase
+      const { data: userTenant, error: tenantError } = await supabase
         .from('user_tenants')
         .select('tenant_id, role')
         .eq('user_id', authUser.id)
         .single();
 
-      if (!userTenant) {
+      // CRITICAL: Handle missing tenant - force logout
+      if (tenantError || !userTenant) {
+        console.error('[UserContext] Tenant not found for user:', authUser.id, tenantError);
         setUser(null);
         setTenant(null);
         setLoading(false);
+
+        // Force logout and show error
+        await supabase.auth.signOut();
+        toast.error('Errore: dati azienda non trovati. Contatta il supporto.');
+        router.push('/tenant-error');
         return;
       }
 
       // Get tenant profile
-      const { data: tenantProfiles } = await supabase
+      const { data: tenantProfiles, error: tenantProfileError } = await supabase
         .from('tenant_profiles')
         .select('ragione_sociale, logo_url')
         .eq('tenant_id', userTenant.tenant_id)
         .limit(1);
 
-      const tenantProfile = tenantProfiles?.[0];
+      // CRITICAL: Handle missing tenant profile
+      if (tenantProfileError || !tenantProfiles || tenantProfiles.length === 0) {
+        console.error('[UserContext] Tenant profile not found:', userTenant.tenant_id, tenantProfileError);
+        setUser(null);
+        setTenant(null);
+        setLoading(false);
+
+        // Force logout and show error
+        await supabase.auth.signOut();
+        toast.error('Errore: profilo azienda non trovato. Contatta il supporto.');
+        router.push('/tenant-error');
+        return;
+      }
+
+      const tenantProfile = tenantProfiles[0];
 
       // Set user data
       const fullName = profile?.full_name || authUser.email?.split('@')[0] || 'Utente';
@@ -95,12 +119,20 @@ export function UserProvider({ children }: { children: ReactNode }) {
       // Set tenant data
       setTenant({
         tenantId: userTenant.tenant_id,
-        ragioneSociale: tenantProfile?.ragione_sociale || 'La Mia Azienda',
-        logoUrl: tenantProfile?.logo_url,
+        ragioneSociale: tenantProfile.ragione_sociale || 'La Mia Azienda',
+        logoUrl: tenantProfile.logo_url,
       });
 
     } catch (error) {
-      console.error('Error loading user data:', error);
+      console.error('[UserContext] Fatal error loading user data:', error);
+      setUser(null);
+      setTenant(null);
+
+      // On fatal error, logout and redirect
+      const supabase = createClient();
+      await supabase.auth.signOut();
+      toast.error('Errore di caricamento. Riprova ad accedere.');
+      router.push('/sign-in');
     } finally {
       setLoading(false);
     }

@@ -72,49 +72,75 @@ export async function middleware(request: NextRequest) {
     // Skip onboarding check for signup and sign-in pages
     if (pathname.startsWith('/sign-in') || pathname.startsWith('/signup')) {
       // Check if user needs onboarding
-      const { data: userTenant } = await supabase
+      const { data: userTenant, error: tenantError } = await supabase
         .from('user_tenants')
         .select('tenant_id, role')
         .eq('user_id', user.id)
         .single();
 
-      if (userTenant) {
-        const { data: profile } = await supabase
-          .from('tenant_profiles')
-          .select('onboarding_completed')
-          .eq('tenant_id', userTenant.tenant_id)
-          .limit(1);
+      // CRITICAL: Handle missing tenant
+      if (tenantError || !userTenant) {
+        console.error('[Middleware] Tenant not found for user:', user.id, tenantError);
+        // Force logout and redirect to error page
+        await supabase.auth.signOut();
+        return NextResponse.redirect(new URL('/tenant-error', request.url));
+      }
 
-        const needsOnboarding = !profile?.[0]?.onboarding_completed;
+      const { data: profile, error: profileError } = await supabase
+        .from('tenant_profiles')
+        .select('onboarding_completed')
+        .eq('tenant_id', userTenant.tenant_id)
+        .limit(1);
 
-        if (needsOnboarding) {
-          return NextResponse.redirect(new URL('/onboarding/step-1', request.url));
-        } else {
-          return NextResponse.redirect(new URL('/dashboard', request.url));
-        }
+      // CRITICAL: Handle missing tenant profile
+      if (profileError || !profile || profile.length === 0) {
+        console.error('[Middleware] Tenant profile not found:', userTenant.tenant_id, profileError);
+        await supabase.auth.signOut();
+        return NextResponse.redirect(new URL('/tenant-error', request.url));
+      }
+
+      const needsOnboarding = !profile[0].onboarding_completed;
+
+      if (needsOnboarding) {
+        return NextResponse.redirect(new URL('/onboarding/step-1', request.url));
+      } else {
+        return NextResponse.redirect(new URL('/dashboard', request.url));
       }
     }
 
     // Check if user needs to complete onboarding
-    if (!pathname.startsWith('/onboarding') && !pathname.startsWith('/api')) {
-      const { data: userTenant } = await supabase
+    if (!pathname.startsWith('/onboarding') && !pathname.startsWith('/api') && !pathname.startsWith('/tenant-error')) {
+      const { data: userTenant, error: tenantError } = await supabase
         .from('user_tenants')
         .select('tenant_id, role')
         .eq('user_id', user.id)
         .single();
 
-      if (userTenant) {
-        const { data: profile } = await supabase
-          .from('tenant_profiles')
-          .select('onboarding_completed')
-          .eq('tenant_id', userTenant.tenant_id)
-          .limit(1);
+      // CRITICAL: Handle missing tenant
+      if (tenantError || !userTenant) {
+        console.error('[Middleware] Tenant not found for user:', user.id, tenantError);
+        // Force logout and redirect to error page
+        await supabase.auth.signOut();
+        return NextResponse.redirect(new URL('/tenant-error', request.url));
+      }
 
-        const needsOnboarding = !profile?.[0]?.onboarding_completed;
+      const { data: profile, error: profileError } = await supabase
+        .from('tenant_profiles')
+        .select('onboarding_completed')
+        .eq('tenant_id', userTenant.tenant_id)
+        .limit(1);
 
-        if (needsOnboarding) {
-          return NextResponse.redirect(new URL('/onboarding/step-1', request.url));
-        }
+      // CRITICAL: Handle missing tenant profile
+      if (profileError || !profile || profile.length === 0) {
+        console.error('[Middleware] Tenant profile not found:', userTenant.tenant_id, profileError);
+        await supabase.auth.signOut();
+        return NextResponse.redirect(new URL('/tenant-error', request.url));
+      }
+
+      const needsOnboarding = !profile[0].onboarding_completed;
+
+      if (needsOnboarding) {
+        return NextResponse.redirect(new URL('/onboarding/step-1', request.url));
       }
     }
   }
