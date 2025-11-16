@@ -1,17 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Create admin client for audit logging
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-);
-
 export type AuditEventType =
   | 'user_created'
   | 'user_updated'
@@ -47,6 +35,18 @@ interface AuditLogParams {
  */
 export async function logAuditEvent(params: AuditLogParams): Promise<string | null> {
   try {
+    // Create admin client inside function to avoid build-time issues
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
+    );
+
     const { data, error } = await supabaseAdmin.rpc('log_audit_event', {
       p_tenant_id: params.tenantId,
       p_user_id: params.userId || null,

@@ -3,18 +3,6 @@ import { createClient } from '@supabase/supabase-js';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { z } from 'zod';
 
-// Use service role for admin operations
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-);
-
 // Validation schema
 const signupSchema = z.object({
   company_name: z.string().min(1, 'Nome azienda obbligatorio').max(100),
@@ -26,6 +14,17 @@ const signupSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    // Create admin client inside function to avoid build-time issues
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
+    );
     // Rate limiting
     const clientIp = getClientIp(request);
     const { success, limit, remaining, reset } = await checkRateLimit(clientIp, 'signup');
