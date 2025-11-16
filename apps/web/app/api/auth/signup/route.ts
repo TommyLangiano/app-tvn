@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { z } from 'zod';
 
 // Use service role for admin operations
 const supabaseAdmin = createClient(
@@ -13,34 +15,50 @@ const supabaseAdmin = createClient(
   }
 );
 
+// Validation schema
+const signupSchema = z.object({
+  company_name: z.string().min(1, 'Nome azienda obbligatorio').max(100),
+  first_name: z.string().min(1, 'Nome obbligatorio').max(50),
+  last_name: z.string().min(1, 'Cognome obbligatorio').max(50),
+  email: z.string().email('Email non valida'),
+  password: z.string().min(8, 'Password deve essere di almeno 8 caratteri'),
+});
+
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting
+    const clientIp = getClientIp(request);
+    const { success, limit, remaining, reset } = await checkRateLimit(clientIp, 'signup');
+
+    if (!success) {
+      return NextResponse.json(
+        {
+          error: 'Troppi tentativi di registrazione. Riprova più tardi.',
+          retryAfter: Math.ceil((reset - Date.now()) / 1000)
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': limit.toString(),
+            'X-RateLimit-Remaining': remaining.toString(),
+            'X-RateLimit-Reset': reset.toString(),
+          }
+        }
+      );
+    }
+
     const body = await request.json();
-    const { company_name, first_name, last_name, email, password } = body;
 
-    // Validation
-    if (!company_name || !first_name || !last_name || !email || !password) {
+    // Validate input with Zod
+    const validation = signupSchema.safeParse(body);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'Tutti i campi sono obbligatori' },
+        { error: validation.error.errors[0].message },
         { status: 400 }
       );
     }
 
-    if (password.length < 8) {
-      return NextResponse.json(
-        { error: 'La password deve essere di almeno 8 caratteri' },
-        { status: 400 }
-      );
-    }
-
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return NextResponse.json(
-        { error: 'Email non valida' },
-        { status: 400 }
-      );
-    }
+    const { company_name, first_name, last_name, email, password } = validation.data;
 
     // Check if email already exists
     const { data: existingUser } = await supabaseAdmin.auth.admin.listUsers();

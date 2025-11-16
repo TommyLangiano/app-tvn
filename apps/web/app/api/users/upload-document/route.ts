@@ -1,5 +1,20 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
+import { checkRateLimit } from '@/lib/rate-limit';
+
+// Allowed MIME types (no SVG to prevent XSS)
+const ALLOWED_MIME_TYPES = [
+  'application/pdf',
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/webp',
+  'image/heic',
+  'image/heif',
+];
+
+// Max file size: 10MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 export async function POST(request: Request) {
   try {
@@ -10,6 +25,26 @@ export async function POST(request: Request) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    }
+
+    // Rate limiting per user
+    const { success, limit, remaining, reset } = await checkRateLimit(user.id, 'upload');
+
+    if (!success) {
+      return NextResponse.json(
+        {
+          error: 'Troppi upload. Riprova più tardi.',
+          retryAfter: Math.ceil((reset - Date.now()) / 1000)
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': limit.toString(),
+            'X-RateLimit-Remaining': remaining.toString(),
+            'X-RateLimit-Reset': reset.toString(),
+          }
+        }
+      );
     }
 
     // Check if user is admin
@@ -35,9 +70,30 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing file or user_id' }, { status: 400 });
     }
 
+    // Validate file size
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json({
+        error: 'File troppo grande. Massimo 10MB.'
+      }, { status: 413 });
+    }
+
+    // Validate file type
+    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+      return NextResponse.json({
+        error: 'Tipo di file non consentito. Sono permessi solo: PDF, JPG, PNG, WEBP, HEIC.'
+      }, { status: 415 });
+    }
+
+    // Sanitize filename - remove directory traversal attempts
+    const fileExt = file.name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') || 'bin';
+    if (!['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'].includes(fileExt)) {
+      return NextResponse.json({
+        error: 'Estensione file non valida.'
+      }, { status: 415 });
+    }
+
     // Generate unique filename
     const timestamp = Date.now();
-    const fileExt = file.name.split('.').pop();
     const fileName = `${timestamp}_${Math.random().toString(36).substring(7)}.${fileExt}`;
     const filePath = `${userTenant.tenant_id}/users/${userId}/documents/${fileName}`;
 
