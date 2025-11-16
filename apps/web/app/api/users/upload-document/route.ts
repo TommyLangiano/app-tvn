@@ -1,17 +1,21 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { fileTypeFromBuffer } from 'file-type';
+import { logAuditEvent, getRequestMetadata } from '@/lib/audit';
 
 // Allowed MIME types (no SVG to prevent XSS)
 const ALLOWED_MIME_TYPES = [
   'application/pdf',
   'image/jpeg',
-  'image/jpg',
   'image/png',
   'image/webp',
   'image/heic',
   'image/heif',
 ];
+
+// Allowed file extensions
+const ALLOWED_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'];
 
 // Max file size: 10MB
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -77,18 +81,38 @@ export async function POST(request: Request) {
       }, { status: 413 });
     }
 
-    // Validate file type
-    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+    // Convert File to Buffer for magic bytes validation
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // SECURITY: Validate actual file content (magic bytes)
+    const detectedType = await fileTypeFromBuffer(buffer);
+
+    if (!detectedType) {
       return NextResponse.json({
-        error: 'Tipo di file non consentito. Sono permessi solo: PDF, JPG, PNG, WEBP, HEIC.'
+        error: 'Tipo di file non riconosciuto. Impossibile verificare il contenuto.'
       }, { status: 415 });
     }
 
-    // Sanitize filename - remove directory traversal attempts
-    const fileExt = file.name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') || 'bin';
-    if (!['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'].includes(fileExt)) {
+    // Check if detected MIME type is allowed
+    if (!ALLOWED_MIME_TYPES.includes(detectedType.mime)) {
+      return NextResponse.json({
+        error: `Tipo di file non consentito. Rilevato: ${detectedType.mime}. Sono permessi solo: PDF, JPG, PNG, WEBP, HEIC.`
+      }, { status: 415 });
+    }
+
+    // Verify extension matches detected type
+    const fileExt = detectedType.ext;
+    if (!ALLOWED_EXTENSIONS.includes(fileExt)) {
       return NextResponse.json({
         error: 'Estensione file non valida.'
+      }, { status: 415 });
+    }
+
+    // Additional check: declared MIME vs actual MIME
+    if (file.type && !ALLOWED_MIME_TYPES.includes(file.type)) {
+      return NextResponse.json({
+        error: 'MIME type dichiarato non consentito.'
       }, { status: 415 });
     }
 
@@ -97,12 +121,13 @@ export async function POST(request: Request) {
     const fileName = `${timestamp}_${Math.random().toString(36).substring(7)}.${fileExt}`;
     const filePath = `${userTenant.tenant_id}/users/${userId}/documents/${fileName}`;
 
-    // Upload to Supabase Storage in app-storage bucket (same as invoices)
+    // Upload to Supabase Storage in app-storage bucket (use buffer instead of file)
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('app-storage')
-      .upload(filePath, file, {
+      .upload(filePath, buffer, {
         cacheControl: '3600',
         upsert: false,
+        contentType: detectedType.mime,
       });
 
     if (uploadError) {
@@ -129,11 +154,32 @@ export async function POST(request: Request) {
       }, { status: 500 });
     }
 
+    // Audit log
+    const { ipAddress, userAgent } = getRequestMetadata(request);
+    await logAuditEvent({
+      tenantId: userTenant.tenant_id,
+      userId: user.id,
+      eventType: 'file_uploaded',
+      resourceType: 'user_document',
+      resourceId: userId,
+      newValues: {
+        file_path: uploadData.path,
+        file_size: file.size,
+        file_type: detectedType.mime,
+        file_ext: fileExt,
+      },
+      ipAddress,
+      userAgent,
+    });
+
     return NextResponse.json({
       success: true,
       path: uploadData.path,
+      fileType: detectedType.mime,
+      fileSize: file.size,
     });
-  } catch {
+  } catch (error) {
+    console.error('[Upload] Error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

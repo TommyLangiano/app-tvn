@@ -109,9 +109,19 @@ export function SignInForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-medium text-foreground">
-                Password
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password" className="text-sm font-medium text-foreground">
+                  Password
+                </Label>
+                {!isSignUp && (
+                  <a
+                    href="/reset-password"
+                    className="text-sm text-primary hover:underline"
+                  >
+                    Password dimenticata?
+                  </a>
+                )}
+              </div>
               <Input
                 id="password"
                 type="password"
