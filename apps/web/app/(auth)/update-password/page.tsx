@@ -23,13 +23,41 @@ export default function UpdatePasswordPage() {
     // Check if user accessed via reset password link
     const checkToken = async () => {
       const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
 
-      if (session) {
-        setIsValidToken(true);
+      // Check for hash fragment (password reset token from email)
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const accessToken = hashParams.get('access_token');
+      const type = hashParams.get('type');
+
+      if (accessToken && type === 'recovery') {
+        // Token found in URL - exchange it for session
+        const { data, error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: hashParams.get('refresh_token') || '',
+        });
+
+        if (error) {
+          console.error('Error setting session:', error);
+          toast.error('Link non valido o scaduto');
+          setTimeout(() => router.push('/reset-password'), 3000);
+          return;
+        }
+
+        if (data.session) {
+          setIsValidToken(true);
+          // Clean URL from hash
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
       } else {
-        toast.error('Link non valido o scaduto');
-        setTimeout(() => router.push('/reset-password'), 3000);
+        // No token in URL - check existing session
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (session) {
+          setIsValidToken(true);
+        } else {
+          toast.error('Link non valido o scaduto');
+          setTimeout(() => router.push('/reset-password'), 3000);
+        }
       }
     };
 
