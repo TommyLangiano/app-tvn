@@ -110,13 +110,16 @@ export default function UpdatePasswordPage() {
         return;
       }
 
+      // Logout user after password reset (force re-login)
+      await supabase.auth.signOut();
+
       setPasswordUpdated(true);
       toast.success('Password aggiornata con successo!');
 
-      // Redirect to dashboard after 2 seconds
+      // Redirect to login after 3 seconds
       setTimeout(() => {
-        router.push('/dashboard');
-      }, 2000);
+        router.push('/sign-in');
+      }, 3000);
     } catch (error) {
       console.error('Update password exception:', error);
       toast.error('Si è verificato un errore');
@@ -159,7 +162,7 @@ export default function UpdatePasswordPage() {
             </p>
 
             <p className="text-sm text-muted-foreground">
-              Verrai reindirizzato alla dashboard...
+              Verrai reindirizzato alla pagina di login per accedere con la nuova password...
             </p>
           </div>
         </div>
