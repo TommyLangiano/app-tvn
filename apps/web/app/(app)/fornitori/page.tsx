@@ -88,7 +88,7 @@ export default function FornitoriPage() {
 
   // Get unique values for filters
   const uniqueSettori = Array.from(new Set(fornitori.map(f => f.tipologia_settore).filter(Boolean))).sort();
-  const uniqueProvince = Array.from(new Set(fornitori.map(f => f.sede_legale_provincia).filter(Boolean))).sort();
+  const uniqueProvince = Array.from(new Set(fornitori.map(f => f.sede_legale_provincia).filter((p): p is string => !!p))).sort();
 
   // Filter fornitori based on search and filters
   const fornitoriFiltrati = fornitori.filter(fornitore => {

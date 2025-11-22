@@ -88,7 +88,7 @@ export default function ClientiPage() {
 
   // Get unique values for filters
   const uniqueSettori = Array.from(new Set(clienti.map(c => c.tipologia_settore).filter(Boolean))).sort();
-  const uniqueProvince = Array.from(new Set(clienti.map(c => c.sede_legale_provincia).filter(Boolean))).sort();
+  const uniqueProvince = Array.from(new Set(clienti.map(c => c.sede_legale_provincia).filter((p): p is string => !!p))).sort();
 
   // Filter clienti based on search and filters
   const clientiFiltrati = clienti.filter(cliente => {
