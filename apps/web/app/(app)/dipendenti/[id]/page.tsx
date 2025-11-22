@@ -101,6 +101,9 @@ type Dipendente = {
   // Stato
   stato: string;
 
+  // Avatar
+  avatar_url?: string;
+
   created_at?: string;
   updated_at?: string;
 };
