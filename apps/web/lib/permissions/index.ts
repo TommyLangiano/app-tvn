@@ -181,7 +181,7 @@ export function getAccessibleRoutes(role: TenantRole): string[] {
 
   // Users management
   if (hasPermission(role, PERMISSIONS.USERS_VIEW)) {
-    routes.push('/gestione-utenti');
+    routes.push('/utenti-ruoli');
   }
 
   // Rapportini

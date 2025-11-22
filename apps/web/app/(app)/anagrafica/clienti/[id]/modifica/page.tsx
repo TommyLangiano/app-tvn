@@ -147,7 +147,7 @@ export default function ModificaClientePage() {
     } catch {
 
       toast.error('Errore nel caricamento del cliente');
-      router.push('/anagrafica?tab=clienti');
+      router.push('/clienti');
     } finally {
       setLoadingData(false);
     }
@@ -250,7 +250,7 @@ export default function ModificaClientePage() {
       if (error) throw error;
 
       toast.success('Cliente aggiornato con successo');
-      router.push('/anagrafica?tab=clienti');
+      router.push('/clienti');
     } catch {
 
       toast.error('Errore durante l\'aggiornamento del cliente');

@@ -40,7 +40,7 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
       const userData = await getUserWithProfile(params.id);
       if (!userData) {
         toast.error('Utente non trovato');
-        router.push('/gestione-utenti');
+        router.push('/utenti-ruoli');
         return;
       }
       setUser(userData);
@@ -88,7 +88,7 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
       }
 
       toast.success('Utente eliminato con successo');
-      router.push('/gestione-utenti');
+      router.push('/utenti-ruoli');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Errore nell&apos;eliminazione';
       toast.error(errorMessage);
@@ -137,7 +137,7 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
       {/* Header */}
       <div className="flex items-start gap-4">
         <Link
-          href="/gestione-utenti"
+          href="/utenti-ruoli"
           className="flex items-center justify-center h-10 w-10 rounded-lg border-2 border-border hover:bg-muted transition-colors shrink-0"
         >
           <ArrowLeft className="h-5 w-5" />
@@ -150,7 +150,7 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
 
         {/* Action Buttons - Stile Tabella */}
         <div className="flex gap-2">
-          <Link href={`/gestione-utenti/${params.id}/modifica`}>
+          <Link href={`/utenti-ruoli/${params.id}/modifica`}>
             <button
               className="p-2 rounded-lg border-2 border-orange-200 bg-orange-50 hover:bg-orange-100 transition-colors"
               title="Modifica"

@@ -7,6 +7,9 @@ export interface Rapportino {
   commessa_id: string;
   data_rapportino: string;
   ore_lavorate: number;
+  tempo_pausa?: number;
+  orario_inizio?: string;
+  orario_fine?: string;
   note?: string;
   allegato_url?: string;
   created_at: string;
@@ -25,5 +28,8 @@ export interface RapportinoFormData {
   commessa_id: string;
   data_rapportino: string;
   ore_lavorate: string;
+  tempo_pausa?: string;
+  orario_inizio?: string;
+  orario_fine?: string;
   note?: string;
 }

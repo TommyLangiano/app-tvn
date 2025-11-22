@@ -195,7 +195,7 @@ export default function NuovoFornitorePage() {
       if (error) throw error;
 
       toast.success('Fornitore creato con successo');
-      router.push('/anagrafica?tab=fornitori');
+      router.push('/fornitori');
     } catch {
 
       toast.error('Errore durante la creazione del Fornitore');

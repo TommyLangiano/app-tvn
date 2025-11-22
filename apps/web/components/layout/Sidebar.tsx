@@ -67,7 +67,7 @@ const menuStructure = [
     label: 'Personale',
     icon: Users,
     items: [
-      { href: '/anagrafica', label: 'Anagrafica', icon: UserCheck },
+      { href: '/dipendenti', label: 'Dipendenti', icon: Users },
       { href: '/presenze', label: 'Presenze', icon: Clock },
       { href: '/assenze-ferie', label: 'Assenze & Ferie', icon: CalendarX },
       { href: '/assunzioni', label: 'Assunzioni', icon: UserPlus },
@@ -116,13 +116,16 @@ const menuStructure = [
     icon: Package
   },
   {
-    type: 'category',
-    label: 'Clienti & Fornitori',
-    icon: UserCircle,
-    items: [
-      { href: '/clienti-fornitori?tab=clienti', label: 'Clienti', icon: UserCircle },
-      { href: '/clienti-fornitori?tab=fornitori', label: 'Fornitori', icon: Package },
-    ]
+    type: 'single',
+    href: '/clienti',
+    label: 'Clienti',
+    icon: UserCircle
+  },
+  {
+    type: 'single',
+    href: '/fornitori',
+    label: 'Fornitori',
+    icon: Package
   },
   {
     type: 'single',
@@ -136,7 +139,7 @@ const menuStructure = [
     icon: Settings,
     items: [
       { href: '/impostazioni', label: 'Impostazioni', icon: Settings },
-      { href: '/gestione-utenti', label: 'Utenti & Ruoli', icon: Shield },
+      { href: '/utenti-ruoli', label: 'Utenti & Ruoli', icon: Shield },
     ]
   },
 ];

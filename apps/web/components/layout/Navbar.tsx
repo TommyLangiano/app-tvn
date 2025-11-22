@@ -32,11 +32,12 @@ const sectionNames: Record<string, string> = {
   '/fatture/movimenti': 'Movimenti',
   '/mezzi-attrezzature': 'Mezzi & Attrezzature',
   '/magazzino': 'Magazzino',
+  '/dipendenti': 'Dipendenti',
   '/clienti': 'Clienti',
   '/fornitori': 'Fornitori',
   '/documenti': 'Documenti',
   '/impostazioni': 'Impostazioni',
-  '/gestione-utenti': 'Utenti & Ruoli',
+  '/utenti-ruoli': 'Utenti & Ruoli',
 };
 
 export function Navbar() {
@@ -48,7 +49,19 @@ export function Navbar() {
 
   // Check if we should show back button
   const shouldShowBackButton = () => {
-    return pathname.match(/^\/commesse\/[^/]+$/) || pathname.match(/^\/commesse\/[^/]+\/modifica$/);
+    return (
+      pathname.match(/^\/commesse\/[^/]+$/) ||
+      pathname.match(/^\/commesse\/[^/]+\/modifica$/) ||
+      pathname === '/dipendenti/nuovo' ||
+      pathname.match(/^\/dipendenti\/[^/]+$/) ||
+      pathname.match(/^\/dipendenti\/[^/]+\/modifica$/) ||
+      pathname === '/fornitori/nuovo' ||
+      pathname.match(/^\/fornitori\/[^/]+\/modifica$/) ||
+      pathname === '/clienti/nuovo' ||
+      pathname.match(/^\/clienti\/[^/]+\/modifica$/) ||
+      pathname === '/utenti-ruoli/ruolo/nuovo' ||
+      pathname.match(/^\/utenti-ruoli\/ruolo\/[^/]+\/modifica$/)
+    );
   };
 
   // Get section name from pathname
@@ -64,6 +77,46 @@ export function Navbar() {
 
     if (pathname.match(/^\/commesse\/[^/]+$/)) {
       return 'Dettaglio Commessa';
+    }
+
+    // Fornitori patterns
+    if (pathname === '/fornitori/nuovo') {
+      return 'Nuovo Fornitore';
+    }
+
+    if (pathname.match(/^\/fornitori\/[^/]+\/modifica$/)) {
+      return 'Modifica Fornitore';
+    }
+
+    // Dipendenti patterns
+    if (pathname === '/dipendenti/nuovo') {
+      return 'Nuovo Dipendente';
+    }
+
+    if (pathname.match(/^\/dipendenti\/[^/]+\/modifica$/)) {
+      return 'Modifica Dipendente';
+    }
+
+    if (pathname.match(/^\/dipendenti\/[^/]+$/)) {
+      return 'Dettaglio Dipendente';
+    }
+
+    // Clienti patterns
+    if (pathname === '/clienti/nuovo') {
+      return 'Nuovo Cliente';
+    }
+
+    if (pathname.match(/^\/clienti\/[^/]+\/modifica$/)) {
+      return 'Modifica Cliente';
+    }
+
+    // Utenti-Ruoli patterns
+    if (pathname === '/utenti-ruoli/ruolo/nuovo') {
+      return 'Crea Ruolo Personalizzato';
+    }
+
+    if (pathname.match(/^\/utenti-ruoli\/ruolo\/[^/]+\/modifica$/)) {
+      return 'Modifica Ruolo';
     }
 
     // Exact match
@@ -90,8 +143,14 @@ export function Navbar() {
       '/commesse': 'Gestisci e monitora tutte le tue commesse',
       '/commesse/nuova': 'Crea una nuova commessa e definisci i dettagli del progetto',
       '/rapportini': 'Visualizza e crea rapportini di lavoro',
-      '/anagrafica': 'Gestisci clienti e fornitori',
-      '/gestione-utenti': 'Amministra utenti e permessi',
+      '/dipendenti': 'Gestisci i dipendenti e il personale',
+      '/dipendenti/nuovo': 'Inserisci i dati del dipendente',
+      '/clienti': 'Gestisci l\'anagrafica dei tuoi clienti',
+      '/clienti/nuovo': 'Inserisci i dati del cliente',
+      '/fornitori': 'Gestisci l\'anagrafica dei tuoi fornitori',
+      '/fornitori/nuovo': 'Inserisci i dati del fornitore',
+      '/utenti-ruoli': 'Amministra utenti e permessi',
+      '/utenti-ruoli/ruolo/nuovo': 'Crea un ruolo su misura per la tua azienda con permessi specifici',
       '/impostazioni': 'Configura le impostazioni del sistema',
     };
 
@@ -106,6 +165,31 @@ export function Navbar() {
     // Check if we're in a commessa edit page
     if (pathname.match(/^\/commesse\/[^/]+\/modifica$/)) {
       return 'Modifica i dettagli e le informazioni della commessa';
+    }
+
+    // Check if we're in a role edit page
+    if (pathname.match(/^\/utenti-ruoli\/ruolo\/[^/]+\/modifica$/)) {
+      return 'Modifica nome, descrizione e permessi del ruolo';
+    }
+
+    // Check if we're in a fornitore edit page
+    if (pathname.match(/^\/fornitori\/[^/]+\/modifica$/)) {
+      return 'Modifica i dati del fornitore';
+    }
+
+    // Check if we're in a dipendente detail page
+    if (pathname.match(/^\/dipendenti\/[^/]+$/)) {
+      return 'Visualizza e gestisci tutti i dettagli del dipendente';
+    }
+
+    // Check if we're in a dipendente edit page
+    if (pathname.match(/^\/dipendenti\/[^/]+\/modifica$/)) {
+      return 'Modifica i dati del dipendente';
+    }
+
+    // Check if we're in a cliente edit page
+    if (pathname.match(/^\/clienti\/[^/]+\/modifica$/)) {
+      return 'Modifica i dati del cliente';
     }
 
     // Check for base paths

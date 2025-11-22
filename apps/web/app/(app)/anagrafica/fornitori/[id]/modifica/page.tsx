@@ -147,7 +147,7 @@ export default function ModificaFornitorePage() {
     } catch {
 
       toast.error('Errore nel caricamento del Fornitore');
-      router.push('/anagrafica?tab=fornitori');
+      router.push('/fornitori');
     } finally {
       setLoadingData(false);
     }
@@ -250,7 +250,7 @@ export default function ModificaFornitorePage() {
       if (error) throw error;
 
       toast.success('Fornitore aggiornato con successo');
-      router.push('/anagrafica?tab=fornitori');
+      router.push('/fornitori');
     } catch {
 
       toast.error('Errore durante l\'aggiornamento del Fornitore');

@@ -43,20 +43,36 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies - Only admin/owner can view audit logs
-CREATE POLICY "Admin and owners can view audit logs"
-  ON audit_logs FOR SELECT
-  USING (
-    tenant_id IN (
-      SELECT tenant_id FROM user_tenants
-      WHERE user_id = auth.uid()
-      AND role IN ('admin', 'owner')
-    )
-  );
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE tablename = 'audit_logs'
+    AND policyname = 'Admin and owners can view audit logs'
+  ) THEN
+    CREATE POLICY "Admin and owners can view audit logs"
+      ON audit_logs FOR SELECT
+      USING (
+        tenant_id IN (
+          SELECT tenant_id FROM user_tenants
+          WHERE user_id = auth.uid()
+          AND role IN ('admin', 'owner')
+        )
+      );
+  END IF;
+END $$;
 
 -- Only system can insert audit logs (via service role)
-CREATE POLICY "Service role can insert audit logs"
-  ON audit_logs FOR INSERT
-  WITH CHECK (auth.uid() IS NULL OR auth.role() = 'service_role');
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE tablename = 'audit_logs'
+    AND policyname = 'Service role can insert audit logs'
+  ) THEN
+    CREATE POLICY "Service role can insert audit logs"
+      ON audit_logs FOR INSERT
+      WITH CHECK (auth.uid() IS NULL OR auth.role() = 'service_role');
+  END IF;
+END $$;
 
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS idx_audit_logs_tenant ON audit_logs(tenant_id);

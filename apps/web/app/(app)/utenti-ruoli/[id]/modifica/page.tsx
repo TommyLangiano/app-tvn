@@ -27,7 +27,7 @@ export default function EditUserPage({ params }: { params: { id: string } }) {
       const userData = await getUserWithProfile(params.id);
       if (!userData) {
         toast.error('Utente non trovato');
-        router.push('/gestione-utenti');
+        router.push('/utenti-ruoli');
         return;
       }
       setUser(userData);
@@ -82,7 +82,7 @@ export default function EditUserPage({ params }: { params: { id: string } }) {
       }
 
       toast.success('Utente aggiornato con successo');
-      router.push(`/gestione-utenti/${params.id}`);
+      router.push(`/utenti-ruoli/${params.id}`);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Errore nell&apos;aggiornamento';
       toast.error(errorMessage);
@@ -92,7 +92,7 @@ export default function EditUserPage({ params }: { params: { id: string } }) {
   };
 
   const handleCancel = () => {
-    router.push(`/gestione-utenti/${params.id}`);
+    router.push(`/utenti-ruoli/${params.id}`);
   };
 
   if (loading) {
@@ -132,7 +132,7 @@ export default function EditUserPage({ params }: { params: { id: string } }) {
       {/* Header */}
       <div className="flex items-start gap-4">
         <Link
-          href={`/gestione-utenti/${params.id}`}
+          href={`/utenti-ruoli/${params.id}`}
           className="flex items-center justify-center h-10 w-10 rounded-lg border-2 border-border hover:bg-muted transition-colors shrink-0"
         >
           <ArrowLeft className="h-5 w-5" />

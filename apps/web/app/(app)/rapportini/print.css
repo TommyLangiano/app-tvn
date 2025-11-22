@@ -1,0 +1,69 @@
+@media print {
+  /* Hide non-essential elements */
+  nav,
+  aside,
+  .no-print,
+  button:not(.print-keep),
+  header > div:first-child,
+  .space-y-6 > div:first-of-type, /* Stats cards */
+  .space-y-6 > div:nth-of-type(2), /* Header with buttons */
+  .space-y-6 > div:nth-of-type(3), /* Filters */
+  .space-y-6 > div:nth-of-type(4) /* Bulk actions */ {
+    display: none !important;
+  }
+
+  /* Show only the grid table */
+  body {
+    background: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Optimize table for printing */
+  table {
+    page-break-inside: avoid;
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 10px;
+  }
+
+  th,
+  td {
+    padding: 4px 2px !important;
+    border: 1px solid #000 !important;
+  }
+
+  /* Remove sticky positioning for print */
+  th.sticky,
+  td.sticky {
+    position: static !important;
+  }
+
+  /* Ensure colors are printed */
+  .bg-emerald-500\/10,
+  .bg-blue-500\/10,
+  .bg-muted\/20,
+  .bg-muted\/30 {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Add page title */
+  @page {
+    margin: 1cm;
+    size: landscape;
+  }
+
+  /* Hide interactive elements in cells */
+  td button {
+    border: none !important;
+    background: transparent !important;
+    pointer-events: none;
+  }
+
+  /* Show only the hours text */
+  td button span {
+    color: #000 !important;
+    font-weight: bold;
+  }
+}

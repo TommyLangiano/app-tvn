@@ -61,7 +61,7 @@ export default async function DashboardPage() {
       <p className="text-muted-foreground">Dashboard amministratore in arrivo...</p>
       <p className="text-sm text-muted-foreground mt-2">
         Nel frattempo, visita <a href="/rapportini" className="text-primary underline">Rapportini</a> o{' '}
-        <a href="/gestione-utenti" className="text-primary underline">Gestione Utenti</a>
+        <a href="/utenti-ruoli" className="text-primary underline">Gestione Utenti</a>
       </p>
     </div>
   );

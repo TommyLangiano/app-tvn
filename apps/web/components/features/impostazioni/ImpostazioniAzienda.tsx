@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Building2, Save, Mail, MapPin, CreditCard } from 'lucide-react';
+import { Building2, Save, Mail, MapPin, CreditCard, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,6 +16,7 @@ export function ImpostazioniAzienda() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [tenantId, setTenantId] = useState<string>('');
+  const [modalitaCalcoloRapportini, setModalitaCalcoloRapportini] = useState<'ore_totali' | 'orari'>('ore_totali');
   const [formData, setFormData] = useState<TenantProfileFormData>({
     ragione_sociale: '',
     partita_iva: '',
@@ -59,6 +60,17 @@ export function ImpostazioniAzienda() {
       if (!userTenants) return;
 
       setTenantId(userTenants.tenant_id);
+
+      // Load modalita_calcolo_rapportini from tenants table
+      const { data: tenant, error: tenantError } = await supabase
+        .from('tenants')
+        .select('modalita_calcolo_rapportini')
+        .eq('id', userTenants.tenant_id)
+        .single();
+
+      if (tenant) {
+        setModalitaCalcoloRapportini(tenant.modalita_calcolo_rapportini || 'ore_totali');
+      }
 
       const { data: profile } = await supabase
         .from('tenant_profiles')
@@ -109,6 +121,15 @@ export function ImpostazioniAzienda() {
       setSaving(true);
       const supabase = createClient();
 
+      // Update modalita_calcolo_rapportini in tenants table
+      const { error: tenantError } = await supabase
+        .from('tenants')
+        .update({ modalita_calcolo_rapportini: modalitaCalcoloRapportini })
+        .eq('id', tenantId);
+
+      if (tenantError) throw tenantError;
+
+      // Update tenant profile
       const { error } = await supabase
         .from('tenant_profiles')
         .upsert({
@@ -380,6 +401,35 @@ export function ImpostazioniAzienda() {
               onChange={(e) => setFormData({ ...formData, sede_legale_nazione: e.target.value })}
               className="h-11 border-2 border-border"
             />
+          </div>
+        </div>
+      </div>
+
+      {/* Impostazioni Rapportini */}
+      <div className="bg-white dark:bg-gray-950 rounded-lg border-2 border-border p-6">
+        <div className="flex items-center gap-2 mb-6">
+          <Clock className="h-5 w-5 text-primary" />
+          <h2 className="text-xl font-semibold">Impostazioni Rapportini</h2>
+        </div>
+
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="modalita_calcolo">Modalità Calcolo Ore Lavorate</Label>
+            <Select
+              value={modalitaCalcoloRapportini}
+              onValueChange={(value: 'ore_totali' | 'orari') => setModalitaCalcoloRapportini(value)}
+            >
+              <SelectTrigger className="h-11 border-2 border-border">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ore_totali">Ore Totali (inserimento diretto)</SelectItem>
+                <SelectItem value="orari">Orari (inizio/fine con calcolo automatico)</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground mt-1">
+              Scegli come i dipendenti inseriranno le ore lavorate nei rapportini
+            </p>
           </div>
         </div>
       </div>

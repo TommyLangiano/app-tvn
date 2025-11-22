@@ -195,7 +195,7 @@ export default function NuovoClientePage() {
       if (error) throw error;
 
       toast.success('Cliente creato con successo');
-      router.push('/anagrafica?tab=clienti');
+      router.push('/clienti');
     } catch {
 
       toast.error('Errore durante la creazione del cliente');

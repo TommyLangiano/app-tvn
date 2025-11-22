@@ -31,7 +31,8 @@ export async function POST(request: Request) {
       email,
       first_name,
       last_name,
-      role,
+      role, // Old role field for backward compatibility
+      custom_role_id, // New custom role ID
       phone,
       position,
       notes,
@@ -42,11 +43,17 @@ export async function POST(request: Request) {
       medical_checkup_expiry
     } = await request.json();
 
-    if (!email || !first_name || !last_name || !role) {
+    if (!email || !first_name || !last_name) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    if (!['admin', 'admin_readonly', 'operaio', 'billing_manager'].includes(role)) {
+    // Support both old role system and new custom_role_id system
+    if (!role && !custom_role_id) {
+      return NextResponse.json({ error: 'Missing role or custom_role_id' }, { status: 400 });
+    }
+
+    // If using old role system, validate
+    if (role && !custom_role_id && !['admin', 'admin_readonly', 'operaio', 'billing_manager'].includes(role)) {
       return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
     }
 
@@ -62,6 +69,7 @@ export async function POST(request: Request) {
           last_name,
           full_name,
         },
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/accept-invite`,
       });
 
       if (inviteError) {
@@ -115,20 +123,32 @@ export async function POST(request: Request) {
     }
 
     // Add user to tenant with specified role (using admin client to bypass RLS)
+    const userTenantData: any = {
+      user_id: newUser.id,
+      tenant_id: userTenant.tenant_id,
+      created_by: user.id,
+      is_active: true,
+    };
+
+    // Add role or custom_role_id based on what was provided
+    if (custom_role_id) {
+      userTenantData.custom_role_id = custom_role_id;
+    } else if (role) {
+      userTenantData.role = role;
+    }
+
     const { error: tenantError } = await adminClient
       .from('user_tenants')
-      .insert({
-        user_id: newUser.id,
-        tenant_id: userTenant.tenant_id,
-        role,
-        created_by: user.id,
-        is_active: true,
-      });
+      .insert(userTenantData);
 
     if (tenantError) {
+      console.error('Tenant assignment error:', tenantError);
       // Try to delete the created user if tenant assignment fails
       await adminClient.auth.admin.deleteUser(newUser.id);
-      return NextResponse.json({ error: 'Failed to assign user to tenant' }, { status: 500 });
+      return NextResponse.json({
+        error: 'Failed to assign user to tenant',
+        details: tenantError.message || tenantError
+      }, { status: 500 });
     }
 
     return NextResponse.json({
@@ -138,7 +158,8 @@ export async function POST(request: Request) {
         id: newUser.id,
         email: newUser.email,
         full_name,
-        role,
+        role: role || null,
+        custom_role_id: custom_role_id || null,
       },
     });
   } catch (err) {

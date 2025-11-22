@@ -70,7 +70,7 @@ export default function NuovoUtentePage() {
       }
 
       // Redirect to users list
-      router.push('/gestione-utenti');
+      router.push('/utenti-ruoli');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Errore nella creazione dell&apos;utente';
       toast.error(errorMessage);
@@ -80,7 +80,7 @@ export default function NuovoUtentePage() {
   };
 
   const handleCancel = () => {
-    router.push('/gestione-utenti');
+    router.push('/utenti-ruoli');
   };
 
   return (
@@ -90,7 +90,7 @@ export default function NuovoUtentePage() {
       {/* Header */}
       <div className="flex items-center gap-4">
         <Link
-          href="/gestione-utenti"
+          href="/utenti-ruoli"
           className="flex items-center justify-center h-10 w-10 rounded-lg border-2 border-border hover:bg-muted transition-colors"
         >
           <ArrowLeft className="h-5 w-5" />

@@ -24,6 +24,7 @@ import { InfoMovimentoModal } from '@/components/features/commesse/InfoMovimento
 import { EditMovimentoModal } from '@/components/features/commesse/EditMovimentoModal';
 import { DeleteMovimentoModal } from '@/components/features/commesse/DeleteMovimentoModal';
 import { BulkDeleteMovimentiModal } from '@/components/features/commesse/BulkDeleteMovimentiModal';
+import { RapportiniSection } from '@/components/features/rapportini/RapportiniSection';
 import { getSignedUrl } from '@/lib/utils/storage';
 
 export default function CommessaDetailPage() {
@@ -1210,10 +1211,7 @@ export default function CommessaDetailPage() {
 
         {/* TAB: Rapportini */}
         <TabsContent value="rapportini" className="space-y-4">
-          <div className="rounded-xl border-2 border-dashed border-border bg-card p-12 text-center">
-            <Users className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-            <p className="text-muted-foreground">Funzionalità rapportini in arrivo</p>
-          </div>
+          <RapportiniSection commessaId={commessa?.id} hideMonthSelector={true} />
         </TabsContent>
 
         {/* TAB: Documenti */}
