@@ -1,11 +1,11 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
-
-export const dynamic = 'force-dynamic';
 
 export default function AcceptInvitePage() {
   const router = useRouter();
