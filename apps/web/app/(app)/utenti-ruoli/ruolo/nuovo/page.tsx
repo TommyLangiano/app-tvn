@@ -142,7 +142,10 @@ const ROLE_TEMPLATES: RoleTemplate[] = [
     permissions: {
       dipendenti: ['view', 'create', 'update', 'delete'],
       documenti: ['view', 'upload', 'delete'],
-      rapportini: ['view', 'create', 'update', 'delete'],
+      rapportini: {
+        own: ['view', 'create', 'update', 'delete'],
+        all: ['view']
+      },
       users: ['view'],
     },
   },
@@ -153,7 +156,10 @@ const ROLE_TEMPLATES: RoleTemplate[] = [
     permissions: {
       commesse: ['view', 'create', 'update', 'delete'],
       clienti: ['view', 'create', 'update', 'delete'],
-      rapportini: ['view', 'create', 'update', 'delete'],
+      rapportini: {
+        own: ['view', 'create', 'update', 'delete'],
+        all: ['view', 'create', 'update', 'delete']
+      },
       dipendenti: ['view'],
       costi: ['view'],
     },
@@ -174,7 +180,10 @@ const ROLE_TEMPLATES: RoleTemplate[] = [
     description: 'Gestisce rapportini e visualizza commesse assegnate',
     icon: Wrench,
     permissions: {
-      rapportini: ['view', 'create', 'update', 'delete'],
+      rapportini: {
+        own: ['view', 'create', 'update', 'delete'],
+        all: ['view', 'create', 'update', 'delete']
+      },
       commesse: ['view'],
       dipendenti: ['view'],
     },
