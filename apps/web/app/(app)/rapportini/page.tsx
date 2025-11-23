@@ -895,7 +895,7 @@ export default function RapportiniPage() {
     }
   };
 
-  const handleExportPDF = async (selectedUserIds: string[], layout: 'list' | 'grid' = 'grid') => {
+  const handleExportPDF = async (selectedUserIds: string[], layout: 'list' | 'grid' = 'grid', month: number, year: number, rapportiniData: any[]) => {
     try {
       // Dynamically import jsPDF and autoTable
       const jsPDF = (await import('jspdf')).default;
