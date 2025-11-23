@@ -525,6 +525,7 @@ export default function RapportiniPage() {
       const Workbook = ExcelJS.default.Workbook;
 
       const workbook = new Workbook();
+      const periodoTitolo = `${MESI[month]} ${year}`;
 
       if (layout === 'list') {
         // EXPORT LISTA - Tutti i dettagli dei rapportini
@@ -900,6 +901,7 @@ export default function RapportiniPage() {
       // Dynamically import jsPDF and autoTable
       const jsPDF = (await import('jspdf')).default;
       const autoTable = (await import('jspdf-autotable')).default;
+      const periodoTitolo = `${MESI[month]} ${year}`;
 
       if (layout === 'list') {
         // EXPORT LISTA - Tutti i dettagli dei rapportini
