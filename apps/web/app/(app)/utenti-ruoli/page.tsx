@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Search,
@@ -53,7 +53,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { DeleteRoleModal } from '@/components/features/roles/DeleteRoleModal';
 
-export default function GestioneUtentiPage() {
+function GestioneUtentiPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { can } = usePermissions();
@@ -629,5 +629,13 @@ export default function GestioneUtentiPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function GestioneUtentiPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div>Caricamento...</div></div>}>
+      <GestioneUtentiPageContent />
+    </Suspense>
   );
 }
