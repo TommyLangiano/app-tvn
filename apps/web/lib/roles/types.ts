@@ -30,6 +30,7 @@ export interface RolePermissions {
   fornitori?: string[];
   fatture?: string[];
   costi?: string[];
+  documenti?: string[];
   settings?: string[];
   billing?: string[];
   critical?: string[];
