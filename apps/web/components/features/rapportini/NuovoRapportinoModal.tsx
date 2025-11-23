@@ -57,6 +57,8 @@ const initialFormData = {
   data_rapportino: new Date().toISOString().split('T')[0],
   ore_lavorate: '',
   tempo_pausa: '60', // Default: 1 ora
+  orario_inizio: '',
+  orario_fine: '',
   note: '',
 };
 
