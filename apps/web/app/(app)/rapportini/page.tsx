@@ -405,7 +405,7 @@ export default function RapportiniPage() {
     let endDateStr: string;
     let month: number;
     let year: number;
-    let periodoTitolo: string;
+    let periodoTitolo: string = '';
 
     if ('month' in periodo) {
       // Mese specifico
