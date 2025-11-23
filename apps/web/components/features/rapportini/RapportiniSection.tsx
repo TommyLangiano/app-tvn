@@ -1688,7 +1688,7 @@ export function RapportiniSection({ commessaId, hideMonthSelector = false }: Rap
 
                     <td className="p-4 text-center">
                       <span className="text-base font-bold text-green-600">
-                        {rapportino.ore_lavorate}h {rapportino.tempo_pausa > 0 && <span className="text-xs font-normal text-muted-foreground">({rapportino.tempo_pausa}')</span>}
+                        {rapportino.ore_lavorate}h {rapportino.tempo_pausa && rapportino.tempo_pausa > 0 && <span className="text-xs font-normal text-muted-foreground">({rapportino.tempo_pausa}')</span>}
                       </span>
                     </td>
 
