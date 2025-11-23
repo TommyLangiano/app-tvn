@@ -117,7 +117,7 @@ export function InfoRapportinoModal({ rapportino, rapportini, onClose, onEdit, o
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-muted-foreground">Ore Lavorate</p>
                     <p className="text-lg font-bold text-green-600">
-                      {rapp.ore_lavorate}h {rapp.tempo_pausa > 0 && <span className="text-xs font-normal text-muted-foreground">({rapp.tempo_pausa}')</span>}
+                      {rapp.ore_lavorate}h {rapp.tempo_pausa && rapp.tempo_pausa > 0 && <span className="text-xs font-normal text-muted-foreground">({rapp.tempo_pausa}')</span>}
                     </p>
                   </div>
                 </div>
