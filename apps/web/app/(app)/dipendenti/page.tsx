@@ -136,8 +136,8 @@ export default function DipendentiPage() {
   };
 
   // Get unique values for filters
-  const uniqueQualifiche = Array.from(new Set(dipendenti.map(d => d.qualifica).filter(Boolean))).sort();
-  const uniqueMansioni = Array.from(new Set(dipendenti.map(d => d.mansione).filter(Boolean))).sort();
+  const uniqueQualifiche = Array.from(new Set(dipendenti.map(d => d.qualifica).filter((q): q is string => !!q))).sort();
+  const uniqueMansioni = Array.from(new Set(dipendenti.map(d => d.mansione).filter((m): m is string => !!m))).sort();
 
   // Filter dipendenti based on search and filters
   const dipendentiFiltrati = dipendenti.filter(dipendente => {
