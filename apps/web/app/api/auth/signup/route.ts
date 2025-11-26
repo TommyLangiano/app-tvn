@@ -14,14 +14,26 @@ const signupSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    // Verify environment variables
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('Missing Supabase environment variables');
+      return NextResponse.json(
+        { error: 'Configurazione server non valida' },
+        { status: 500 }
+      );
+    }
+
     // Create admin client inside function to avoid build-time issues
     const supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
       {
         auth: {
           autoRefreshToken: false,
           persistSession: false
+        },
+        db: {
+          schema: 'public'
         }
       }
     );
@@ -95,17 +107,19 @@ export async function POST(request: NextRequest) {
       .from('tenants')
       .insert({
         name: company_name,
-        created_by: userId
+        created_by: userId,
+        created_at: new Date().toISOString(),
       })
       .select()
       .single();
 
     if (tenantError || !tenantData) {
       console.error('Tenant error:', tenantError);
+      console.error('Tenant error details:', JSON.stringify(tenantError, null, 2));
       // Rollback: delete user
       await supabaseAdmin.auth.admin.deleteUser(userId);
       return NextResponse.json(
-        { error: 'Errore nella creazione dell\'azienda' },
+        { error: `Errore nella creazione dell'azienda: ${tenantError?.message || 'Unknown error'}` },
         { status: 500 }
       );
     }
