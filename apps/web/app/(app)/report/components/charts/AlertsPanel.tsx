@@ -1,12 +1,15 @@
 'use client';
 
-import { AlertCircle, AlertTriangle, CheckCircle, Info } from 'lucide-react';
+import { AlertCircle, AlertTriangle, CheckCircle, Info, ArrowRight, Zap } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface Alert {
   type: 'error' | 'warning' | 'success' | 'info';
   title: string;
   message: string;
   priority: number;
+  suggestedActions?: string[];
+  impact?: 'high' | 'medium' | 'low';
 }
 
 interface AlertsPanelProps {
@@ -96,18 +99,51 @@ export function AlertsPanel({ alerts, loading = false }: AlertsPanelProps) {
             return (
               <div
                 key={index}
-                className={`${config.bgColor} ${config.borderColor} border rounded-lg p-4 flex gap-3`}
+                className={`${config.bgColor} ${config.borderColor} border rounded-lg p-4`}
               >
-                <div className="flex-shrink-0">
-                  <Icon className={`h-5 w-5 ${config.iconColor}`} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className={`text-sm font-semibold ${config.titleColor} mb-1`}>
-                    {alert.title}
-                  </h4>
-                  <p className={`text-sm ${config.messageColor}`}>
-                    {alert.message}
-                  </p>
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0">
+                    <Icon className={`h-5 w-5 ${config.iconColor}`} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <h4 className={`text-sm font-semibold ${config.titleColor}`}>
+                        {alert.title}
+                      </h4>
+                      {alert.impact && (
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                          alert.impact === 'high' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' :
+                          alert.impact === 'medium' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' :
+                          'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                        }`}>
+                          {alert.impact === 'high' ? 'Alto Impatto' : alert.impact === 'medium' ? 'Medio Impatto' : 'Basso Impatto'}
+                        </span>
+                      )}
+                    </div>
+                    <p className={`text-sm ${config.messageColor} mb-3`}>
+                      {alert.message}
+                    </p>
+
+                    {/* Suggested Actions */}
+                    {alert.suggestedActions && alert.suggestedActions.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Zap className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                          <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                            Azioni Suggerite:
+                          </p>
+                        </div>
+                        <ul className="space-y-1.5">
+                          {alert.suggestedActions.map((action, actionIdx) => (
+                            <li key={actionIdx} className="flex items-start gap-2 text-xs text-gray-600 dark:text-gray-400">
+                              <ArrowRight className="h-3.5 w-3.5 flex-shrink-0 mt-0.5 text-gray-400" />
+                              <span>{action}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             );

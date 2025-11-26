@@ -19,6 +19,13 @@ import { MarginByProject } from './components/charts/MarginByProject';
 import { EmployeeHours } from './components/charts/EmployeeHours';
 import { ClientsAnalysis } from './components/charts/ClientsAnalysis';
 import { AlertsPanel } from './components/charts/AlertsPanel';
+import { CashFlowForecast } from './components/charts/CashFlowForecast';
+import { BudgetVsActual } from './components/charts/BudgetVsActual';
+import { AgingReport } from './components/charts/AgingReport';
+import { ProjectTimeline } from './components/charts/ProjectTimeline';
+import { ResourceUtilization } from './components/charts/ResourceUtilization';
+import { ProfitabilityTrends } from './components/charts/ProfitabilityTrends';
+import { WorkingCapital } from './components/charts/WorkingCapital';
 import { exportToPDF } from './components/export/ExportPDF';
 import { exportToExcel } from './components/export/ExportExcel';
 import { getAnalyticsData, type AnalyticsData } from '@/lib/analytics';
@@ -242,6 +249,42 @@ export default function ReportPage() {
           </div>
         )}
 
+        {/* Cash Flow Forecast - Full Width */}
+        <div className="mb-6">
+          <CashFlowForecast
+            data={analyticsData?.cashFlowForecast || {
+              saldoIniziale: 0,
+              entratePrevistoMese1: 0,
+              uscitePrevistoMese1: 0,
+              entratePrevistoMese2: 0,
+              uscitePrevistoMese2: 0,
+              entratePrevistoMese3: 0,
+              uscitePrevistoMese3: 0,
+            }}
+            loading={loading}
+          />
+        </div>
+
+        {/* Two Column Layout - Budget vs Actual + Aging Report */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <BudgetVsActual
+            data={analyticsData?.budgetVsActual || []}
+            loading={loading}
+          />
+          <AgingReport
+            data={analyticsData?.agingReport || {
+              range_0_30: { importo: 0, numeroFatture: 0 },
+              range_31_60: { importo: 0, numeroFatture: 0 },
+              range_61_90: { importo: 0, numeroFatture: 0 },
+              range_over_90: { importo: 0, numeroFatture: 0 },
+              totale: 0,
+              dso: 0,
+              clientiMorosi: [],
+            }}
+            loading={loading}
+          />
+        </div>
+
         {/* Revenue Chart - Full Width */}
         <div className="mb-6">
           <RevenueChart
@@ -274,6 +317,43 @@ export default function ReportPage() {
         <div className="mb-6">
           <EmployeeHours
             data={analyticsData?.hoursByEmployee || []}
+            loading={loading}
+          />
+        </div>
+
+        {/* Profitability Trends - Full Width */}
+        <div className="mb-6">
+          <ProfitabilityTrends
+            data={analyticsData?.profitabilityTrends || []}
+            loading={loading}
+          />
+        </div>
+
+        {/* Two Column Layout - Resource Utilization + Working Capital */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <ResourceUtilization
+            data={analyticsData?.resourceUtilization || []}
+            loading={loading}
+          />
+          <WorkingCapital
+            data={analyticsData?.workingCapital || {
+              creditiCommerciali: 0,
+              debitiCommerciali: 0,
+              liquiditaDisponibile: 0,
+              capitaleCircolanteNetto: 0,
+              rapportoLiquidita: 0,
+              giornoIncassoMedi: 0,
+              giornoPagamentoMedi: 0,
+              cicloCassa: 0,
+            }}
+            loading={loading}
+          />
+        </div>
+
+        {/* Project Timeline - Full Width */}
+        <div className="mb-6">
+          <ProjectTimeline
+            data={analyticsData?.projectTimeline || []}
             loading={loading}
           />
         </div>
