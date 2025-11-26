@@ -302,7 +302,7 @@ export async function getAnalyticsData(filters: AnalyticsFilters): Promise<Analy
     const { data: rapportini } = await rapportiniQuery;
 
     // Fetch dipendenti
-    const dipendentiIds = [...new Set((rapportini || []).map(r => r.dipendente_id).filter(id => id))];
+    const dipendentiIds = Array.from(new Set((rapportini || []).map(r => r.dipendente_id).filter(id => id)));
     let dipendentiData: any[] = [];
     if (dipendentiIds.length > 0) {
       const { data } = await supabase
