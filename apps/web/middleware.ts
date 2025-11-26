@@ -78,12 +78,10 @@ export async function middleware(request: NextRequest) {
         .eq('user_id', user.id)
         .single();
 
-      // CRITICAL: Handle missing tenant
+      // CRITICAL: Handle missing tenant - redirect to account recovery
       if (tenantError || !userTenant) {
         console.error('[Middleware] Tenant not found for user:', user.id, tenantError);
-        // Force logout and redirect to error page
-        await supabase.auth.signOut();
-        return NextResponse.redirect(new URL('/tenant-error', request.url));
+        return NextResponse.redirect(new URL('/account-recovery', request.url));
       }
 
       const { data: profile, error: profileError } = await supabase
@@ -92,11 +90,10 @@ export async function middleware(request: NextRequest) {
         .eq('tenant_id', userTenant.tenant_id)
         .limit(1);
 
-      // CRITICAL: Handle missing tenant profile
+      // CRITICAL: Handle missing tenant profile - redirect to account recovery
       if (profileError || !profile || profile.length === 0) {
         console.error('[Middleware] Tenant profile not found:', userTenant.tenant_id, profileError);
-        await supabase.auth.signOut();
-        return NextResponse.redirect(new URL('/tenant-error', request.url));
+        return NextResponse.redirect(new URL('/account-recovery', request.url));
       }
 
       const needsOnboarding = !profile[0].onboarding_completed;
@@ -109,19 +106,17 @@ export async function middleware(request: NextRequest) {
     }
 
     // Check if user needs to complete onboarding
-    if (!pathname.startsWith('/onboarding') && !pathname.startsWith('/api') && !pathname.startsWith('/tenant-error')) {
+    if (!pathname.startsWith('/onboarding') && !pathname.startsWith('/api') && !pathname.startsWith('/tenant-error') && !pathname.startsWith('/account-recovery')) {
       const { data: userTenant, error: tenantError } = await supabase
         .from('user_tenants')
         .select('tenant_id, role')
         .eq('user_id', user.id)
         .single();
 
-      // CRITICAL: Handle missing tenant
+      // CRITICAL: Handle missing tenant - redirect to account recovery
       if (tenantError || !userTenant) {
         console.error('[Middleware] Tenant not found for user:', user.id, tenantError);
-        // Force logout and redirect to error page
-        await supabase.auth.signOut();
-        return NextResponse.redirect(new URL('/tenant-error', request.url));
+        return NextResponse.redirect(new URL('/account-recovery', request.url));
       }
 
       const { data: profile, error: profileError } = await supabase
@@ -130,11 +125,10 @@ export async function middleware(request: NextRequest) {
         .eq('tenant_id', userTenant.tenant_id)
         .limit(1);
 
-      // CRITICAL: Handle missing tenant profile
+      // CRITICAL: Handle missing tenant profile - redirect to account recovery
       if (profileError || !profile || profile.length === 0) {
         console.error('[Middleware] Tenant profile not found:', userTenant.tenant_id, profileError);
-        await supabase.auth.signOut();
-        return NextResponse.redirect(new URL('/tenant-error', request.url));
+        return NextResponse.redirect(new URL('/account-recovery', request.url));
       }
 
       const needsOnboarding = !profile[0].onboarding_completed;

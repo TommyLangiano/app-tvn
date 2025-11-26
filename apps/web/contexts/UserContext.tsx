@@ -67,17 +67,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
         .eq('user_id', authUser.id)
         .single();
 
-      // CRITICAL: Handle missing tenant - force logout
+      // CRITICAL: Handle missing tenant - redirect to recovery
       if (tenantError || !userTenant) {
         console.error('[UserContext] Tenant not found for user:', authUser.id, tenantError);
         setUser(null);
         setTenant(null);
         setLoading(false);
 
-        // Force logout and show error
-        await supabase.auth.signOut();
-        toast.error('Errore: dati azienda non trovati. Contatta il supporto.');
-        router.push('/tenant-error');
+        // Redirect to account recovery
+        toast.error('Completa i dati della tua azienda per continuare.');
+        router.push('/account-recovery');
         return;
       }
 
@@ -88,17 +87,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
         .eq('tenant_id', userTenant.tenant_id)
         .limit(1);
 
-      // CRITICAL: Handle missing tenant profile
+      // CRITICAL: Handle missing tenant profile - redirect to recovery
       if (tenantProfileError || !tenantProfiles || tenantProfiles.length === 0) {
         console.error('[UserContext] Tenant profile not found:', userTenant.tenant_id, tenantProfileError);
         setUser(null);
         setTenant(null);
         setLoading(false);
 
-        // Force logout and show error
-        await supabase.auth.signOut();
-        toast.error('Errore: profilo azienda non trovato. Contatta il supporto.');
-        router.push('/tenant-error');
+        // Redirect to account recovery
+        toast.error('Completa i dati della tua azienda per continuare.');
+        router.push('/account-recovery');
         return;
       }
 
