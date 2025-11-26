@@ -1,5 +1,15 @@
 import { createClient } from '@/lib/supabase/client';
-import { format, eachMonthOfInterval, startOfMonth, endOfMonth } from 'date-fns';
+import { format, eachMonthOfInterval, startOfMonth, endOfMonth, addMonths, differenceInDays } from 'date-fns';
+import {
+  calculateCashFlowForecast,
+  calculateBudgetVsActual,
+  calculateAgingReport,
+  generateEnhancedAlerts,
+  calculateProjectTimeline,
+  calculateResourceUtilization,
+  calculateProfitabilityTrends,
+  calculateWorkingCapital,
+} from './advanced-metrics';
 
 export interface AnalyticsData {
   kpis: {
@@ -52,7 +62,77 @@ export interface AnalyticsData {
     title: string;
     message: string;
     priority: number;
+    suggestedActions?: string[];
+    impact?: 'high' | 'medium' | 'low';
   }>;
+  cashFlowForecast: {
+    saldoIniziale: number;
+    entratePrevistoMese1: number;
+    uscitePrevistoMese1: number;
+    entratePrevistoMese2: number;
+    uscitePrevistoMese2: number;
+    entratePrevistoMese3: number;
+    uscitePrevistoMese3: number;
+  };
+  budgetVsActual: Array<{
+    id: string;
+    titolo: string;
+    budgetPreventivo: number;
+    costiEffettivi: number;
+    fatturatoEffettivo: number;
+    percentualeCompletamento: number;
+    varianceBudget: number;
+    variancePercentage: number;
+  }>;
+  agingReport: {
+    range_0_30: { importo: number; numeroFatture: number };
+    range_31_60: { importo: number; numeroFatture: number };
+    range_61_90: { importo: number; numeroFatture: number };
+    range_over_90: { importo: number; numeroFatture: number };
+    totale: number;
+    dso: number;
+    clientiMorosi: Array<{
+      id: string;
+      ragione_sociale: string;
+      importoScaduto: number;
+      giorniRitardo: number;
+    }>;
+  };
+  projectTimeline: Array<{
+    id: string;
+    titolo: string;
+    data_inizio?: string;
+    data_fine_prevista?: string;
+    stato: string;
+    percentualeCompletamento: number;
+    cliente?: string;
+  }>;
+  resourceUtilization: Array<{
+    dipendenteId: string;
+    nome: string;
+    cognome: string;
+    oreLavorate: number;
+    oreDisponibili: number;
+    percentualeUtilizzo: number;
+    numeroCommesse: number;
+  }>;
+  profitabilityTrends: Array<{
+    mese: string;
+    fatturato: number;
+    costi: number;
+    margine: number;
+    marginePercentuale: number;
+  }>;
+  workingCapital: {
+    creditiCommerciali: number;
+    debitiCommerciali: number;
+    liquiditaDisponibile: number;
+    capitaleCircolanteNetto: number;
+    rapportoLiquidita: number;
+    giornoIncassoMedi: number;
+    giornoPagamentoMedi: number;
+    cicloCassa: number;
+  };
 }
 
 export interface AnalyticsFilters {
@@ -88,6 +168,38 @@ function getEmptyAnalyticsData(): AnalyticsData {
       message: 'Non ci sono dati per il periodo selezionato',
       priority: 1,
     }],
+    cashFlowForecast: {
+      saldoIniziale: 0,
+      entratePrevistoMese1: 0,
+      uscitePrevistoMese1: 0,
+      entratePrevistoMese2: 0,
+      uscitePrevistoMese2: 0,
+      entratePrevistoMese3: 0,
+      uscitePrevistoMese3: 0,
+    },
+    budgetVsActual: [],
+    agingReport: {
+      range_0_30: { importo: 0, numeroFatture: 0 },
+      range_31_60: { importo: 0, numeroFatture: 0 },
+      range_61_90: { importo: 0, numeroFatture: 0 },
+      range_over_90: { importo: 0, numeroFatture: 0 },
+      totale: 0,
+      dso: 0,
+      clientiMorosi: [],
+    },
+    projectTimeline: [],
+    resourceUtilization: [],
+    profitabilityTrends: [],
+    workingCapital: {
+      creditiCommerciali: 0,
+      debitiCommerciali: 0,
+      liquiditaDisponibile: 0,
+      capitaleCircolanteNetto: 0,
+      rapportoLiquidita: 0,
+      giornoIncassoMedi: 0,
+      giornoPagamentoMedi: 0,
+      cicloCassa: 0,
+    },
   };
 }
 
@@ -161,7 +273,7 @@ export async function getAnalyticsData(filters: AnalyticsFilters): Promise<Analy
       .lte('data_emissione', format(filters.dateTo, 'yyyy-MM-dd'));
 
     // Fetch clienti
-    const clientiIds = [...new Set(commesse.map(c => c.cliente_id).filter(id => id))];
+    const clientiIds = Array.from(new Set(commesse.map(c => c.cliente_id).filter(id => id)));
     let clientiData: any[] = [];
     if (clientiIds.length > 0) {
       const { data } = await supabase
@@ -278,8 +390,17 @@ function buildAnalyticsData(params: {
   // Top clients
   const topClients = calculateTopClients(commesse, fatture, clienti);
 
-  // Alerts
-  const alerts = generateAlerts(kpis, marginByProject);
+  // Advanced metrics
+  const cashFlowForecast = calculateCashFlowForecast(fatture, fatturePassive, scontrini);
+  const budgetVsActual = calculateBudgetVsActual(commesse, fatture, fatturePassive, scontrini);
+  const agingReport = calculateAgingReport(fatture, clienti);
+  const projectTimeline = calculateProjectTimeline(commesse, clienti);
+  const resourceUtilization = calculateResourceUtilization(rapportini, dipendenti);
+  const profitabilityTrends = calculateProfitabilityTrends(fatture, fatturePassive, scontrini, filters);
+  const workingCapital = calculateWorkingCapital(fatture, fatturePassive, scontrini);
+
+  // Enhanced alerts with suggested actions
+  const alerts = generateEnhancedAlerts(kpis, marginByProject, cashFlowForecast, agingReport, budgetVsActual);
 
   return {
     kpis,
@@ -289,6 +410,13 @@ function buildAnalyticsData(params: {
     hoursByEmployee,
     topClients,
     alerts,
+    cashFlowForecast,
+    budgetVsActual,
+    agingReport,
+    projectTimeline,
+    resourceUtilization,
+    profitabilityTrends,
+    workingCapital,
   };
 }
 
@@ -446,59 +574,3 @@ function calculateTopClients(commesse: any[], fatture: any[], clienti: any[]) {
     .slice(0, 10);
 }
 
-function generateAlerts(kpis: any, marginByProject: any[]) {
-  const alerts: any[] = [];
-
-  // Check for projects with negative margin
-  const lossProjects = marginByProject.filter(p => p.margine < 0);
-
-  if (lossProjects.length > 0) {
-    alerts.push({
-      type: 'error',
-      title: 'Commesse in perdita',
-      message: `${lossProjects.length} commessa/e con margine negativo`,
-      priority: 1,
-    });
-  }
-
-  // Check for low margin percentage
-  if (kpis.marginPercentage < 10 && kpis.totalRevenue > 0) {
-    alerts.push({
-      type: 'warning',
-      title: 'Margine basso',
-      message: `Il margine è solo del ${kpis.marginPercentage.toFixed(1)}%`,
-      priority: 2,
-    });
-  }
-
-  // Check for good performance
-  if (kpis.marginPercentage > 30 && kpis.totalRevenue > 0) {
-    alerts.push({
-      type: 'success',
-      title: 'Ottima performance',
-      message: `Margine eccellente: ${kpis.marginPercentage.toFixed(1)}%`,
-      priority: 3,
-    });
-  }
-
-  // Check for high costs
-  if (kpis.totalCosts > kpis.totalRevenue * 0.8 && kpis.totalRevenue > 0) {
-    alerts.push({
-      type: 'warning',
-      title: 'Costi elevati',
-      message: `I costi rappresentano l'${((kpis.totalCosts / kpis.totalRevenue) * 100).toFixed(0)}% del fatturato`,
-      priority: 2,
-    });
-  }
-
-  if (alerts.length === 0) {
-    alerts.push({
-      type: 'success',
-      title: 'Tutto ok',
-      message: 'Nessun problema rilevato',
-      priority: 3,
-    });
-  }
-
-  return alerts.sort((a, b) => a.priority - b.priority);
-}
