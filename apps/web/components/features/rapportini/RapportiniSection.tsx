@@ -516,12 +516,12 @@ export function RapportiniSection({ commessaId, hideMonthSelector = false }: Rap
     for (let i = 1; i <= daysInMonth; i++) {
       const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
       const totaleGiorno = rapportiniData
-        .filter(r => r.data_rapportino === dateStr && selectedUserIds.includes(r.user_id))
+        .filter(r => r.data_rapportino === dateStr && selectedUserIds.includes(r.user_id || r.dipendente_id || ''))
         .reduce((sum, r) => sum + r.ore_lavorate, 0);
       totalsRow.push(totaleGiorno > 0 ? totaleGiorno.toFixed(1) : '');
     }
     const granTotal = rapportiniData
-      .filter(r => selectedUserIds.includes(r.user_id))
+      .filter(r => selectedUserIds.includes(r.user_id || r.dipendente_id || ''))
       .reduce((sum, r) => sum + r.ore_lavorate, 0);
     totalsRow.push(granTotal.toFixed(1));
     rows.push(totalsRow);
@@ -582,7 +582,7 @@ export function RapportiniSection({ commessaId, hideMonthSelector = false }: Rap
 
         // Filter and sort rapportini
         const filteredRapportini = rapportiniData
-          .filter(r => selectedUserIds.includes(r.user_id))
+          .filter(r => selectedUserIds.includes(r.user_id || r.dipendente_id || ''))
           .sort((a, b) => new Date(a.data_rapportino).getTime() - new Date(b.data_rapportino).getTime());
 
         // Data rows
@@ -857,7 +857,7 @@ export function RapportiniSection({ commessaId, hideMonthSelector = false }: Rap
       for (let i = 1; i <= daysInMonth; i++) {
         const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
         const totaleGiorno = rapportiniFiltrati
-          .filter(r => r.data_rapportino === dateStr && selectedUserIds.includes(r.user_id))
+          .filter(r => r.data_rapportino === dateStr && selectedUserIds.includes(r.user_id || r.dipendente_id || ''))
           .reduce((sum, r) => sum + r.ore_lavorate, 0);
         const date = new Date(currentYear, currentMonth, i);
         const isWeekend = date.getDay() === 0 || date.getDay() === 6;
@@ -881,7 +881,7 @@ export function RapportiniSection({ commessaId, hideMonthSelector = false }: Rap
       }
 
       const granTotal = rapportiniFiltrati
-        .filter(r => selectedUserIds.includes(r.user_id))
+        .filter(r => selectedUserIds.includes(r.user_id || r.dipendente_id || ''))
         .reduce((sum, r) => sum + r.ore_lavorate, 0);
       const granTotalCell = totalsRow.getCell(daysInMonth + 2);
       granTotalCell.value = `${granTotal.toFixed(1)}h`;
@@ -943,7 +943,7 @@ export function RapportiniSection({ commessaId, hideMonthSelector = false }: Rap
 
         // Filter and sort rapportini
         const filteredRapportini = rapportiniData
-          .filter(r => selectedUserIds.includes(r.user_id))
+          .filter(r => selectedUserIds.includes(r.user_id || r.dipendente_id || ''))
           .sort((a, b) => new Date(a.data_rapportino).getTime() - new Date(b.data_rapportino).getTime());
 
         // Prepare table data
@@ -1084,13 +1084,13 @@ export function RapportiniSection({ commessaId, hideMonthSelector = false }: Rap
       for (let i = 1; i <= daysInMonth; i++) {
         const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
         const totaleGiorno = rapportiniFiltrati
-          .filter(r => r.data_rapportino === dateStr && selectedUserIds.includes(r.user_id))
+          .filter(r => r.data_rapportino === dateStr && selectedUserIds.includes(r.user_id || r.dipendente_id || ''))
           .reduce((sum, r) => sum + r.ore_lavorate, 0);
         totalsRow.push(totaleGiorno > 0 ? totaleGiorno.toFixed(1) + 'h' : '-');
       }
 
       const granTotal = rapportiniFiltrati
-        .filter(r => selectedUserIds.includes(r.user_id))
+        .filter(r => selectedUserIds.includes(r.user_id || r.dipendente_id || ''))
         .reduce((sum, r) => sum + r.ore_lavorate, 0);
       totalsRow.push(granTotal.toFixed(1) + 'h');
       rows.push(totalsRow);
