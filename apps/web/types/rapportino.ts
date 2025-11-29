@@ -1,7 +1,8 @@
 export interface Rapportino {
   id: string;
   tenant_id: string;
-  user_id: string;
+  user_id?: string; // Opzionale: presente solo se il dipendente ha un account
+  dipendente_id?: string; // Opzionale: presente solo se il dipendente non ha un account
   user_name?: string;
   user_email?: string;
   commessa_id: string;
@@ -20,6 +21,12 @@ export interface Rapportino {
   commesse?: {
     titolo: string;
     slug: string;
+  };
+  dipendenti?: {
+    id: string;
+    nome: string;
+    cognome: string;
+    email: string;
   };
 }
 
