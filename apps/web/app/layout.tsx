@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { ThemeProvider } from "@/components/common/theme-provider";
 import { ScrollToTop } from "@/components/common/ScrollToTop";
 import { Toaster } from "sonner";
 
@@ -22,15 +21,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en">
       <body
         className={`${inter.variable} font-sans antialiased`}
       >
-        <ThemeProvider defaultTheme="system" storageKey="ui-theme">
-          <ScrollToTop />
-          {children}
-          <Toaster />
-        </ThemeProvider>
+        <ScrollToTop />
+        {children}
+        <Toaster />
       </body>
     </html>
   );

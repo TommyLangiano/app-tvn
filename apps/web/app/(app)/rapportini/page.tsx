@@ -35,6 +35,7 @@ type User = {
   id: string;
   email: string;
   role: string;
+  dipendente_id?: string; // ID del dipendente se non ha account
   user_metadata?: {
     full_name?: string;
   };
@@ -155,46 +156,26 @@ export default function RapportiniPage() {
       setRagioneSociale(tenantProfile.ragione_sociale);
     }
 
-    // Load dipendenti with role 'dipendente' only
-    // First, get the dipendente role ID
-    const { data: dipendenteRole } = await supabase
-      .from('custom_roles')
-      .select('id')
+    // Load ALL dipendenti (anche quelli senza account)
+    const { data: dipendentiData } = await supabase
+      .from('dipendenti')
+      .select('id, nome, cognome, email, user_id')
       .eq('tenant_id', userTenant.tenant_id)
-      .eq('system_role_key', 'dipendente')
-      .single();
+      .order('cognome');
 
-    if (dipendenteRole) {
-      // Get all user_tenants with dipendente role
-      const { data: userTenantsWithRole } = await supabase
-        .from('user_tenants')
-        .select('user_id')
-        .eq('tenant_id', userTenant.tenant_id)
-        .eq('custom_role_id', dipendenteRole.id);
-
-      if (userTenantsWithRole && userTenantsWithRole.length > 0) {
-        const userIds = userTenantsWithRole.map(ut => ut.user_id);
-
-        // Get dipendenti with those user_ids
-        const { data: dipendentiData } = await supabase
-          .from('dipendenti')
-          .select('id, nome, cognome, email, user_id')
-          .eq('tenant_id', userTenant.tenant_id)
-          .in('user_id', userIds);
-
-        if (dipendentiData) {
-          // Transform to match User type
-          const dipendentiUsers: User[] = dipendentiData.map(dip => ({
-            id: dip.user_id!,
-            email: dip.email || '',
-            role: 'dipendente',
-            user_metadata: {
-              full_name: `${dip.nome} ${dip.cognome}`
-            }
-          }));
-          setUsers(dipendentiUsers);
+    if (dipendentiData) {
+      // Transform to match User type
+      // Usa l'id del dipendente se non ha user_id
+      const dipendentiUsers: User[] = dipendentiData.map(dip => ({
+        id: dip.user_id || dip.id,
+        email: dip.email || '',
+        role: 'dipendente',
+        dipendente_id: !dip.user_id ? dip.id : undefined, // Salva dipendente_id solo se non ha user_id
+        user_metadata: {
+          full_name: `${dip.nome} ${dip.cognome}`
         }
-      }
+      }));
+      setUsers(dipendentiUsers);
     }
 
     // Load commesse
@@ -233,7 +214,8 @@ export default function RapportiniPage() {
         .from('rapportini')
         .select(`
           *,
-          commesse:commessa_id(titolo, slug)
+          commesse:commessa_id(titolo, slug),
+          dipendenti:dipendente_id(id, nome, cognome, email)
         `)
         .eq('tenant_id', userTenants.tenant_id)
         .gte('data_rapportino', firstDay.toISOString().split('T')[0])
@@ -242,7 +224,19 @@ export default function RapportiniPage() {
 
       if (error) throw error;
 
-      setRapportini(data || []);
+      // Popola user_name e user_email dai dipendenti se mancanti
+      const rapportiniWithUserInfo = (data || []).map(r => {
+        if (!r.user_name && r.dipendenti) {
+          return {
+            ...r,
+            user_name: `${r.dipendenti.nome} ${r.dipendenti.cognome}`,
+            user_email: r.dipendenti.email
+          };
+        }
+        return r;
+      });
+
+      setRapportini(rapportiniWithUserInfo);
     } catch {
       toast.error('Errore nel caricamento dei rapportini');
     } finally {
@@ -439,14 +433,25 @@ export default function RapportiniPage() {
         commesse (
           titolo,
           slug
-        )
+        ),
+        dipendenti:dipendente_id(id, nome, cognome, email)
       `)
       .eq('tenant_id', userTenant.tenant_id)
       .gte('data_rapportino', startDateStr)
       .lte('data_rapportino', endDateStr)
       .order('data_rapportino', { ascending: false });
 
-    const rapportiniForExport = rapportiniData || [];
+    // Popola user_name e user_email dai dipendenti se mancanti
+    const rapportiniForExport = (rapportiniData || []).map(r => {
+      if (!r.user_name && r.dipendenti) {
+        return {
+          ...r,
+          user_name: `${r.dipendenti.nome} ${r.dipendenti.cognome}`,
+          user_email: r.dipendenti.email
+        };
+      }
+      return r;
+    });
 
     if (format === 'csv') {
       handleExportCSV(selectedUserIds, month, year, rapportiniForExport);
@@ -470,7 +475,9 @@ export default function RapportiniPage() {
 
     const filteredUsers = users.filter(u => selectedUserIds.includes(u.id));
     const rows = filteredUsers.map(user => {
-      const userRapportini = rapportiniData.filter(r => r.user_id === user.id);
+      const userRapportini = rapportiniData.filter(r =>
+        r.user_id === user.id || r.dipendente_id === user.dipendente_id
+      );
       const row = [user.user_metadata?.full_name || user.email];
 
       // Add hours for each day
@@ -737,7 +744,9 @@ export default function RapportiniPage() {
       // Data rows
       let currentRow = 4;
       filteredUsers.forEach(user => {
-        const userRapportini = rapportiniFiltrati.filter(r => r.user_id === user.id);
+        const userRapportini = rapportiniFiltrati.filter(r =>
+          r.user_id === user.id || r.dipendente_id === user.dipendente_id
+        );
         const row = worksheet.getRow(currentRow);
 
         // Dipendente name
@@ -1025,7 +1034,9 @@ export default function RapportiniPage() {
       const cellMetadata: any[] = [];
 
       filteredUsers.forEach(user => {
-        const userRapportini = rapportiniFiltrati.filter(r => r.user_id === user.id);
+        const userRapportini = rapportiniFiltrati.filter(r =>
+          r.user_id === user.id || r.dipendente_id === user.dipendente_id
+        );
         const row = [user.user_metadata?.full_name || user.email];
         const rowMeta: any[] = [];
 
@@ -1866,7 +1877,9 @@ export default function RapportiniPage() {
 
                 <tbody>
                   {users.map((user) => {
-                    const userRapportini = rapportiniFiltrati.filter(r => r.user_id === user.id);
+                    const userRapportini = rapportiniFiltrati.filter(r =>
+          r.user_id === user.id || r.dipendente_id === user.dipendente_id
+        );
                     const totaleMensile = userRapportini.reduce((sum, r) => sum + r.ore_lavorate, 0);
 
                     return (

@@ -42,6 +42,7 @@ type User = {
   id: string;
   email: string;
   role: string;
+  dipendente_id?: string; // ID del dipendente se non ha account
   user_metadata?: {
     full_name?: string;
   };
@@ -290,7 +291,6 @@ export function NuovoRapportinoModal({ onClose, onSuccess, users, commesse, pref
         // Insert rapportino data
         const rapportinoData: any = {
           tenant_id: userTenant.tenant_id,
-          user_id: userId,
           user_name,
           user_email,
           commessa_id: formData.commessa_id,
@@ -301,6 +301,13 @@ export function NuovoRapportinoModal({ onClose, onSuccess, users, commesse, pref
           allegato_url,
           created_by: user.id,
         };
+
+        // Usa user_id o dipendente_id in base alla presenza di account
+        if (selectedUser?.dipendente_id) {
+          rapportinoData.dipendente_id = selectedUser.dipendente_id;
+        } else {
+          rapportinoData.user_id = userId;
+        }
 
         // Aggiungi orari solo se modalità orari
         if (modalitaCalcolo === 'orari') {
