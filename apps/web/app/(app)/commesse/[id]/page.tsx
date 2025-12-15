@@ -24,7 +24,7 @@ import { InfoMovimentoModal } from '@/components/features/commesse/InfoMovimento
 import { EditMovimentoModal } from '@/components/features/commesse/EditMovimentoModal';
 import { DeleteMovimentoModal } from '@/components/features/commesse/DeleteMovimentoModal';
 import { BulkDeleteMovimentiModal } from '@/components/features/commesse/BulkDeleteMovimentiModal';
-import { RapportiniSection } from '@/components/features/rapportini/RapportiniSection';
+import { RapportiniSection } from '@/components/features/registro-presenze/RapportiniSection';
 import { getSignedUrl } from '@/lib/utils/storage';
 
 export default function CommessaDetailPage() {

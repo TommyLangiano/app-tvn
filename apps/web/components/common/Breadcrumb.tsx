@@ -16,7 +16,8 @@ export function Breadcrumb({ pageName }: BreadcrumbProps) {
 
   // Mappa per tradurre i nomi delle pagine
   const pageLabels: { [key: string]: string } = {
-    'rapportini': 'Rapportini',
+    'rapportini': 'Registro Presenze',
+    'registro-presenze': 'Registro Presenze',
     'commesse': 'Commesse',
     'anagrafica': 'Anagrafica',
     'gestione-utenti': 'Gestione Utenti',

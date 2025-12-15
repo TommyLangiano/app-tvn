@@ -88,8 +88,8 @@ const menuStructure = [
   },
   {
     type: 'single',
-    href: '/rapportini',
-    label: 'Rapportini',
+    href: '/registro-presenze',
+    label: 'Registro Presenze',
     icon: FileText
   },
   {

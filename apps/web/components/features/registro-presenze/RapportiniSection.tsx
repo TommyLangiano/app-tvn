@@ -19,11 +19,11 @@ import {
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import type { Rapportino } from '@/types/rapportino';
-import { InfoRapportinoModal } from '@/components/features/rapportini/InfoRapportinoModal';
-import { DeleteRapportinoModal } from '@/components/features/rapportini/DeleteRapportinoModal';
-import { NuovoRapportinoModal } from '@/components/features/rapportini/NuovoRapportinoModal';
-import { EditRapportinoModal } from '@/components/features/rapportini/EditRapportinoModal';
-import { ExportRapportiniModal } from '@/components/features/rapportini/ExportRapportiniModal';
+import { InfoRapportinoModal } from '@/components/features/registro-presenze/InfoRapportinoModal';
+import { DeleteRapportinoModal } from '@/components/features/registro-presenze/DeleteRapportinoModal';
+import { NuovoRapportinoModal } from '@/components/features/registro-presenze/NuovoRapportinoModal';
+import { EditRapportinoModal } from '@/components/features/registro-presenze/EditRapportinoModal';
+import { ExportRapportiniModal } from '@/components/features/registro-presenze/ExportRapportiniModal';
 import { getSignedUrl } from '@/lib/utils/storage';
 
 const MESI = [
