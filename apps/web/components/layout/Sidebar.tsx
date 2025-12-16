@@ -10,21 +10,26 @@ import {
   Building2,
   LogOut,
   MoreVertical,
-  UserCheck,
   Clock,
   CalendarX,
-  Wrench,
-  UserPlus,
   Wallet,
   Truck,
   Package,
   Receipt,
-  DollarSign,
   Calendar,
   BarChart3,
   Shield,
   ChevronRight,
-  FolderOpen
+  FolderOpen,
+  AlertCircle,
+  FileSignature,
+  GraduationCap,
+  MapPin,
+  Repeat,
+  FileCheck,
+  Banknote,
+  BadgeEuro,
+  FileSpreadsheet
 } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -52,15 +57,9 @@ const menuStructure = [
   },
   {
     type: 'single',
-    href: '/report',
-    label: 'Report',
-    icon: BarChart3
-  },
-  {
-    type: 'single',
-    href: '/calendario',
-    label: 'Calendario',
-    icon: Calendar
+    href: '/commesse',
+    label: 'Commesse',
+    icon: Briefcase
   },
   {
     type: 'category',
@@ -68,52 +67,47 @@ const menuStructure = [
     icon: Users,
     items: [
       { href: '/dipendenti', label: 'Dipendenti', icon: Users },
-      { href: '/presenze', label: 'Presenze', icon: Clock },
-      { href: '/assenze-ferie', label: 'Assenze & Ferie', icon: CalendarX },
-      { href: '/assunzioni', label: 'Assunzioni', icon: UserPlus },
-      { href: '/gestione-hr', label: 'Gestione HR', icon: Wrench },
+      { href: '/contratti', label: 'Contratti', icon: FileSignature },
+      { href: '/documenti', label: 'Documenti', icon: FolderOpen },
+      { href: '/sicurezza-formazione', label: 'Sicurezza & Formazione', icon: GraduationCap },
     ]
-  },
-  {
-    type: 'single',
-    href: '/stipendi',
-    label: 'Stipendi',
-    icon: Wallet
-  },
-  {
-    type: 'single',
-    href: '/commesse',
-    label: 'Commesse',
-    icon: Briefcase
-  },
-  {
-    type: 'single',
-    href: '/registro-presenze',
-    label: 'Registro Presenze',
-    icon: FileText
   },
   {
     type: 'category',
-    label: 'Fatture',
-    icon: Receipt,
+    label: 'Presenze',
+    icon: Clock,
     items: [
-      { href: '/fatture/attive', label: 'Attive', icon: Receipt },
-      { href: '/fatture/passive', label: 'Passive', icon: Receipt },
-      { href: '/fatture/f24', label: 'F24', icon: Receipt },
-      { href: '/fatture/movimenti', label: 'Movimenti', icon: DollarSign },
+      { href: '/timbrature', label: 'Timbrature', icon: Clock },
+      { href: '/registro-presenze', label: 'Registro Presenze', icon: FileText },
+      { href: '/assenze-ferie', label: 'Assenze & Ferie', icon: CalendarX },
+      { href: '/anomalie', label: 'Anomalie', icon: AlertCircle },
+      { href: '/richieste-correzioni', label: 'Richieste & Correzioni', icon: FileCheck },
+    ]
+  },
+  {
+    type: 'category',
+    label: 'Turni',
+    icon: Calendar,
+    items: [
+      { href: '/calendario-turni', label: 'Calendario Turni', icon: Calendar },
+      { href: '/scambi-modifiche', label: 'Scambi & Modifiche', icon: Repeat },
     ]
   },
   {
     type: 'single',
-    href: '/mezzi-attrezzature',
-    label: 'Mezzi & Attrezzature',
-    icon: Truck
+    href: '/fatture',
+    label: 'Fatture',
+    icon: Receipt
   },
   {
-    type: 'single',
-    href: '/magazzino',
-    label: 'Magazzino',
-    icon: Package
+    type: 'category',
+    label: 'Paghe e Contributi',
+    icon: Wallet,
+    items: [
+      { href: '/buste-paga', label: 'Buste Paga', icon: Banknote },
+      { href: '/f24', label: 'F24', icon: BadgeEuro },
+      { href: '/cedolini', label: 'Cedolini', icon: FileSpreadsheet },
+    ]
   },
   {
     type: 'single',
@@ -125,21 +119,40 @@ const menuStructure = [
     type: 'single',
     href: '/fornitori',
     label: 'Fornitori',
+    icon: Truck
+  },
+  {
+    type: 'single',
+    href: '/magazzino',
+    label: 'Magazzino',
     icon: Package
   },
   {
     type: 'single',
-    href: '/documenti',
-    label: 'Documenti',
-    icon: FolderOpen
+    href: '/mezzi-attrezzature',
+    label: 'Mezzi e Attrezzature',
+    icon: Truck
   },
   {
     type: 'category',
-    label: 'Sistema',
+    label: 'Report',
+    icon: BarChart3,
+    items: [
+      { href: '/report/azienda', label: 'Azienda', icon: Building2 },
+      { href: '/report/hr', label: 'HR', icon: Users },
+      { href: '/report/commesse', label: 'Commesse', icon: Briefcase },
+    ]
+  },
+  {
+    type: 'category',
+    label: 'Impostazioni',
     icon: Settings,
     items: [
-      { href: '/impostazioni', label: 'Impostazioni', icon: Settings },
-      { href: '/utenti-ruoli', label: 'Utenti & Ruoli', icon: Shield },
+      { href: '/impostazioni', label: 'Azienda', icon: Building2 },
+      { href: '/impostazioni/sedi', label: 'Sedi', icon: MapPin },
+      { href: '/impostazioni/regole', label: 'Regole', icon: FileCheck },
+      { href: '/impostazioni/ccnl', label: 'CCNL', icon: FileText },
+      { href: '/impostazioni/permessi-ruoli', label: 'Permessi & Ruoli', icon: Shield },
     ]
   },
 ];
