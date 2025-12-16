@@ -152,8 +152,7 @@ export default function CommessePage() {
     <>
       {/* Portal: Bottone nella Navbar */}
       {navbarActionsContainer && createPortal(
-        <Button onClick={() => router.push('/commesse/nuova')} className="gap-2 h-11 whitespace-nowrap rounded-md">
-          <Plus className="h-4 w-4" />
+        <Button onClick={() => router.push('/commesse/nuova')} className="h-11 whitespace-nowrap rounded-md">
           Nuova Commessa
         </Button>,
         navbarActionsContainer
