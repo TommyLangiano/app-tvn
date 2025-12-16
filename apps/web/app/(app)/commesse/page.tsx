@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { createPortal } from 'react-dom';
 import { Search, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -28,9 +29,12 @@ export default function CommessePage() {
   const [tipologiaClienteFilter, setTipologiaClienteFilter] = useState<string>('all');
   const [tipologiaCommessaFilter, setTipologiaCommessaFilter] = useState<string>('all');
   const [statoFilter, setStatoFilter] = useState<string>('all');
+  const [navbarActionsContainer, setNavbarActionsContainer] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     loadCommesse();
+    // Trova il container per i bottoni nella navbar
+    setNavbarActionsContainer(document.getElementById('navbar-actions'));
   }, []);
 
   useEffect(() => {
@@ -145,65 +149,68 @@ export default function CommessePage() {
   };
 
   return (
-    <div className="space-y-6">
-
-      {/* Search, Filters and New Button */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-        <div className="relative flex-1 w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Cerca commesse..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 h-11 border-2 border-border rounded-lg bg-card w-full"
-          />
-        </div>
-
-        {/* Filtro Tipologia Cliente */}
-        <Select value={tipologiaClienteFilter} onValueChange={setTipologiaClienteFilter}>
-          <SelectTrigger className="w-full sm:w-[180px] h-11 border-2 border-border rounded-lg bg-card">
-            <SelectValue placeholder="Tipologia Cliente" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tutte le Tipologie</SelectItem>
-            <SelectItem value="Privato">Privato</SelectItem>
-            <SelectItem value="Pubblico">Pubblico</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {/* Filtro Tipo Commessa */}
-        <Select value={tipologiaCommessaFilter} onValueChange={setTipologiaCommessaFilter}>
-          <SelectTrigger className="w-full sm:w-[180px] h-11 border-2 border-border rounded-lg bg-card">
-            <SelectValue placeholder="Tipo Commessa" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tutti i Tipi</SelectItem>
-            <SelectItem value="Appalto">Appalto</SelectItem>
-            <SelectItem value="ATI">ATI</SelectItem>
-            <SelectItem value="Sub Appalto">Sub Appalto</SelectItem>
-            <SelectItem value="Sub Affidamento">Sub Affidamento</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {/* Filtro Stato */}
-        <Select value={statoFilter} onValueChange={setStatoFilter}>
-          <SelectTrigger className="w-full sm:w-[180px] h-11 border-2 border-border rounded-lg bg-card">
-            <SelectValue placeholder="Stato" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tutti gli Stati</SelectItem>
-            <SelectItem value="da-iniziare">Da Iniziare</SelectItem>
-            <SelectItem value="in-corso">In Corso</SelectItem>
-            <SelectItem value="completate">Completate</SelectItem>
-          </SelectContent>
-        </Select>
-
+    <>
+      {/* Portal: Bottone nella Navbar */}
+      {navbarActionsContainer && createPortal(
         <Button onClick={() => router.push('/commesse/nuova')} className="gap-2 h-11 whitespace-nowrap">
           <Plus className="h-4 w-4" />
-          <span className="hidden sm:inline">Nuova Commessa</span>
-          <span className="sm:hidden">Nuova</span>
-        </Button>
-      </div>
+          Nuova Commessa
+        </Button>,
+        navbarActionsContainer
+      )}
+
+      <div className="space-y-6">
+        {/* Search and Filters */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="relative flex-1 w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Cerca commesse..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-11 border-2 border-border rounded-lg bg-card w-full"
+            />
+          </div>
+
+          {/* Filtro Tipologia Cliente */}
+          <Select value={tipologiaClienteFilter} onValueChange={setTipologiaClienteFilter}>
+            <SelectTrigger className="w-full sm:w-[180px] h-11 border-2 border-border rounded-lg bg-card">
+              <SelectValue placeholder="Tipologia Cliente" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tutte le Tipologie</SelectItem>
+              <SelectItem value="Privato">Privato</SelectItem>
+              <SelectItem value="Pubblico">Pubblico</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Filtro Tipo Commessa */}
+          <Select value={tipologiaCommessaFilter} onValueChange={setTipologiaCommessaFilter}>
+            <SelectTrigger className="w-full sm:w-[180px] h-11 border-2 border-border rounded-lg bg-card">
+              <SelectValue placeholder="Tipo Commessa" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tutti i Tipi</SelectItem>
+              <SelectItem value="Appalto">Appalto</SelectItem>
+              <SelectItem value="ATI">ATI</SelectItem>
+              <SelectItem value="Sub Appalto">Sub Appalto</SelectItem>
+              <SelectItem value="Sub Affidamento">Sub Affidamento</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Filtro Stato */}
+          <Select value={statoFilter} onValueChange={setStatoFilter}>
+            <SelectTrigger className="w-full sm:w-[180px] h-11 border-2 border-border rounded-lg bg-card">
+              <SelectValue placeholder="Stato" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tutti gli Stati</SelectItem>
+              <SelectItem value="da-iniziare">Da Iniziare</SelectItem>
+              <SelectItem value="in-corso">In Corso</SelectItem>
+              <SelectItem value="completate">Completate</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
       {/* Commesse Grid - 2 per riga */}
       {loading ? (
@@ -311,6 +318,7 @@ export default function CommessePage() {
           )}
         </>
       )}
-    </div>
+      </div>
+    </>
   );
 }

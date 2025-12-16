@@ -192,31 +192,37 @@ export function Navbar() {
 
   return (
     <div className="mb-12">
-      <div className="flex items-center gap-3">
-        {/* Back button (se necessario) */}
-        {shouldShowBackButton() && (
-          <button
-            onClick={() => router.back()}
-            className="h-11 w-11 flex items-center justify-center bg-surface border border-border rounded-lg hover:border-primary/20 hover:bg-primary/5 transition-all flex-shrink-0"
-            title="Torna indietro"
-          >
-            <ArrowLeft className="h-5 w-5 text-foreground" />
-          </button>
-        )}
-
-        {/* Section Name + Description */}
-        <div className="flex flex-col">
-          <h1 className="text-3xl font-bold text-foreground">
-            {pathname === '/dashboard' && user?.firstName
-              ? `Bentornato, ${user.firstName}`
-              : getSectionName()}
-          </h1>
-          {getSectionDescription() && (
-            <p className="text-sm text-muted-foreground mt-1">
-              {getSectionDescription()}
-            </p>
+      <div className="flex items-start justify-between gap-3">
+        {/* Left side: Back button + Section Name + Description */}
+        <div className="flex items-center gap-3">
+          {/* Back button (se necessario) */}
+          {shouldShowBackButton() && (
+            <button
+              onClick={() => router.back()}
+              className="h-11 w-11 flex items-center justify-center bg-surface border border-border rounded-lg hover:border-primary/20 hover:bg-primary/5 transition-all flex-shrink-0"
+              title="Torna indietro"
+            >
+              <ArrowLeft className="h-5 w-5 text-foreground" />
+            </button>
           )}
+
+          {/* Section Name + Description */}
+          <div className="flex flex-col">
+            <h1 className="text-3xl font-bold text-foreground">
+              {pathname === '/dashboard' && user?.firstName
+                ? `Bentornato, ${user.firstName}`
+                : getSectionName()}
+            </h1>
+            {getSectionDescription() && (
+              <p className="text-sm text-muted-foreground mt-1">
+                {getSectionDescription()}
+              </p>
+            )}
+          </div>
         </div>
+
+        {/* Right side: Slot per action buttons (popolato dalle pagine) */}
+        <div id="navbar-actions" className="flex items-center gap-3" />
       </div>
     </div>
   );
