@@ -4,10 +4,19 @@ import { withAuth } from '@/lib/middleware/auth';
 import { handleApiError, ApiErrors } from '@/lib/errors/api-errors';
 import { checkRateLimit } from '@/lib/rate-limit';
 
+// 🔒 SECURITY #66: Google Maps Quota Tracking
+// NOTA: Questo endpoint usa Google Maps Static API che ha limiti di quota:
+// - Free tier: 25,000 requests/day
+// - Rate limit implementato: 100 req/min per utente
+// - Monitoraggio consigliato: Google Cloud Console > APIs & Services > Quotas
+// - Costi oltre quota: $2 per 1000 requests
+// TODO: Implementare contatore database per tracciare chiamate giornaliere
+// TODO: Aggiungere alert quando si raggiunge 80% della quota
+
 export async function POST() {
   return withAuth(async (context) => {
     try {
-      // 🔒 PERFORMANCE: Rate limit per evitare abuso Google Maps API quota
+      // 🔒 PERFORMANCE & #66: Rate limit per evitare abuso Google Maps API quota
       const { success, reset } = await checkRateLimit(context.user.id, 'api');
       if (!success) {
         throw ApiErrors.rateLimitExceeded(Math.ceil((reset - Date.now()) / 1000));
@@ -40,15 +49,25 @@ export async function POST() {
         provincia?: string | null;
       };
 
+      // 🔒 SECURITY #60: Sanitizza indirizzo per prevenire injection in Google Maps URL
+      const sanitizeAddressField = (field: string | null | undefined): string => {
+        if (!field) return '';
+        // Rimuovi caratteri potenzialmente pericolosi per URL
+        return field
+          .replace(/[<>'"]/g, '') // HTML/JS injection
+          .replace(/[&|;$`\\]/g, '') // Command injection
+          .trim();
+      };
+
       // Funzione per costruire l'indirizzo
       const buildAddress = (commessa: CommessaAddress) => {
         const parts: string[] = [];
-        if (commessa.via) parts.push(commessa.via);
-        if (commessa.civico) parts.push(commessa.civico);
-        if (commessa.cap) parts.push(commessa.cap);
-        if (commessa.citta) parts.push(commessa.citta);
-        if (commessa.provincia) parts.push(commessa.provincia);
-        return parts.join(', ');
+        if (commessa.via) parts.push(sanitizeAddressField(commessa.via));
+        if (commessa.civico) parts.push(sanitizeAddressField(commessa.civico));
+        if (commessa.cap) parts.push(sanitizeAddressField(commessa.cap));
+        if (commessa.citta) parts.push(sanitizeAddressField(commessa.citta));
+        if (commessa.provincia) parts.push(sanitizeAddressField(commessa.provincia));
+        return parts.filter(p => p.length > 0).join(', ');
       };
 
       // Funzione per generare URL mappa statica

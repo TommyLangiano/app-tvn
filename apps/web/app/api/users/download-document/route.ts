@@ -57,13 +57,17 @@ export async function GET(request: Request) {
       // 🔒 AUDIT: Log document access
       const userId = pathSegments[2]; // Extract user_id from path
       const { ipAddress, userAgent } = getRequestMetadata(request);
+
+      // 🔒 SECURITY #47: Non loggare path completo (contiene user_id) - usa solo filename
+      const filename = pathSegments[pathSegments.length - 1];
+
       await logAuditEvent({
         tenantId: context.tenant.tenant_id,
         userId: context.user.id,
         eventType: 'document_accessed',
         resourceType: 'user_document',
         resourceId: userId,
-        newValues: { path: documentPath },
+        newValues: { filename }, // Solo filename, non path completo
         ipAddress,
         userAgent,
       });

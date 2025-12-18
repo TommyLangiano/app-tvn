@@ -61,15 +61,24 @@ export async function POST(request: NextRequest) {
       sede_legale_nazione,
     } = validation.data;
 
+    // 🔒 SECURITY #12 & #15: Timing attack prevention - use constant time check
     // Check if user already has a tenant
+    const checkStart = Date.now();
     const { data: existingUserTenant } = await supabase
       .from('user_tenants')
       .select('tenant_id')
       .eq('user_id', user.id)
       .single();
 
+    // Aggiungi delay minimo per normalizzare il tempo di risposta (anti-timing attack)
+    const elapsed = Date.now() - checkStart;
+    if (elapsed < 100) {
+      await new Promise(resolve => setTimeout(resolve, 100 - elapsed));
+    }
+
     if (existingUserTenant) {
-      throw ApiErrors.badRequest('L\'utente ha già un tenant associato');
+      // 🔒 SECURITY #15: Errore generico (non rivelare se utente ha tenant)
+      throw ApiErrors.badRequest('Impossibile completare l\'operazione');
     }
 
     // 1. Create tenant

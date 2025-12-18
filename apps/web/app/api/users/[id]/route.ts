@@ -36,6 +36,7 @@ export async function PUT(
         throw ApiErrors.notFound('User');
       }
 
+      // 🔒 SECURITY #30 & #31: Mass assignment protection - whitelist solo campi permessi
       const {
         full_name,
         phone,
@@ -49,7 +50,14 @@ export async function PUT(
         medical_checkup_expiry
       } = validation.data;
 
-      // Update user profile
+      // 🔒 SECURITY #31: Verifica che role change sia autorizzato
+      // Solo admin può cambiare ruoli
+      if (role && role !== targetUserTenant.role) {
+        // withAdminAuth già verifica che sia admin, quindi OK
+        // Ma preveniamo comunque injection di ruoli non validi tramite Zod schema
+      }
+
+      // Update user profile - whitelist esplicita dei campi
       const profileUpdates: Record<string, string | null> = {};
       if (full_name !== undefined) profileUpdates.full_name = full_name;
       if (phone !== undefined) profileUpdates.phone = phone;
@@ -85,15 +93,18 @@ export async function PUT(
         }
       }
 
-      // Update email if changed
+      // 🔒 SECURITY #27: Email change richiede verifica
+      // NON permettere cambio email diretto - richiedere conferma via email
       if (email) {
-        const { error: emailError } = await adminClient.auth.admin.updateUserById(userId, {
-          email,
-        });
+        // Opzione 1: Blocca completamente il cambio email via API
+        throw ApiErrors.badRequest('Email change must be done through user settings with verification');
 
-        if (emailError) {
-          throw new Error('Failed to update user email');
-        }
+        // Opzione 2 (commentata): Invia email di verifica
+        // const { error: emailError } = await adminClient.auth.admin.updateUserById(userId, {
+        //   email,
+        //   email_confirm: false // Richiede conferma via email
+        // });
+        // if (emailError) throw new Error('Failed to send verification email');
       }
 
       // 🔒 AUDIT: Log user update

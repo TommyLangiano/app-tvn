@@ -10,6 +10,7 @@ const loginSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  // 🔒 SECURITY #1: Rate limiting su login (già implementato)
   try {
     // Rate limiting per IP
     const clientIp = getClientIp(request);
@@ -58,9 +59,40 @@ export async function POST(request: NextRequest) {
     });
 
     if (error) {
-      // 🔒 SECURITY: Log senza PII - no email in plain text
+      // 🔒 SECURITY #4: Errore generico per prevenire user enumeration
+      // Non rivelare se l'email esiste o se la password è sbagliata
       console.warn(`[Login] Failed attempt from IP: ${clientIp}`);
 
+      return NextResponse.json(
+        { error: 'Credenziali non valide' },
+        { status: 401 }
+      );
+    }
+
+    // 🔒 SECURITY #2: Verifica che l'utente abbia almeno un tenant attivo
+    const supabaseServer = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
+    const { data: userTenants } = await supabaseServer
+      .from('user_tenants')
+      .select('tenant_id, is_active')
+      .eq('user_id', data.user.id);
+
+    if (!userTenants || userTenants.length === 0) {
+      // 🔒 SECURITY #4: Errore generico (non rivelare motivo specifico)
+      await supabase.auth.signOut();
+      return NextResponse.json(
+        { error: 'Credenziali non valide' },
+        { status: 401 }
+      );
+    }
+
+    const hasActiveTenant = userTenants.some(t => t.is_active);
+    if (!hasActiveTenant) {
+      // 🔒 SECURITY #2 & #4: Account disattivato, ma errore generico
+      await supabase.auth.signOut();
       return NextResponse.json(
         { error: 'Credenziali non valide' },
         { status: 401 }

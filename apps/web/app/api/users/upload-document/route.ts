@@ -62,10 +62,23 @@ export async function POST(request: Request) {
         throw ApiErrors.badRequest('File troppo grande. Massimo 10MB.');
       }
 
-      // 🔒 SECURITY #38: Sanitize filename to prevent path traversal
+      // 🔒 SECURITY #38 & #42: Sanitize filename to prevent path traversal e caratteri pericolosi
       const originalName = file.name;
+
+      // Blocca path traversal
       if (originalName.includes('..') || originalName.includes('/') || originalName.includes('\\')) {
         throw ApiErrors.badRequest('Nome file non valido');
+      }
+
+      // 🔒 SECURITY #42: Blocca caratteri pericolosi nel filename
+      const dangerousChars = /[<>:"|?*\x00-\x1f]/;
+      if (dangerousChars.test(originalName)) {
+        throw ApiErrors.badRequest('Il nome del file contiene caratteri non permessi');
+      }
+
+      // Limita lunghezza filename
+      if (originalName.length > 255) {
+        throw ApiErrors.badRequest('Nome file troppo lungo (max 255 caratteri)');
       }
 
       // Convert File to Buffer for magic bytes validation

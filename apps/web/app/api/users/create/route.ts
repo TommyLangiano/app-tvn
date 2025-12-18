@@ -45,14 +45,21 @@ export async function POST(request: Request) {
 
       const adminClient = createAdminClient();
 
-      // 🔒 SECURITY #21 & #19: Validate custom_role_id BEFORE creating user (prevent timing attack)
+      // 🔒 SECURITY #21, #19 & #22: Validate custom_role_id BEFORE creating user (prevent timing attack)
       if (custom_role_id) {
+        const checkStart = Date.now();
         const { data: customRole } = await adminClient
           .from('custom_roles')
           .select('id')
           .eq('id', custom_role_id)
           .eq('tenant_id', context.tenant.tenant_id)
           .single();
+
+        // 🔒 SECURITY #22: Normalizza tempo di risposta per prevenire timing attack
+        const elapsed = Date.now() - checkStart;
+        if (elapsed < 50) {
+          await new Promise(resolve => setTimeout(resolve, 50 - elapsed));
+        }
 
         if (!customRole) {
           throw ApiErrors.badRequest('Custom role not found in your tenant');

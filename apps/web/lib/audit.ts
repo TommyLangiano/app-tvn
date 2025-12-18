@@ -31,6 +31,25 @@ interface AuditLogParams {
 }
 
 /**
+ * 🔒 SECURITY #56: Rimuove PII da oldValues/newValues prima del logging
+ */
+function sanitizePII(values: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
+  if (!values) return undefined;
+
+  const sanitized = { ...values };
+  const piiFields = ['email', 'phone', 'full_name', 'first_name', 'last_name', 'password', 'token', 'api_key'];
+
+  for (const field of piiFields) {
+    if (field in sanitized) {
+      // Sostituisci PII con hash o placeholder
+      sanitized[field] = '[REDACTED]';
+    }
+  }
+
+  return sanitized;
+}
+
+/**
  * Log an audit event to the database
  */
 export async function logAuditEvent(params: AuditLogParams): Promise<string | null> {
@@ -47,14 +66,18 @@ export async function logAuditEvent(params: AuditLogParams): Promise<string | nu
       }
     );
 
+    // 🔒 SECURITY #56: Sanitizza PII da oldValues/newValues
+    const sanitizedOldValues = sanitizePII(params.oldValues);
+    const sanitizedNewValues = sanitizePII(params.newValues);
+
     const { data, error } = await supabaseAdmin.rpc('log_audit_event', {
       p_tenant_id: params.tenantId,
       p_user_id: params.userId || null,
       p_event_type: params.eventType,
       p_resource_type: params.resourceType || null,
       p_resource_id: params.resourceId || null,
-      p_old_values: params.oldValues ? JSON.stringify(params.oldValues) : null,
-      p_new_values: params.newValues ? JSON.stringify(params.newValues) : null,
+      p_old_values: sanitizedOldValues ? JSON.stringify(sanitizedOldValues) : null,
+      p_new_values: sanitizedNewValues ? JSON.stringify(sanitizedNewValues) : null,
       p_ip_address: params.ipAddress || null,
       p_user_agent: params.userAgent || null,
       p_notes: params.notes || null,
