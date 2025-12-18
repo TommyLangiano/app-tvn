@@ -91,6 +91,9 @@ export async function GET(request: NextRequest) {
     // Converti il blob in ArrayBuffer
     const arrayBuffer = await fileData.arrayBuffer();
 
+    // 🔒 SECURITY #53: Log download per audit trail
+    console.info(`[Storage Download] User ${user.id} downloaded ${filePath} from tenant ${fileTenantId}`);
+
     // Ritorna il file con gli header appropriati
     // ⚡ PERFORMANCE: Cache immutabile per file storage
     return new NextResponse(arrayBuffer, {

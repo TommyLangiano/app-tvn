@@ -151,8 +151,14 @@ export async function POST(request: Request) {
         .insert(userTenantData);
 
       if (tenantError) {
-        // Rollback: delete created user
-        await adminClient.auth.admin.deleteUser(newUser.id);
+        // 🔒 SECURITY #24: Improved rollback con error handling
+        try {
+          await adminClient.auth.admin.deleteUser(newUser.id);
+        } catch (deleteError) {
+          // Log errore critico: orphan user created
+          console.error(`[CRITICAL] Failed to rollback user ${newUser.id} after tenant assignment error:`, deleteError);
+          // TODO: Implementare alert/monitoring per orphan users
+        }
         throw new Error('Failed to assign user to tenant');
       }
 

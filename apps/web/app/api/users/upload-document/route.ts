@@ -164,12 +164,18 @@ export async function POST(request: Request) {
         });
 
       if (uploadError) {
+        // 🔒 SECURITY #40: No cleanup needed - upload failed, no partial file created
         // If file exists, unique filename should prevent this, but handle gracefully
         if (uploadError.message?.includes('already exists')) {
           throw ApiErrors.conflict('File già esistente. Riprova.');
         }
         throw new Error('Failed to upload file');
       }
+
+      // 🔒 SECURITY #43: File version history
+      // TODO: Implementare versioning salvando vecchi file con timestamp invece di sovrascrivere
+      // Esempio: document_path, document_path_v1, document_path_v2
+      // O creare tabella document_versions con history completa
 
       // Update user_profiles with document path
       const { error: updateError } = await adminClient
@@ -180,6 +186,12 @@ export async function POST(request: Request) {
         .eq('user_id', userId);
 
       if (updateError) {
+        // 🔒 SECURITY #40: Cleanup file se update fallisce
+        try {
+          await supabase.storage.from('app-storage').remove([uploadData.path]);
+        } catch (cleanupError) {
+          console.error(`[CRITICAL] Failed to cleanup uploaded file ${uploadData.path}:`, cleanupError);
+        }
         throw new Error('Failed to update profile');
       }
 

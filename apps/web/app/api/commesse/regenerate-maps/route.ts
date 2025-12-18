@@ -24,12 +24,21 @@ export async function POST() {
 
       const supabase = await createClient();
 
+      // 🔒 PERFORMANCE #59: Pagination per non caricare tutto in memoria
+      // TODO: Implementare pagination con limit/offset per tenant con 10k+ commesse
+      // Esempio: .range(offset, offset + limit - 1)
+
+      // 🔒 PERFORMANCE #64: Caching per evitare rigenerazione
+      // TODO: Salvare map URLs in DB con cache expiry (es. 7 giorni)
+      // Rigenera solo se indirizzo cambiato o cache scaduta
+
       // Ottieni tutte le commesse del tenant che hanno un indirizzo
       const { data: commesse, error: commesseError } = await supabase
         .from('commesse')
         .select('id, nome_commessa, via, civico, cap, citta, provincia')
         .eq('tenant_id', context.tenant.tenant_id)
-        .not('via', 'is', null);
+        .not('via', 'is', null)
+        .limit(1000); // 🔒 PERFORMANCE #59: Limit temporaneo per prevenire OOM
 
       if (commesseError) throw commesseError;
 
@@ -89,19 +98,33 @@ export async function POST() {
         return `https://maps.googleapis.com/maps/api/staticmap?center=${center}&zoom=${zoom}&size=${size}&scale=${scale}&maptype=${maptype}&${style}&markers=${markers}&key=${apiKey}`;
       };
 
-      // 🔒 SECURITY #58: NON esporre API key nella response
+      // 🔒 SECURITY #58 & #62: NON esporre API key + sanitizza nome per XSS
       // Genera info per tutte le commesse con indirizzo (senza mapUrl che contiene API key)
       const mapInfo = commesse.map(commessa => {
         const address = buildAddress(commessa);
+
+        // 🔒 SECURITY #62: Sanitizza nome_commessa per prevenire XSS se riflesso in UI
+        const safeName = (commessa.nome_commessa || 'Senza nome')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#x27;')
+          .replace(/\//g, '&#x2F;');
+
         return {
           id: commessa.id,
-          nome: commessa.nome_commessa || 'Senza nome',
+          nome: safeName,
           indirizzo: address,
           hasAddress: !!(commessa.via || commessa.citta),
           // Segnala solo se la mappa può essere generata, ma non espone l'URL con la chiave
           canGenerateMap: !!address && !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
         };
       }).filter(info => info.hasAddress);
+
+      // 🔒 PERFORMANCE #63: Timeout handling per Google Maps API
+      // TODO: Implementare timeout con AbortController se si chiama realmente Google API
+      // Esempio: const controller = new AbortController();
+      //          setTimeout(() => controller.abort(), 5000); // 5s timeout
 
       return NextResponse.json({
         success: true,

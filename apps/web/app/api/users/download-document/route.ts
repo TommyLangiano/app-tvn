@@ -72,6 +72,8 @@ export async function GET(request: Request) {
         userAgent,
       });
 
+      // 🔒 SECURITY #48: URL è già safe (generato da Supabase), ma per extra safety
+      // non includiamo path raw nella response (solo signedUrl)
       return NextResponse.json({ url: data.signedUrl });
     } catch (error) {
       return handleApiError(error, 'GET /api/users/download-document');
