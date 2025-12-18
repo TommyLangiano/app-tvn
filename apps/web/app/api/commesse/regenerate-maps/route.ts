@@ -1,11 +1,18 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/middleware/auth';
-import { handleApiError } from '@/lib/errors/api-errors';
+import { handleApiError, ApiErrors } from '@/lib/errors/api-errors';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 export async function POST() {
   return withAuth(async (context) => {
     try {
+      // 🔒 PERFORMANCE: Rate limit per evitare abuso Google Maps API quota
+      const { success, reset } = await checkRateLimit(context.user.id, 'api');
+      if (!success) {
+        throw ApiErrors.rateLimitExceeded(Math.ceil((reset - Date.now()) / 1000));
+      }
+
       const supabase = await createClient();
 
       // Ottieni tutte le commesse del tenant che hanno un indirizzo

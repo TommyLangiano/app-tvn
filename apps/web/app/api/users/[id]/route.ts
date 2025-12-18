@@ -60,7 +60,8 @@ export async function PUT(
       if (medical_checkup_expiry !== undefined) profileUpdates.medical_checkup_expiry = medical_checkup_expiry || null;
 
       if (Object.keys(profileUpdates).length > 0) {
-        const { error: profileError } = await adminClient
+        // 🔒 SECURITY: Usa supabase client (non admin) per RLS protection
+        const { error: profileError } = await supabase
           .from('user_profiles')
           .update(profileUpdates)
           .eq('user_id', userId);

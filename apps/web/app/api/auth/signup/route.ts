@@ -80,11 +80,9 @@ export async function POST(request: NextRequest) {
     });
 
     if (authError) {
-      // Check if it's a duplicate email error
-      if (authError.message?.includes('already') || authError.message?.includes('duplicate')) {
-        throw ApiErrors.conflict('Email già registrata');
-      }
-      throw new Error('Errore nella creazione dell\'utente');
+      // 🔒 SECURITY: Email enumeration prevention - errore generico
+      // Non esporre se l'email esiste o meno nel sistema (privacy)
+      throw ApiErrors.badRequest('Errore nella registrazione. Verifica i dati inseriti.');
     }
 
     if (!authData.user) {

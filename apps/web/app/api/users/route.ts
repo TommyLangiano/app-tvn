@@ -1,11 +1,18 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/middleware/auth';
-import { handleApiError } from '@/lib/errors/api-errors';
+import { handleApiError, ApiErrors } from '@/lib/errors/api-errors';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 export async function GET() {
   return withAuth(async (context) => {
     try {
+      // 🔒 Rate limit to prevent abuse
+      const { success, reset } = await checkRateLimit(context.user.id, 'api');
+      if (!success) {
+        throw ApiErrors.rateLimitExceeded(Math.ceil((reset - Date.now()) / 1000));
+      }
+
       const supabase = await createClient();
 
       // Load users from tenant with roles

@@ -84,11 +84,6 @@ export async function POST(request: Request) {
         throw ApiErrors.badRequest('Estensione file non valida.');
       }
 
-      // Additional check: declared MIME vs actual MIME
-      if (file.type && !ALLOWED_MIME_TYPES.includes(file.type)) {
-        throw ApiErrors.badRequest('MIME type dichiarato non consentito.');
-      }
-
       // 🔒 SECURITY: Verify userId belongs to current tenant BEFORE upload
       const { data: targetUserTenant } = await supabase
         .from('user_tenants')
