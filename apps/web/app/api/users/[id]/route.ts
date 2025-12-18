@@ -57,16 +57,17 @@ export async function PUT(
         // Ma preveniamo comunque injection di ruoli non validi tramite Zod schema
       }
 
+      // 🔒 CODE QUALITY #29: Default values espliciti per prevenire null vs undefined confusion
       // Update user profile - whitelist esplicita dei campi
       const profileUpdates: Record<string, string | null> = {};
-      if (full_name !== undefined) profileUpdates.full_name = full_name;
-      if (phone !== undefined) profileUpdates.phone = phone;
-      if (position !== undefined) profileUpdates.position = position;
-      if (notes !== undefined) profileUpdates.notes = notes;
-      if (birth_date !== undefined) profileUpdates.birth_date = birth_date || null;
-      if (hire_date !== undefined) profileUpdates.hire_date = hire_date || null;
-      if (medical_checkup_date !== undefined) profileUpdates.medical_checkup_date = medical_checkup_date || null;
-      if (medical_checkup_expiry !== undefined) profileUpdates.medical_checkup_expiry = medical_checkup_expiry || null;
+      if (full_name !== undefined) profileUpdates.full_name = full_name ?? null;
+      if (phone !== undefined) profileUpdates.phone = phone ?? null;
+      if (position !== undefined) profileUpdates.position = position ?? null;
+      if (notes !== undefined) profileUpdates.notes = notes ?? null;
+      if (birth_date !== undefined) profileUpdates.birth_date = birth_date ?? null;
+      if (hire_date !== undefined) profileUpdates.hire_date = hire_date ?? null;
+      if (medical_checkup_date !== undefined) profileUpdates.medical_checkup_date = medical_checkup_date ?? null;
+      if (medical_checkup_expiry !== undefined) profileUpdates.medical_checkup_expiry = medical_checkup_expiry ?? null;
 
       if (Object.keys(profileUpdates).length > 0) {
         // 🔒 SECURITY: Usa supabase client (non admin) per RLS protection

@@ -126,6 +126,17 @@ export async function POST() {
       // Esempio: const controller = new AbortController();
       //          setTimeout(() => controller.abort(), 5000); // 5s timeout
 
+      // 🔒 OBSERVABILITY #67 & #68: Monitoring Google Maps API usage
+      console.debug('[Google Maps] API call tracked:', {
+        tenantId: context.tenant.tenant_id,
+        userId: context.user.id,
+        commesseCount: mapInfo.length,
+        timestamp: new Date().toISOString(),
+      });
+
+      // TODO #67: Implementare contatore database per quota monitoring
+      // Example: await supabase.from('google_maps_usage').insert({ tenant_id, call_count: mapInfo.length })
+
       return NextResponse.json({
         success: true,
         message: `Trovate ${mapInfo.length} commesse con indirizzi validi`,
@@ -135,6 +146,13 @@ export async function POST() {
       });
 
     } catch (error) {
+      // 🔒 OBSERVABILITY #68: Log Google Maps API errors per troubleshooting
+      console.error('[Google Maps] API error:', {
+        tenantId: context.tenant.tenant_id,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString(),
+      });
+
       return handleApiError(error, 'POST /api/commesse/regenerate-maps');
     }
   });

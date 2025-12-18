@@ -88,11 +88,26 @@ export async function GET(request: NextRequest) {
     };
     const contentType = contentTypes[extension || ''] || 'application/octet-stream';
 
+    // 🔒 OBSERVABILITY #52: Track download performance
+    const downloadStart = Date.now();
+
     // Converti il blob in ArrayBuffer
     const arrayBuffer = await fileData.arrayBuffer();
 
-    // 🔒 SECURITY #53: Log download per audit trail
-    console.info(`[Storage Download] User ${user.id} downloaded ${filePath} from tenant ${fileTenantId}`);
+    const downloadTime = Date.now() - downloadStart;
+
+    // 🔒 SECURITY #53 & OBSERVABILITY #52: Log download per audit trail + performance metrics
+    console.info('[Storage Download] Success:', {
+      userId: user.id,
+      filePath: fileName, // Solo filename per privacy
+      tenantId: fileTenantId,
+      fileSize: arrayBuffer.byteLength,
+      downloadTimeMs: downloadTime,
+      timestamp: new Date().toISOString(),
+    });
+
+    // TODO #52: Inviare metriche a monitoring service (DataDog, New Relic, etc.)
+    // Example: metrics.histogram('storage.download.duration', downloadTime);
 
     // Ritorna il file con gli header appropriati
     // ⚡ PERFORMANCE: Cache immutabile per file storage

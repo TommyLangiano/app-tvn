@@ -128,7 +128,13 @@ export async function POST(request: Request) {
 
       // Profile errors non-critical (trigger creates it)
       if (profileError) {
-        console.warn('Profile update warning:', profileError.message);
+        // 🔒 CODE QUALITY #20: Structured logging invece di console.warn
+        console.warn('[User Create] Profile update warning:', {
+          userId: newUser.id,
+          tenantId: context.tenant.tenant_id,
+          error: profileError.message,
+          timestamp: new Date().toISOString(),
+        });
       }
 
       // Add user to tenant with specified role

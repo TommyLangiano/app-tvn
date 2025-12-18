@@ -96,12 +96,31 @@ export async function logAuditEvent(params: AuditLogParams): Promise<string | nu
 }
 
 /**
+ * 🔒 SECURITY #70: Sanitizza User-Agent per prevenire XSS se loggato/visualizzato
+ */
+function sanitizeUserAgent(userAgent: string): string {
+  if (!userAgent || userAgent === 'unknown') return 'unknown';
+
+  // Rimuovi caratteri HTML/script pericolosi
+  return userAgent
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/\//g, '&#x2F;')
+    .substring(0, 500); // Limit length to prevent DoS
+}
+
+/**
  * Helper to extract request metadata
  */
 export function getRequestMetadata(request: Request) {
   const forwardedFor = request.headers.get('x-forwarded-for');
   const ipAddress = forwardedFor ? forwardedFor.split(',')[0].trim() : request.headers.get('x-real-ip') || 'unknown';
-  const userAgent = request.headers.get('user-agent') || 'unknown';
+  const rawUserAgent = request.headers.get('user-agent') || 'unknown';
+
+  // 🔒 SECURITY #70: Sanitizza User-Agent prima di loggare
+  const userAgent = sanitizeUserAgent(rawUserAgent);
 
   return { ipAddress, userAgent };
 }

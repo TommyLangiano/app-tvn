@@ -41,30 +41,41 @@ export async function GET() {
       // Map profiles by user_id for quick lookup
       const profilesMap = new Map(profiles.map(p => [p.user_id, p]));
 
+      // 🔒 CODE QUALITY #54 & #55: Explicit handling di profili mancanti + cleanup is_active confusion
       // Merge tenant data with profiles
-      const users = tenantUsersData.map((ut) => {
-        const profile = profilesMap.get(ut.user_id);
-        if (!profile) {
-          return null;
-        }
+      const users = tenantUsersData
+        .map((ut) => {
+          const profile = profilesMap.get(ut.user_id);
 
-        return {
-          id: ut.user_id,
-          email: profile.email,
-          full_name: profile.full_name,
-          first_name: profile.first_name,
-          last_name: profile.last_name,
-          username: profile.username,
-          avatar_url: profile.avatar_url,
-          position: profile.position,
-          role: ut.role,
-          is_active: profile.is_active,
-          is_active_in_tenant: ut.is_active,
-          user_metadata: {
-            full_name: profile.full_name,
+          // 🔒 CODE QUALITY #54: Log esplicitamente profili mancanti invece di filter(Boolean)
+          if (!profile) {
+            console.warn('[Users List] Missing profile for user:', {
+              userId: ut.user_id,
+              tenantId: context.tenant.tenant_id,
+              timestamp: new Date().toISOString(),
+            });
+            return null;
           }
-        };
-      }).filter(Boolean);
+
+          return {
+            id: ut.user_id,
+            email: profile.email,
+            full_name: profile.full_name,
+            first_name: profile.first_name,
+            last_name: profile.last_name,
+            username: profile.username,
+            avatar_url: profile.avatar_url,
+            position: profile.position,
+            role: ut.role,
+            // 🔒 CODE QUALITY #55: Clarify is_active fields
+            is_active: ut.is_active, // Tenant membership status (primary)
+            profile_is_active: profile.is_active, // Profile status (secondary, deprecated)
+            user_metadata: {
+              full_name: profile.full_name,
+            }
+          };
+        })
+        .filter((user): user is NonNullable<typeof user> => user !== null);
 
       return NextResponse.json({ users });
     } catch (error) {
