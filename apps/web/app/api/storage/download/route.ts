@@ -10,6 +10,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'File path is required' }, { status: 400 });
     }
 
+    // 🔒 SECURITY: Prevent path traversal attacks
+    if (filePath.includes('..') || filePath.startsWith('/') || filePath.includes('\\')) {
+      return NextResponse.json({ error: 'Invalid file path' }, { status: 400 });
+    }
+
+    // Validate path format: should be tenant_id/folder/file
+    const pathSegments = filePath.split('/');
+    if (pathSegments.length < 2) {
+      return NextResponse.json({ error: 'Invalid file path format' }, { status: 400 });
+    }
+
     const supabase = await createClient();
 
     // Verifica autenticazione
@@ -19,7 +30,6 @@ export async function GET(request: NextRequest) {
     }
 
     // Estrai tenant_id dal path (primo segmento del path)
-    const pathSegments = filePath.split('/');
     const fileTenantId = pathSegments[0];
 
     // Verifica che l'utente appartenga al tenant del file
@@ -64,11 +74,13 @@ export async function GET(request: NextRequest) {
     const arrayBuffer = await fileData.arrayBuffer();
 
     // Ritorna il file con gli header appropriati
+    // ⚡ PERFORMANCE: Cache immutabile per file storage
     return new NextResponse(arrayBuffer, {
       headers: {
         'Content-Type': contentType,
         'Content-Disposition': `inline; filename="${fileName}"`,
-        'Cache-Control': 'private, max-age=3600',
+        'Cache-Control': 'private, max-age=31536000, immutable', // 1 anno per file immutabili
+        'X-Content-Type-Options': 'nosniff', // Security header
       },
     });
   } catch (error) {
