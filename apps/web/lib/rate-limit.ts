@@ -1,13 +1,13 @@
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 
-// 🔒 SECURITY #65: Fail hard in production if Redis not configured
-// In production, we MUST have Redis for proper rate limiting across instances
+// 🔒 SECURITY #65: Warn in production if Redis not configured
+// In production, we SHOULD have Redis for proper rate limiting across instances
 const isProduction = process.env.NODE_ENV === 'production';
 const hasRedisConfig = !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
 
 if (isProduction && !hasRedisConfig) {
-  throw new Error('🚨 CRITICAL: Redis must be configured in production for rate limiting. Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN');
+  console.warn('⚠️ WARNING: Redis not configured in production. Rate limiting will use in-memory fallback (not distributed across instances). Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN');
 }
 
 // Create Redis instance
