@@ -40,6 +40,14 @@ export async function POST(
         throw ApiErrors.notFound('User');
       }
 
+      // 🔒 SECURITY #35: Verifica che utente NON sia già attivo prima di reinviare
+      const { data: authUser } = await adminClient.auth.admin.getUserById(userId);
+      if (authUser?.user?.email_confirmed_at) {
+        throw ApiErrors.badRequest('Utente già attivo, non è necessario reinviare l\'invito');
+      }
+
+      // 🔒 SECURITY #33: Invite token expiration gestito da Supabase (default 24h)
+      // Token scade automaticamente, configurabile in Supabase Dashboard > Authentication > Email Templates
       // Resend invite email
       const { error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(
         targetUser.user.email!,

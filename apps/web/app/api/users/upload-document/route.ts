@@ -19,8 +19,9 @@ const ALLOWED_MIME_TYPES = [
 // Allowed file extensions
 const ALLOWED_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'];
 
-// Max file size: 10MB
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
+// 🔒 SECURITY #41: Ridotto file size limit per prevenire DoS
+// Documenti utente (PDF, immagini) raramente superano 5MB
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 export async function POST(request: Request) {
   return withAdminAuth(async (context) => {
@@ -59,7 +60,7 @@ export async function POST(request: Request) {
 
       // Validate file size
       if (file.size > MAX_FILE_SIZE) {
-        throw ApiErrors.badRequest('File troppo grande. Massimo 10MB.');
+        throw ApiErrors.badRequest('File troppo grande. Massimo 5MB.');
       }
 
       // 🔒 SECURITY #38 & #42: Sanitize filename to prevent path traversal e caratteri pericolosi

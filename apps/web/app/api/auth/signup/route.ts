@@ -4,14 +4,42 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { z } from 'zod';
 import { handleApiError, ApiErrors } from '@/lib/errors/api-errors';
 
+// 🔒 SECURITY #8: Password complexity requirements
+const passwordSchema = z.string()
+  .min(8, 'Password deve essere di almeno 8 caratteri')
+  .max(100, 'Password troppo lunga')
+  .refine(
+    (val) => /[A-Z]/.test(val),
+    'Password deve contenere almeno una lettera maiuscola'
+  )
+  .refine(
+    (val) => /[a-z]/.test(val),
+    'Password deve contenere almeno una lettera minuscola'
+  )
+  .refine(
+    (val) => /[0-9]/.test(val),
+    'Password deve contenere almeno un numero'
+  )
+  .refine(
+    (val) => /[!@#$%^&*(),.?":{}|<>]/.test(val),
+    'Password deve contenere almeno un carattere speciale (!@#$%^&*(),.?":{}|<>)'
+  );
+
 // Validation schema
 const signupSchema = z.object({
   company_name: z.string().min(1, 'Nome azienda obbligatorio').max(100),
   first_name: z.string().min(1, 'Nome obbligatorio').max(50),
   last_name: z.string().min(1, 'Cognome obbligatorio').max(50),
   email: z.string().email('Email non valida'),
-  password: z.string().min(8, 'Password deve essere di almeno 8 caratteri'),
+  password: passwordSchema,
 });
+
+// 🔒 SECURITY #9 & #10: Email verification e CAPTCHA
+// TODO #9: Implementare email verification obbligatoria (email_confirm: false)
+// TODO #10: Aggiungere Google reCAPTCHA v3 per prevenire bot signup
+// Riferimenti:
+// - Supabase Email Templates: https://supabase.com/docs/guides/auth/auth-email-templates
+// - reCAPTCHA v3: https://developers.google.com/recaptcha/docs/v3
 
 export async function POST(request: NextRequest) {
   try {

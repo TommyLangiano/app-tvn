@@ -165,6 +165,10 @@ export async function POST(request: NextRequest) {
         });
     }
 
+    // 🔒 SECURITY #16 & #18: Log account recovery + send email notification
+    // TODO #18: Inviare email di notifica all'utente che account è stato recuperato
+    console.info(`[Account Recovery] User ${user.id} recovered account for tenant ${tenantId}`);
+
     return NextResponse.json({
       success: true,
       tenantId,

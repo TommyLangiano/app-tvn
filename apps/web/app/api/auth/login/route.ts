@@ -59,9 +59,11 @@ export async function POST(request: NextRequest) {
     });
 
     if (error) {
-      // 🔒 SECURITY #4: Errore generico per prevenire user enumeration
-      // Non rivelare se l'email esiste o se la password è sbagliata
+      // 🔒 SECURITY #4 & #5: Errore generico + audit log per rilevare brute force
       console.warn(`[Login] Failed attempt from IP: ${clientIp}`);
+
+      // 🔒 SECURITY #5: Log failed login per detection brute force
+      // TODO: Implementare alert automatico dopo N tentativi falliti dallo stesso IP
 
       return NextResponse.json(
         { error: 'Credenziali non valide' },

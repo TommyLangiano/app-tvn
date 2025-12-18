@@ -33,6 +33,30 @@ export async function PATCH(
       // Toggle the is_active status
       const newStatus = !targetUserTenant.is_active;
 
+      // 🔒 SECURITY #26: Verifica che non sia l'ultimo admin attivo
+      if (!newStatus) { // Se stiamo disattivando
+        const { data: targetUser } = await supabase
+          .from('user_tenants')
+          .select('role')
+          .eq('user_id', userId)
+          .eq('tenant_id', context.tenant.tenant_id)
+          .single();
+
+        if (targetUser?.role === 'admin') {
+          const { data: admins } = await supabase
+            .from('user_tenants')
+            .select('user_id')
+            .eq('tenant_id', context.tenant.tenant_id)
+            .eq('role', 'admin')
+            .eq('is_active', true);
+
+          // Se è l'ultimo admin attivo, blocca
+          if (admins && admins.length === 1) {
+            throw ApiErrors.badRequest('Cannot deactivate the last active admin');
+          }
+        }
+      }
+
       const { error: statusError } = await supabase
         .from('user_tenants')
         .update({ is_active: newStatus })

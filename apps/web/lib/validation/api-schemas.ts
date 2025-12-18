@@ -20,15 +20,20 @@ export const signupSchema = z.object({
 
 // ========== USER SCHEMAS ==========
 
+// 🔒 SECURITY #23: Phone validation con formato internazionale
+const phoneSchema = z.string()
+  .regex(/^\+?[1-9]\d{1,14}$/, 'Telefono non valido (formato: +39xxxxxxxxxx)')
+  .optional();
+
 export const createUserSchema = z.object({
   email: z.string().email('Email non valida'),
   first_name: z.string().min(1, 'Nome obbligatorio'),
   last_name: z.string().min(1, 'Cognome obbligatorio'),
   role: z.enum(['admin', 'admin_readonly', 'operaio', 'billing_manager']).optional(),
   custom_role_id: z.string().uuid().optional(),
-  phone: z.string().optional(),
+  phone: phoneSchema,
   position: z.string().optional(),
-  notes: z.string().optional(),
+  notes: z.string().max(5000, 'Note troppo lunghe (max 5000 caratteri)').optional(), // 🔒 #32
   send_invite: z.boolean().default(true),
   birth_date: z.string().optional(),
   hire_date: z.string().optional(),
@@ -41,9 +46,9 @@ export const createUserSchema = z.object({
 
 export const updateUserSchema = z.object({
   full_name: z.string().optional(),
-  phone: z.string().optional(),
+  phone: phoneSchema, // 🔒 #23
   position: z.string().optional(),
-  notes: z.string().optional(),
+  notes: z.string().max(5000, 'Note troppo lunghe (max 5000 caratteri)').optional(), // 🔒 #32
   role: z.enum(['admin', 'admin_readonly', 'operaio', 'billing_manager']).optional(),
   email: z.string().email().optional(),
   birth_date: z.string().optional(),
