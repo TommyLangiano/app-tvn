@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { withAdminAuth } from '@/lib/middleware/auth';
 import { validateRequestBody, updateUserSchema, updateUserStatusSchema } from '@/lib/validation/api-schemas';
 import { handleApiError, ApiErrors } from '@/lib/errors/api-errors';
+import { logAuditEvent, getRequestMetadata } from '@/lib/audit';
 
 export async function PUT(
   request: Request,
@@ -95,6 +96,19 @@ export async function PUT(
         }
       }
 
+      // 🔒 AUDIT: Log user update
+      const { ipAddress, userAgent } = getRequestMetadata(request);
+      await logAuditEvent({
+        tenantId: context.tenant.tenant_id,
+        userId: context.user.id,
+        eventType: 'user_updated',
+        resourceType: 'user',
+        resourceId: userId,
+        newValues: validation.data,
+        ipAddress,
+        userAgent,
+      });
+
       return NextResponse.json({ success: true });
     } catch (error) {
       return handleApiError(error, 'PUT /api/users/[id]');
@@ -130,50 +144,59 @@ export async function DELETE(
         throw ApiErrors.notFound('User');
       }
 
-      // Get user profile to check for documents
-      const { data: profile } = await adminClient
-        .from('user_profiles')
-        .select('document_path')
-        .eq('user_id', userId)
-        .single();
+      // 🔒 SOFT DELETE: Disattiva l'utente invece di cancellarlo
+      // Mantiene audit trail e permette ripristino
+      const now = new Date().toISOString();
 
-      // Delete document from storage if exists
-      if (profile?.document_path) {
-        try {
-          await supabase.storage
-            .from('app-storage')
-            .remove([profile.document_path]);
-        } catch (error) {
-          // Non-critical - continue deletion
-          console.warn('Storage deletion warning:', error);
-        }
-      }
-
-      // Delete user from tenant
-      const { error: tenantError } = await adminClient
+      // 1. Disattiva user_tenants (soft delete)
+      const { error: tenantError } = await supabase
         .from('user_tenants')
-        .delete()
+        .update({
+          is_active: false,
+          updated_at: now
+        })
         .eq('user_id', userId)
         .eq('tenant_id', context.tenant.tenant_id);
 
       if (tenantError) {
-        throw new Error('Failed to remove user from tenant');
+        throw new Error('Failed to deactivate user');
       }
 
-      // Delete user profile
-      await adminClient
+      // 2. Marca user_profiles come inattivo
+      const { error: profileError } = await supabase
         .from('user_profiles')
-        .delete()
+        .update({
+          is_active: false,
+          updated_at: now
+        })
         .eq('user_id', userId);
 
-      // Delete auth user (definitive deletion)
-      const { error: deleteError } = await adminClient.auth.admin.deleteUser(userId);
-
-      if (deleteError) {
-        throw new Error(deleteError.message);
+      if (profileError) {
+        console.warn('Profile deactivation warning:', profileError.message);
       }
 
-      return NextResponse.json({ success: true });
+      // 🔒 AUDIT: Log user deactivation
+      const { ipAddress, userAgent } = getRequestMetadata(request);
+      await logAuditEvent({
+        tenantId: context.tenant.tenant_id,
+        userId: context.user.id,
+        eventType: 'user_deactivated',
+        resourceType: 'user',
+        resourceId: userId,
+        oldValues: { is_active: true },
+        newValues: { is_active: false },
+        ipAddress,
+        userAgent,
+      });
+
+      // NOTA: NON cancellare documenti né auth user
+      // Per hard delete definitivo, creare API separata /api/users/[id]/permanent-delete
+      // accessibile solo a owner con conferma esplicita
+
+      return NextResponse.json({
+        success: true,
+        message: 'User deactivated successfully'
+      });
     } catch (error) {
       return handleApiError(error, 'DELETE /api/users/[id]');
     }

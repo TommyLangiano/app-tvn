@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { withAdminAuth } from '@/lib/middleware/auth';
 import { validateRequestBody, createUserSchema } from '@/lib/validation/api-schemas';
 import { handleApiError, ApiErrors } from '@/lib/errors/api-errors';
+import { checkIdempotency, storeIdempotencyResult } from '@/lib/idempotency';
 
 export async function POST(request: Request) {
   return withAdminAuth(async (context) => {
@@ -29,6 +30,18 @@ export async function POST(request: Request) {
         medical_checkup_date,
         medical_checkup_expiry
       } = validation.data;
+
+      // 🔒 IDEMPOTENCY: Check per prevenire duplicati su retry
+      const idempotencyKey = request.headers.get('idempotency-key');
+      if (idempotencyKey) {
+        const cached = await checkIdempotency(
+          idempotencyKey,
+          'POST /api/users/create',
+          validation.data,
+          context.tenant.tenant_id
+        );
+        if (cached) return cached;
+      }
 
       const adminClient = createAdminClient();
       let newUser;
@@ -133,7 +146,7 @@ export async function POST(request: Request) {
         throw new Error('Failed to assign user to tenant');
       }
 
-      return NextResponse.json({
+      const result = {
         success: true,
         invite_sent: inviteSent,
         user: {
@@ -143,7 +156,21 @@ export async function POST(request: Request) {
           role: role || null,
           custom_role_id: custom_role_id || null,
         },
-      });
+      };
+
+      // 🔒 IDEMPOTENCY: Store result se chiave presente
+      if (idempotencyKey) {
+        await storeIdempotencyResult(
+          idempotencyKey,
+          'POST /api/users/create',
+          validation.data,
+          result,
+          200,
+          context.tenant.tenant_id
+        );
+      }
+
+      return NextResponse.json(result);
     } catch (error) {
       return handleApiError(error, 'POST /api/users/create');
     }

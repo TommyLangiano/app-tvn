@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { withAdminAuth } from '@/lib/middleware/auth';
 import { handleApiError, ApiErrors } from '@/lib/errors/api-errors';
+import { logAuditEvent, getRequestMetadata } from '@/lib/audit';
 
 export async function PATCH(
   request: Request,
@@ -41,6 +42,20 @@ export async function PATCH(
       if (statusError) {
         throw new Error('Failed to update user status');
       }
+
+      // 🔒 AUDIT: Log status change
+      const { ipAddress, userAgent } = getRequestMetadata(request);
+      await logAuditEvent({
+        tenantId: context.tenant.tenant_id,
+        userId: context.user.id,
+        eventType: 'user_status_changed',
+        resourceType: 'user',
+        resourceId: userId,
+        oldValues: { is_active: targetUserTenant.is_active },
+        newValues: { is_active: newStatus },
+        ipAddress,
+        userAgent,
+      });
 
       return NextResponse.json({
         success: true,

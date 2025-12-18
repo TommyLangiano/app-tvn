@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/middleware/auth';
 import { handleApiError, ApiErrors } from '@/lib/errors/api-errors';
+import { logAuditEvent, getRequestMetadata } from '@/lib/audit';
 
 export async function GET(request: Request) {
   return withAuth(async (context) => {
@@ -36,6 +37,20 @@ export async function GET(request: Request) {
       if (error) {
         throw new Error('Failed to get download URL');
       }
+
+      // 🔒 AUDIT: Log document access
+      const userId = pathSegments[2]; // Extract user_id from path
+      const { ipAddress, userAgent } = getRequestMetadata(request);
+      await logAuditEvent({
+        tenantId: context.tenant.tenant_id,
+        userId: context.user.id,
+        eventType: 'document_accessed',
+        resourceType: 'user_document',
+        resourceId: userId,
+        newValues: { path: documentPath },
+        ipAddress,
+        userAgent,
+      });
 
       return NextResponse.json({ url: data.signedUrl });
     } catch (error) {
