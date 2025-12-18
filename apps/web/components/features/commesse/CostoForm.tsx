@@ -353,7 +353,7 @@ export function CostoForm({ commessaId, commessaNome, onSuccess, onCancel }: Cos
         const importo_iva = calcolaIva();
 
         const dataToInsert = {
-          commessa_id: commessaId,
+          commessa_id: commessaId || null,
           tenant_id: tenantId,
           numero_fattura: fatturaData.numero_fattura,
           fornitore: fatturaData.fornitore,
@@ -380,7 +380,7 @@ export function CostoForm({ commessaId, commessaNome, onSuccess, onCancel }: Cos
         const importo_totale = parseFloat(scontrinoData.importo_totale);
 
         const dataToInsert = {
-          commessa_id: commessaId,
+          commessa_id: commessaId || null,
           tenant_id: tenantId,
           fornitore: scontrinoData.fornitore,
           tipologia: scontrinoData.tipologia,

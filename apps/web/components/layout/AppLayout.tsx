@@ -13,12 +13,12 @@ function AppLayoutContent({ children }: AppLayoutProps) {
   const { isOpen } = useSidebar();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white">
       <Sidebar />
 
       {/* Main content area with integrated navbar */}
       <main
-        className={`min-h-screen transition-all duration-300 ${
+        className={`min-h-screen transition-all duration-300 bg-white ${
           isOpen ? 'ml-80' : 'ml-0'
         }`}
       >

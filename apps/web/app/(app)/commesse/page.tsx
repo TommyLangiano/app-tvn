@@ -3,11 +3,13 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
-import { Search, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Plus, ChevronLeft, ChevronRight, Filter, Grid3x3, List, Play, Clock, CheckCircle, Briefcase } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { CommessaTable } from '@/components/features/commesse/CommessaTable';
+import { CommessaCard } from '@/components/features/commesse/CommessaCard';
 import { createClient } from '@/lib/supabase/client';
+import { cn } from '@/lib/utils';
 import type { Commessa } from '@/types/commessa';
 import {
   Select,
@@ -16,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 
 export default function CommessePage() {
   const router = useRouter();
@@ -33,6 +36,8 @@ export default function CommessePage() {
   const [clienti, setClienti] = useState<Array<{ id: string; nome: string; cognome: string }>>([]);
   const [clienteSearch, setClienteSearch] = useState('');
   const [navbarActionsContainer, setNavbarActionsContainer] = useState<HTMLElement | null>(null);
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     loadCommesse();
@@ -264,171 +269,230 @@ export default function CommessePage() {
       )}
 
       <div className="space-y-6">
-        {/* Tabs */}
-        <div className="flex items-center gap-8 border-b border-border">
-          <button
-            onClick={() => setActiveTab('all')}
-            className={`px-6 py-3 text-sm font-medium transition-all relative ${
-              activeTab === 'all'
-                ? 'text-black'
-                : 'text-gray-600 hover:text-black'
-            }`}
-          >
-            <span className="flex items-center gap-2">
+        {/* Tabs Redesign con icone e color coding */}
+        <div className="flex items-center justify-between border-b border-border">
+          <div className="flex gap-2">
+            <button
+              onClick={() => setActiveTab('all')}
+              className={cn(
+                "px-4 py-3 text-sm font-medium transition-all relative flex items-center gap-2 border-b-2",
+                activeTab === 'all'
+                  ? 'text-primary border-primary'
+                  : 'text-gray-600 hover:text-black border-transparent'
+              )}
+            >
+              <Briefcase className="h-4 w-4" />
+              <span>Tutte</span>
               {tabCounts.all > 0 && (
-                <span className="text-xs bg-primary text-white px-3 py-0.5 rounded-full">{tabCounts.all}</span>
+                <Badge variant="secondary" className="ml-1">{tabCounts.all}</Badge>
               )}
-              Tutte
-            </span>
-            {activeTab === 'all' && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab('in-corso')}
-            className={`px-6 py-3 text-sm font-medium transition-all relative ${
-              activeTab === 'in-corso'
-                ? 'text-black'
-                : 'text-gray-600 hover:text-black'
-            }`}
-          >
-            <span className="flex items-center gap-2">
-              {tabCounts.inCorso > 0 && (
-                <span className="text-xs bg-primary text-white px-3 py-0.5 rounded-full">{tabCounts.inCorso}</span>
-              )}
-              In corso
-            </span>
-            {activeTab === 'in-corso' && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab('da-iniziare')}
-            className={`px-6 py-3 text-sm font-medium transition-all relative ${
-              activeTab === 'da-iniziare'
-                ? 'text-black'
-                : 'text-gray-600 hover:text-black'
-            }`}
-          >
-            <span className="flex items-center gap-2">
-              {tabCounts.daIniziare > 0 && (
-                <span className="text-xs bg-primary text-white px-3 py-0.5 rounded-full">{tabCounts.daIniziare}</span>
-              )}
-              Da iniziare
-            </span>
-            {activeTab === 'da-iniziare' && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab('completate')}
-            className={`px-6 py-3 text-sm font-medium transition-all relative ${
-              activeTab === 'completate'
-                ? 'text-black'
-                : 'text-gray-600 hover:text-black'
-            }`}
-          >
-            <span className="flex items-center gap-2">
-              {tabCounts.completate > 0 && (
-                <span className="text-xs bg-primary text-white px-3 py-0.5 rounded-full">{tabCounts.completate}</span>
-              )}
-              Completate
-            </span>
-            {activeTab === 'completate' && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
-            )}
-          </button>
-        </div>
+            </button>
 
-        {/* Search and Filters */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <div className="relative flex-1 w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground" />
-            <Input
-              placeholder="Cerca commesse..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-11 border-2 border-border rounded-sm bg-background text-foreground placeholder:text-muted-foreground w-full"
-            />
+            <button
+              onClick={() => setActiveTab('in-corso')}
+              className={cn(
+                "px-4 py-3 text-sm font-medium transition-all relative flex items-center gap-2 border-b-2",
+                activeTab === 'in-corso'
+                  ? 'text-green-600 border-green-600'
+                  : 'text-gray-600 hover:text-green-600 border-transparent'
+              )}
+            >
+              <Play className="h-4 w-4" />
+              <span>In corso</span>
+              {tabCounts.inCorso > 0 && (
+                <Badge className="ml-1 bg-green-100 text-green-700 hover:bg-green-100">{tabCounts.inCorso}</Badge>
+              )}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('da-iniziare')}
+              className={cn(
+                "px-4 py-3 text-sm font-medium transition-all relative flex items-center gap-2 border-b-2",
+                activeTab === 'da-iniziare'
+                  ? 'text-blue-600 border-blue-600'
+                  : 'text-gray-600 hover:text-blue-600 border-transparent'
+              )}
+            >
+              <Clock className="h-4 w-4" />
+              <span>Da iniziare</span>
+              {tabCounts.daIniziare > 0 && (
+                <Badge className="ml-1 bg-blue-100 text-blue-700 hover:bg-blue-100">{tabCounts.daIniziare}</Badge>
+              )}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('completate')}
+              className={cn(
+                "px-4 py-3 text-sm font-medium transition-all relative flex items-center gap-2 border-b-2",
+                activeTab === 'completate'
+                  ? 'text-yellow-600 border-yellow-600'
+                  : 'text-gray-600 hover:text-yellow-600 border-transparent'
+              )}
+            >
+              <CheckCircle className="h-4 w-4" />
+              <span>Completate</span>
+              {tabCounts.completate > 0 && (
+                <Badge className="ml-1 bg-yellow-100 text-yellow-700 hover:bg-yellow-100">{tabCounts.completate}</Badge>
+              )}
+            </button>
           </div>
 
-          {/* Filtro Tipologia Cliente */}
-          <Select value={tipologiaClienteFilter} onValueChange={setTipologiaClienteFilter}>
-            <SelectTrigger className="w-full sm:w-[180px] h-11 border-2 border-border rounded-sm bg-background text-foreground">
-              <SelectValue placeholder="Tipologia" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tipologia</SelectItem>
-              <SelectItem value="Privato">Privato</SelectItem>
-              <SelectItem value="Pubblico">Pubblico</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Filtro Tipo Commessa */}
-          <Select value={tipologiaCommessaFilter} onValueChange={setTipologiaCommessaFilter}>
-            <SelectTrigger className="w-full sm:w-[180px] h-11 border-2 border-border rounded-sm bg-background text-foreground">
-              <SelectValue placeholder="Tipo" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tipo</SelectItem>
-              <SelectItem value="Appalto">Appalto</SelectItem>
-              <SelectItem value="ATI">ATI</SelectItem>
-              <SelectItem value="Sub Appalto">Sub Appalto</SelectItem>
-              <SelectItem value="Sub Affidamento">Sub Affidamento</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Filtro Cliente */}
-          <Select value={clienteFilter} onValueChange={setClienteFilter}>
-            <SelectTrigger className="w-full sm:w-[200px] h-11 border-2 border-border rounded-sm bg-background text-foreground">
-              <SelectValue placeholder="Cliente" />
-            </SelectTrigger>
-            <SelectContent>
-              <div className="px-2 pb-2">
-                <Input
-                  placeholder="Cerca cliente..."
-                  value={clienteSearch}
-                  onChange={(e) => setClienteSearch(e.target.value)}
-                  className="h-9"
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </div>
-              <SelectItem value="all">Cliente</SelectItem>
-              {clienti
-                .filter(c => {
-                  const fullName = `${c.cognome || ''} ${c.nome || ''}`.trim();
-                  return fullName && fullName.toLowerCase().includes(clienteSearch.toLowerCase());
-                })
-                .map(cliente => {
-                  const fullName = `${cliente.cognome || ''} ${cliente.nome || ''}`.trim();
-                  return fullName ? (
-                    <SelectItem key={cliente.id} value={fullName}>
-                      {fullName}
-                    </SelectItem>
-                  ) : null;
-                })
-                .filter(Boolean)}
-            </SelectContent>
-          </Select>
+          {/* View Toggle */}
+          <div className="flex items-center gap-2 mb-2">
+            <Button
+              variant={viewMode === 'cards' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('cards')}
+              className="h-9 w-9 p-0"
+            >
+              <Grid3x3 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'table' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('table')}
+              className="h-9 w-9 p-0"
+            >
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
-      {/* Commesse Table */}
+        {/* Search and Filters - Collapsible */}
+        <div className="flex flex-col gap-3">
+          <div className="flex gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground" />
+              <Input
+                placeholder="Cerca commesse..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 h-11 border-2 border-border rounded-sm bg-background text-foreground placeholder:text-muted-foreground"
+              />
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => setShowFilters(!showFilters)}
+              className="h-11 px-4"
+            >
+              <Filter className="h-4 w-4 mr-2" />
+              Filtri
+              {(tipologiaClienteFilter !== 'all' || tipologiaCommessaFilter !== 'all' || clienteFilter !== 'all') && (
+                <Badge className="ml-2" variant="secondary">
+                  {[tipologiaClienteFilter, tipologiaCommessaFilter, clienteFilter].filter(f => f !== 'all').length}
+                </Badge>
+              )}
+            </Button>
+          </div>
+
+          {/* Filtri Collapsible */}
+          {showFilters && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg border border-border">
+              <Select value={tipologiaClienteFilter} onValueChange={setTipologiaClienteFilter}>
+                <SelectTrigger className="w-full h-11 border-2 border-border rounded-sm bg-background text-foreground">
+                  <SelectValue placeholder="Tipologia" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tipologia</SelectItem>
+                  <SelectItem value="Privato">Privato</SelectItem>
+                  <SelectItem value="Pubblico">Pubblico</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Filtro Tipo Commessa */}
+              <Select value={tipologiaCommessaFilter} onValueChange={setTipologiaCommessaFilter}>
+                <SelectTrigger className="w-full h-11 border-2 border-border rounded-sm bg-background text-foreground">
+                  <SelectValue placeholder="Tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tipo</SelectItem>
+                  <SelectItem value="Appalto">Appalto</SelectItem>
+                  <SelectItem value="ATI">ATI</SelectItem>
+                  <SelectItem value="Sub Appalto">Sub Appalto</SelectItem>
+                  <SelectItem value="Sub Affidamento">Sub Affidamento</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Filtro Cliente */}
+              <Select value={clienteFilter} onValueChange={setClienteFilter}>
+                <SelectTrigger className="w-full h-11 border-2 border-border rounded-sm bg-background text-foreground">
+                  <SelectValue placeholder="Cliente" />
+                </SelectTrigger>
+                <SelectContent>
+                  <div className="px-2 pb-2">
+                    <Input
+                      placeholder="Cerca cliente..."
+                      value={clienteSearch}
+                      onChange={(e) => setClienteSearch(e.target.value)}
+                      className="h-9"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                  <SelectItem value="all">Cliente</SelectItem>
+                  {clienti
+                    .filter(c => {
+                      const fullName = `${c.cognome || ''} ${c.nome || ''}`.trim();
+                      return fullName && fullName.toLowerCase().includes(clienteSearch.toLowerCase());
+                    })
+                    .map(cliente => {
+                      const fullName = `${cliente.cognome || ''} ${cliente.nome || ''}`.trim();
+                      return fullName ? (
+                        <SelectItem key={cliente.id} value={fullName}>
+                          {fullName}
+                        </SelectItem>
+                      ) : null;
+                    })
+                    .filter(Boolean)}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
+
+      {/* Commesse Table/Cards */}
       {loading ? (
         <div className="text-center py-12 text-muted-foreground">Caricamento...</div>
       ) : filteredCommesse.length === 0 ? (
-        <div className="text-center py-12 rounded-lg border border-dashed border-border bg-card/50">
-          <p className="text-muted-foreground">
+        <div className="text-center py-16 rounded-lg border border-dashed border-border bg-card/50">
+          <Briefcase className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+          <h3 className="text-lg font-semibold mb-2">Nessuna commessa trovata</h3>
+          <p className="text-sm text-muted-foreground mb-6">
             {searchQuery || tipologiaClienteFilter !== 'all' || tipologiaCommessaFilter !== 'all' || clienteFilter !== 'all'
-              ? 'Nessuna commessa trovata con i filtri selezionati'
-              : 'Nessuna commessa presente'}
+              ? 'Prova a rimuovere alcuni filtri'
+              : 'Inizia creando la tua prima commessa'}
           </p>
+          {(searchQuery || tipologiaClienteFilter !== 'all' || tipologiaCommessaFilter !== 'all' || clienteFilter !== 'all') && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSearchQuery('');
+                setTipologiaClienteFilter('all');
+                setTipologiaCommessaFilter('all');
+                setClienteFilter('all');
+              }}
+            >
+              Rimuovi filtri
+            </Button>
+          )}
         </div>
       ) : (
         <>
-          <CommessaTable
-            commesse={commessePaginate}
-            marginiLordi={marginiLordi}
-          />
+          {viewMode === 'table' ? (
+            <CommessaTable
+              commesse={commessePaginate}
+              marginiLordi={marginiLordi}
+            />
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {commessePaginate.map(commessa => (
+                <CommessaCard
+                  key={commessa.id}
+                  commessa={commessa}
+                  margineLordo={marginiLordi[commessa.id]}
+                />
+              ))}
+            </div>
+          )}
 
           {/* Pagination */}
           {totalCommesse > 0 && (

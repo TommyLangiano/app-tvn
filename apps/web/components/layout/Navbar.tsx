@@ -18,10 +18,12 @@ const sectionNames: Record<string, string> = {
   '/commesse': 'Commesse',
   '/rapportini': 'Registro Presenze',
   '/registro-presenze': 'Registro Presenze',
+  '/fatture': 'Fatture',
   '/fatture/attive': 'Fatture Attive',
   '/fatture/passive': 'Fatture Passive',
   '/fatture/f24': 'F24',
   '/fatture/movimenti': 'Movimenti',
+  '/scadenziario': 'Scadenziario',
   '/mezzi-attrezzature': 'Mezzi & Attrezzature',
   '/magazzino': 'Magazzino',
   '/dipendenti': 'Dipendenti',
@@ -109,6 +111,15 @@ export function Navbar() {
       return 'Modifica Ruolo';
     }
 
+    // Fatture patterns
+    if (pathname === '/fatture/nuova-emessa') {
+      return null; // Nasconde il titolo perché è già nella pagina
+    }
+
+    if (pathname === '/fatture/nuova-ricevuta') {
+      return null; // Nasconde il titolo perché è già nella pagina
+    }
+
     // Exact match
     if (sectionNames[pathname]) {
       return sectionNames[pathname];
@@ -190,10 +201,17 @@ export function Navbar() {
     return '';
   };
 
+  const sectionName = getSectionName();
+
+  // Nascondi la navbar se il titolo è null (pagine con header proprio)
+  if (sectionName === null) {
+    return null;
+  }
+
   return (
-    <div className="mb-12">
-      <div className="flex items-start justify-between gap-3">
-        {/* Left side: Back button + Section Name + Description */}
+    <div className="mb-6">
+      <div className="flex items-center justify-between gap-3">
+        {/* Left side: Back button + Section Name */}
         <div className="flex items-center gap-3">
           {/* Back button (se necessario) */}
           {shouldShowBackButton() && (
@@ -206,19 +224,12 @@ export function Navbar() {
             </button>
           )}
 
-          {/* Section Name + Description */}
-          <div className="flex flex-col">
-            <h1 className="text-3xl font-bold text-foreground">
-              {pathname === '/dashboard' && user?.firstName
-                ? `Bentornato, ${user.firstName}`
-                : getSectionName()}
-            </h1>
-            {getSectionDescription() && (
-              <p className="text-sm text-muted-foreground mt-1">
-                {getSectionDescription()}
-              </p>
-            )}
-          </div>
+          {/* Section Name */}
+          <h1 className="text-4xl font-bold text-foreground">
+            {pathname === '/dashboard' && user?.firstName
+              ? `Bentornato, ${user.firstName}`
+              : sectionName}
+          </h1>
         </div>
 
         {/* Right side: Slot per action buttons (popolato dalle pagine) */}

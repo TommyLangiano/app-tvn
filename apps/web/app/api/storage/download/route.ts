@@ -1,0 +1,78 @@
+import { createClient } from '@/lib/supabase/server';
+import { NextRequest, NextResponse } from 'next/server';
+
+export async function GET(request: NextRequest) {
+  try {
+    const searchParams = request.nextUrl.searchParams;
+    const filePath = searchParams.get('path');
+
+    if (!filePath) {
+      return NextResponse.json({ error: 'File path is required' }, { status: 400 });
+    }
+
+    const supabase = await createClient();
+
+    // Verifica autenticazione
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Estrai tenant_id dal path (primo segmento del path)
+    const pathSegments = filePath.split('/');
+    const fileTenantId = pathSegments[0];
+
+    // Verifica che l'utente appartenga al tenant del file
+    const { data: userTenant, error: tenantError } = await supabase
+      .from('user_tenants')
+      .select('tenant_id')
+      .eq('user_id', user.id)
+      .eq('tenant_id', fileTenantId)
+      .single();
+
+    if (tenantError || !userTenant) {
+      return NextResponse.json({ error: 'Forbidden - You do not have access to this file' }, { status: 403 });
+    }
+
+    // Download del file
+    const { data: fileData, error: downloadError } = await supabase.storage
+      .from('app-storage')
+      .download(filePath);
+
+    if (downloadError || !fileData) {
+      console.error('Download error:', downloadError);
+      return NextResponse.json({ error: 'File not found' }, { status: 404 });
+    }
+
+    // Estrai il nome del file dal path
+    const fileName = filePath.split('/').pop() || 'download';
+
+    // Determina il content-type basato sull'estensione
+    const extension = fileName.split('.').pop()?.toLowerCase();
+    const contentTypes: Record<string, string> = {
+      'pdf': 'application/pdf',
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'webp': 'image/webp',
+      'heic': 'image/heic',
+      'heif': 'image/heif',
+    };
+    const contentType = contentTypes[extension || ''] || 'application/octet-stream';
+
+    // Converti il blob in ArrayBuffer
+    const arrayBuffer = await fileData.arrayBuffer();
+
+    // Ritorna il file con gli header appropriati
+    return new NextResponse(arrayBuffer, {
+      headers: {
+        'Content-Type': contentType,
+        'Content-Disposition': `inline; filename="${fileName}"`,
+        'Cache-Control': 'private, max-age=3600',
+      },
+    });
+  } catch (error) {
+    console.error('Error in download route:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

@@ -323,7 +323,7 @@ export function FatturaAttivaForm({
       const importo_iva = calcolaIva();
 
       const dataToInsert = {
-        commessa_id: commessaId,
+        commessa_id: commessaId || null,
         tenant_id: tenantId,
         numero_fattura: formData.numero_fattura,
         cliente: formData.cliente,

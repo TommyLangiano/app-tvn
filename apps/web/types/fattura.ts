@@ -7,9 +7,10 @@ export interface FatturaAttiva {
   // Dati fattura
   numero_fattura: string;
   cliente: string;
-  tipologia: string;
-  data_emissione: string;
-  data_pagamento: string | null;
+  cliente_id?: string;
+  categoria: string;
+  data_fattura: string;
+  scadenza_pagamento: string | null;
 
   // Importi
   importo_imponibile: number;
@@ -20,6 +21,10 @@ export interface FatturaAttiva {
   // Pagamento
   modalita_pagamento: string | null;
   stato_pagamento: 'Pagato' | 'Non Pagato';
+  data_pagamento: string | null;
+
+  // Note
+  note: string | null;
 
   // Allegato
   allegato_url: string | null;
@@ -39,9 +44,9 @@ export interface FatturaPassiva {
   // Dati fattura
   numero_fattura: string;
   fornitore: string;
-  tipologia: string;
-  data_emissione: string;
-  data_pagamento: string | null;
+  categoria: string;
+  data_fattura: string;
+  scadenza_pagamento: string | null;
 
   // Importi
   importo_imponibile: number;
@@ -54,33 +59,10 @@ export interface FatturaPassiva {
   banca_emissione: string | null;
   numero_conto: string | null;
   stato_pagamento: 'Pagato' | 'Non Pagato';
+  data_pagamento: string | null;
 
-  // Allegato
-  allegato_url: string | null;
-
-  // Metadata
-  created_at: string;
-  updated_at: string;
-  created_by: string;
-}
-
-// Scontrini (Costi - Scontrino)
-export interface Scontrino {
-  id: string;
-  commessa_id: string;
-  tenant_id: string;
-
-  // Dati scontrino
-  fornitore: string;
-  tipologia: string;
-  data_emissione: string;
-
-  // Importo
-  importo_totale: number;
-
-  // Pagamento (sempre pagato)
-  modalita_pagamento: string | null;
-  stato_pagamento: 'Pagato';
+  // Note
+  note: string | null;
 
   // Allegato
   allegato_url: string | null;
@@ -92,7 +74,7 @@ export interface Scontrino {
 }
 
 // Tipo unione per tutti i costi
-export type Costo = FatturaPassiva | Scontrino;
+export type Costo = FatturaPassiva;
 
 // Riepilogo Economico (aggiornato)
 export interface RiepilogoEconomico {

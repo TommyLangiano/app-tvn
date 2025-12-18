@@ -1,32 +1,41 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback, memo } from 'react';
 import { useRouter } from 'next/navigation';
-import { MapPin } from 'lucide-react';
+import { MapPin, ExternalLink, MoreVertical, Briefcase } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import type { Commessa } from '@/types/commessa';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 interface CommessaCardProps {
   commessa: Commessa;
   margineLordo?: number;
 }
 
-export function CommessaCard({ commessa, margineLordo = 0 }: CommessaCardProps) {
+export const CommessaCard = memo(function CommessaCard({ commessa, margineLordo = 0 }: CommessaCardProps) {
   const router = useRouter();
   const [showMargine, setShowMargine] = useState(false);
 
-  const getStatusColor = () => {
+  const getStatusColor = useCallback(() => {
     if (!commessa.data_inizio) return 'bg-yellow-500'; // Da avviare
 
     const today = new Date();
     const startDate = new Date(commessa.data_inizio);
     const endDate = commessa.data_fine_prevista ? new Date(commessa.data_fine_prevista) : null;
 
-    if (today < startDate) return 'bg-yellow-500'; // Da avviare
-    if (endDate && today > endDate) return 'bg-red-500'; // Terminata/Scaduta
+    if (today < startDate) return 'bg-blue-500'; // Da avviare
+    if (endDate && today > endDate) return 'bg-yellow-500'; // Terminata/Scaduta
     return 'bg-green-500'; // Avviata/In corso
-  };
+  }, [commessa.data_inizio, commessa.data_fine_prevista]);
 
-  const getStatusText = () => {
+  const getStatusText = useCallback(() => {
     if (!commessa.data_inizio) return 'Da Iniziare';
 
     const today = new Date();
@@ -36,9 +45,9 @@ export function CommessaCard({ commessa, margineLordo = 0 }: CommessaCardProps) 
     if (today < startDate) return 'Da Iniziare';
     if (endDate && today > endDate) return 'Completata';
     return 'In Corso';
-  };
+  }, [commessa.data_inizio, commessa.data_fine_prevista]);
 
-  const buildAddress = () => {
+  const buildAddress = useCallback(() => {
     const parts = [];
     if (commessa.via) {
       parts.push(commessa.via);
@@ -53,10 +62,10 @@ export function CommessaCard({ commessa, margineLordo = 0 }: CommessaCardProps) 
     }
     if (commessa.provincia) parts.push(commessa.provincia);
     return parts.join(', ');
-  };
+  }, [commessa.via, commessa.numero_civico, commessa.cap, commessa.citta, commessa.provincia]);
 
   // Google Maps Static API URL
-  const getStaticMapUrl = () => {
+  const getStaticMapUrl = useCallback(() => {
     const address = buildAddress();
     if (!address) return null;
 
@@ -75,10 +84,10 @@ export function CommessaCard({ commessa, margineLordo = 0 }: CommessaCardProps) 
     const style = 'style=feature:poi|visibility:off&style=feature:transit|visibility:off';
 
     return `https://maps.googleapis.com/maps/api/staticmap?center=${center}&zoom=${zoom}&size=${size}&scale=${scale}&maptype=${maptype}&${style}&markers=${markers}&key=${apiKey}`;
-  };
+  }, [buildAddress]);
 
   // URL per aprire Google Maps sulla posizione (non indicazioni)
-  const openGoogleMapsLocation = (e: React.MouseEvent) => {
+  const openGoogleMapsLocation = useCallback((e: React.MouseEvent) => {
     e.stopPropagation(); // Non far scattare il click sulla card
     const address = buildAddress();
     if (!address) return;
@@ -86,10 +95,12 @@ export function CommessaCard({ commessa, margineLordo = 0 }: CommessaCardProps) 
     // URL per aprire Google Maps sulla posizione specifica
     const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
     window.open(url, '_blank');
-  };
+  }, [buildAddress]);
 
   const hasAddress = commessa.via || commessa.citta || commessa.provincia || commessa.cap;
   const mapUrl = hasAddress ? getStaticMapUrl() : null;
+  const statusColor = getStatusColor();
+  const statusText = getStatusText();
 
   const formatMargine = (value: number) => {
     return new Intl.NumberFormat('it-IT', {
@@ -109,10 +120,10 @@ export function CommessaCard({ commessa, margineLordo = 0 }: CommessaCardProps) 
   return (
     <div
       onClick={() => router.push(`/commesse/${commessa.slug}`)}
-      className="group relative flex rounded-xl border-2 border-border bg-card hover:shadow-lg transition-all duration-200 cursor-pointer hover:border-primary/30 overflow-hidden"
+      className="group relative flex rounded-xl border-2 border-border bg-card hover:shadow-lg transition-all duration-200 cursor-pointer hover:border-primary/30 overflow-hidden hover:-translate-y-0.5"
     >
       {/* Linea colorata laterale */}
-      <div className={`w-1.5 flex-shrink-0 ${getStatusColor()}`} />
+      <div className={cn("w-1.5 flex-shrink-0", statusColor)} />
 
       {/* Mappa statica a sinistra - INFINITY EDGE */}
       {mapUrl ? (
@@ -157,13 +168,42 @@ export function CommessaCard({ commessa, margineLordo = 0 }: CommessaCardProps) 
             </h3>
           </div>
 
-          {/* Badge Stato */}
-          <div className={`px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0 ${
-            getStatusColor() === 'bg-green-500' ? 'bg-green-100 text-green-700' :
-            getStatusColor() === 'bg-yellow-500' ? 'bg-yellow-100 text-yellow-700' :
-            'bg-red-100 text-red-700'
-          }`}>
-            {getStatusText()}
+          {/* Badge Stato + Dropdown Menu */}
+          <div className="flex items-center gap-2">
+            <Badge className={cn(
+              "border whitespace-nowrap",
+              statusColor === 'bg-green-500' ? 'bg-green-100 text-green-700 border-green-200' :
+              statusColor === 'bg-blue-500' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+              'bg-yellow-100 text-yellow-700 border-yellow-200'
+            )}>
+              {statusText}
+            </Badge>
+
+            {/* Dropdown Menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); router.push(`/commesse/${commessa.slug}`); }}>
+                  <Briefcase className="h-4 w-4 mr-2" />
+                  Visualizza
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); router.push(`/commesse/${commessa.slug}/modifica`); }}>
+                  Modifica
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); router.push(`/commesse/${commessa.slug}/movimenti`); }}>
+                  Movimenti
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
@@ -211,4 +251,4 @@ export function CommessaCard({ commessa, margineLordo = 0 }: CommessaCardProps) 
       </div>
     </div>
   );
-}
+});

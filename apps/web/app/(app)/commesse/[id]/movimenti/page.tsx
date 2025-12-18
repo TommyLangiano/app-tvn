@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/select';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
-import type { FatturaAttiva, FatturaPassiva, Scontrino } from '@/types/fattura';
+import type { FatturaAttiva, FatturaPassiva } from '@/types/fattura';
 import { InfoMovimentoModal } from '@/components/features/commesse/InfoMovimentoModal';
 import { EditMovimentoModal } from '@/components/features/commesse/EditMovimentoModal';
 import { DeleteMovimentoModal } from '@/components/features/commesse/DeleteMovimentoModal';

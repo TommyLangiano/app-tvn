@@ -53,9 +53,9 @@
     --radius: 12px;
 
     /* Base Colors */
-    --bg: 245 247 250;
+    --bg: 255 255 255;
     --surface: 255 255 255;
-    --text: 30 41 59;
+    --text: 0 0 0;
     --border: 226 232 240;
 
     /* Brand Colors */
@@ -129,5 +129,23 @@
   }
   body {
     @apply bg-background text-foreground;
+    letter-spacing: -0.02em;
+  }
+
+  /* Apply rounded-sm to all inputs, selects, textareas, and buttons */
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea,
+  button,
+  [role="combobox"] {
+    border-radius: 0.125rem !important; /* rounded-sm */
+  }
+
+  /* High z-index for popovers and selects to appear above modals */
+  [data-radix-popper-content-wrapper],
+  [data-radix-select-content],
+  [data-radix-popover-content] {
+    z-index: 99999 !important;
   }
 }
+
