@@ -31,7 +31,7 @@ export function EconomiaRiepilogo({
   riepilogo,
   fatture = [],
   fatturePassive = [],
-  scontrini = [],
+  // scontrini = [], // Tabella eliminata
   onNuovoRicavo,
   onNuovoCosto,
   onVisualizzaTutto
@@ -67,8 +67,8 @@ export function EconomiaRiepilogo({
       categoria: 'fattura_attiva' as const,
       numero: f.numero_fattura,
       cliente_fornitore: f.cliente,
-      tipologia: f.tipologia,
-      data_emissione: f.data_emissione,
+      tipologia: f.categoria, // FatturaAttiva usa 'categoria' non 'tipologia'
+      data_emissione: f.data_fattura, // FatturaAttiva usa 'data_fattura' non 'data_emissione'
       importo_totale: f.importo_totale,
       allegato_url: f.allegato_url,
     })),
@@ -78,21 +78,22 @@ export function EconomiaRiepilogo({
       categoria: 'fattura_passiva' as const,
       numero: f.numero_fattura,
       cliente_fornitore: f.fornitore,
-      tipologia: f.tipologia,
-      data_emissione: f.data_emissione,
+      tipologia: f.categoria, // FatturaPassiva usa 'categoria' non 'tipologia'
+      data_emissione: f.data_fattura, // FatturaPassiva usa 'data_fattura' non 'data_emissione'
       importo_totale: f.importo_totale,
       allegato_url: f.allegato_url,
     })),
-    ...scontrini.map(s => ({
-      id: s.id,
-      tipo: 'costo' as const,
-      categoria: 'scontrino' as const,
-      cliente_fornitore: s.fornitore,
-      tipologia: s.tipologia,
-      data_emissione: s.data_emissione,
-      importo_totale: s.importo_totale,
-      allegato_url: s.allegato_url,
-    })),
+    // Scontrini rimossi (tabella eliminata)
+    // ...scontrini.map(s => ({
+    //   id: s.id,
+    //   tipo: 'costo' as const,
+    //   categoria: 'scontrino' as const,
+    //   cliente_fornitore: s.fornitore,
+    //   tipologia: s.tipologia,
+    //   data_emissione: s.data_emissione,
+    //   importo_totale: s.importo_totale,
+    //   allegato_url: s.allegato_url,
+    // })),
   ];
 
   // Ordina per data (più recenti prima)
