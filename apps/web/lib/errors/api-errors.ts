@@ -34,7 +34,7 @@ export function handleApiError(error: unknown, context?: string): NextResponse {
     // NON loggare dettagli sensibili come email, password, token
   });
 
-  // Se è un ApiError custom, usa statusCode e message
+  // Se Ã¨ un ApiError custom, usa statusCode e message
   if (error instanceof ApiError) {
     return NextResponse.json(
       { error: error.message },

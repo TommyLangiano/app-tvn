@@ -58,8 +58,8 @@ export async function POST(request: NextRequest) {
     });
 
     if (error) {
-      // Log failed attempt (could be stored in audit table)
-      console.warn(`[Login] Failed attempt for ${email} from ${clientIp}`);
+      // 🔒 SECURITY: Log senza PII - no email in plain text
+      console.warn(`[Login] Failed attempt from IP: ${clientIp}`);
 
       return NextResponse.json(
         { error: 'Credenziali non valide' },
@@ -67,8 +67,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Log successful login (could be stored in audit table)
-    console.info(`[Login] Successful login for ${email} from ${clientIp}`);
+    // 🔒 SECURITY: Log senza PII
+    console.info(`[Login] Successful login from IP: ${clientIp}`);
 
     return NextResponse.json({
       success: true,

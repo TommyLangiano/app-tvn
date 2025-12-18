@@ -29,7 +29,7 @@ export async function withAuth(
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    // 2. Ottieni tenant dell'utente (prende il più recente se multipli)
+    // 2. Ottieni tenant dell'utente (prende il piÃ¹ recente se multipli)
     const { data: tenants, error: tenantError } = await supabase
       .from('user_tenants')
       .select('tenant_id, role, is_active')
