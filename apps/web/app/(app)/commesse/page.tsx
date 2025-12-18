@@ -188,7 +188,7 @@ export default function CommessePage() {
       })) || [];
 
       setCommesse(commesseWithClientNames);
-      setFilteredCommesse(commesseWithClientNames);
+      // setFilteredCommesse(commesseWithClientNames); // Rimosso: filteredCommesse è computed con useMemo
 
       // Load margini lordi for all commesse
       if (data && data.length > 0) {

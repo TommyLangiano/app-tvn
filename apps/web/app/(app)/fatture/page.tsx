@@ -508,7 +508,7 @@ export default function FatturePage() {
     setIsEditing(false);
 
     // Reset selezioni
-    setSelectedClienteId(fattura.cliente_id || '');
+    setSelectedClienteId('cliente_id' in fattura ? fattura.cliente_id || '' : '');
     setSelectedFornitoreId('fornitore_id' in fattura ? fattura.fornitore_id || '' : '');
     setSelectedCommessaId(fattura.commessa_id || '');
 
@@ -676,7 +676,7 @@ export default function FatturePage() {
       };
 
       // Aggiungi campi specifici per fatture attive
-      if (isEmessa) {
+      if (isEmessa && 'cliente' in editedData) {
         Object.assign(dataToUpdate, {
           cliente: editedData.cliente,
           cliente_id: editedData.cliente_id,
@@ -684,12 +684,12 @@ export default function FatturePage() {
       }
 
       // Aggiungi campi specifici per fatture passive
-      if (!isEmessa && 'banca_emissione' in editedData) {
+      if (!isEmessa && 'fornitore' in editedData) {
         Object.assign(dataToUpdate, {
           fornitore: editedData.fornitore,
           fornitore_id: editedData.fornitore_id,
-          banca_emissione: editedData.banca_emissione,
-          numero_conto: editedData.numero_conto,
+          banca_emissione: 'banca_emissione' in editedData ? editedData.banca_emissione : undefined,
+          numero_conto: 'numero_conto' in editedData ? editedData.numero_conto : undefined,
         });
       }
 
@@ -1364,7 +1364,7 @@ export default function FatturePage() {
                                 aria-expanded={openClienteCombo}
                                 className="w-full justify-between h-11 border-2 border-border bg-white font-normal"
                               >
-                                {editedData.cliente || "Seleziona cliente..."}
+                                {'cliente' in editedData ? editedData.cliente || "Seleziona cliente..." : "Seleziona cliente..."}
                                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                               </Button>
                             </PopoverTrigger>
@@ -1372,9 +1372,11 @@ export default function FatturePage() {
                               <Command>
                                 <CommandInput
                                   placeholder="Cerca cliente..."
-                                  value={editedData.cliente || ''}
+                                  value={'cliente' in editedData ? editedData.cliente || '' : ''}
                                   onValueChange={(value) => {
-                                    setEditedData({ ...editedData, cliente: value });
+                                    if ('cliente' in editedData) {
+                                      setEditedData({ ...editedData, cliente: value });
+                                    }
                                     setSelectedClienteId('');
                                   }}
                                 />

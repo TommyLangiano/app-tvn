@@ -8,7 +8,7 @@ interface EconomiaRiepilogoProps {
   riepilogo: RiepilogoEconomico | null;
   fatture?: FatturaAttiva[];
   fatturePassive?: FatturaPassiva[];
-  scontrini?: Scontrino[];
+  // scontrini?: Scontrino[]; // Tabella eliminata
   onNuovoRicavo?: () => void;
   onNuovoCosto?: () => void;
   onVisualizzaTutto?: () => void;

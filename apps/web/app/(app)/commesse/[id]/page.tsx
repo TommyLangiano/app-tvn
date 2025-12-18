@@ -459,7 +459,7 @@ export default function CommessaDetailPage() {
   const statusBadge = getStatusBadge();
 
   // Calcola totali movimenti
-  const totalMovimenti = fatture.length + fatturePassive.length + scontrini.length;
+  const totalMovimenti = fatture.length + fatturePassive.length; // + scontrini.length (tabella eliminata)
 
   return (
     <div className="space-y-6">

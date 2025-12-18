@@ -42,7 +42,7 @@ export async function GET(request: Request) {
 
       if (!isAdmin && !isOwnDocument) {
         // Non-admin users can only access their own documents
-        throw ApiErrors.notAuthorized('You can only access your own documents');
+        throw ApiErrors.notAuthorized();
       }
 
       // Get signed URL for download
@@ -64,7 +64,7 @@ export async function GET(request: Request) {
       await logAuditEvent({
         tenantId: context.tenant.tenant_id,
         userId: context.user.id,
-        eventType: 'document_accessed',
+        eventType: 'sensitive_data_accessed',
         resourceType: 'user_document',
         resourceId: userId,
         newValues: { filename }, // Solo filename, non path completo

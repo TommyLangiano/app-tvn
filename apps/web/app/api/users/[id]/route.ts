@@ -192,7 +192,7 @@ export async function DELETE(
       await logAuditEvent({
         tenantId: context.tenant.tenant_id,
         userId: context.user.id,
-        eventType: 'user_deactivated',
+        eventType: 'user_status_changed',
         resourceType: 'user',
         resourceId: userId,
         oldValues: { is_active: true },
