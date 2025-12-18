@@ -13,7 +13,7 @@ type Movimento = {
   categoria: 'fattura_attiva' | 'fattura_passiva' | 'scontrino';
   numero?: string;
   cliente_fornitore: string;
-  tipologia: string;
+  tipologia?: string;
   data_emissione: string;
   importo_imponibile?: number;
   importo_iva?: number;

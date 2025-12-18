@@ -11,7 +11,7 @@ type Movimento = {
   categoria: 'fattura_attiva' | 'fattura_passiva' | 'scontrino';
   numero?: string;
   cliente_fornitore: string;
-  tipologia: string;
+  tipologia?: string;
   data_emissione: string;
   data_pagamento?: string;
   importo_imponibile?: number;
@@ -127,13 +127,15 @@ export function InfoMovimentoModal({ movimento, onClose, onEdit, onDelete }: Inf
               </div>
             </div>
 
-            <div className="flex items-start gap-3">
-              <Tag className="h-5 w-5 text-muted-foreground mt-0.5" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-muted-foreground">Tipologia</p>
-                <p className="font-semibold break-words">{movimento.tipologia}</p>
+            {movimento.tipologia && (
+              <div className="flex items-start gap-3">
+                <Tag className="h-5 w-5 text-muted-foreground mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-muted-foreground">Tipologia</p>
+                  <p className="font-semibold break-words">{movimento.tipologia}</p>
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="flex items-start gap-3">
               <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />

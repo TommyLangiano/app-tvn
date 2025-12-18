@@ -16,7 +16,7 @@ import {
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import type { Commessa } from '@/types/commessa';
-import type { RiepilogoEconomico, FatturaAttiva, FatturaPassiva, Scontrino } from '@/types/fattura';
+import type { RiepilogoEconomico, FatturaAttiva, FatturaPassiva } from '@/types/fattura';
 import { FatturaAttivaForm } from '@/components/features/commesse/FatturaAttivaForm';
 import { CostoForm } from '@/components/features/commesse/CostoForm';
 import { DeleteCommessaModal } from '@/components/features/commesse/DeleteCommessaModal';
@@ -37,7 +37,7 @@ export default function CommessaDetailPage() {
   const [riepilogo, setRiepilogo] = useState<RiepilogoEconomico | null>(null);
   const [fatture, setFatture] = useState<FatturaAttiva[]>([]);
   const [fatturePassive, setFatturePassive] = useState<FatturaPassiva[]>([]);
-  const [scontrini, setScontrini] = useState<Scontrino[]>([]);
+  // const [scontrini, setScontrini] = useState([])  // Tabella eliminata
   const [showFatturaForm, setShowFatturaForm] = useState(false);
   const [showCostoForm, setShowCostoForm] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -128,14 +128,13 @@ export default function CommessaDetailPage() {
 
       setFatturePassive(fatturePassiveData || []);
 
-      // Load scontrini (costi - scontrini)
-      const { data: scontriniData } = await supabase
-        .from('scontrini')
-        .select('*')
-        .eq('commessa_id', commessaData.id)
-        .order('data_emissione', { ascending: false });
-
-      setScontrini(scontriniData || []);
+      // Load scontrini (costi - scontrini) - TABELLA ELIMINATA
+      // const { data: scontriniData } = await supabase
+      //   .from('scontrini')
+      //   .select('*')
+      //   .eq('commessa_id', commessaData.id)
+      //   .order('data_emissione', { ascending: false });
+      // setScontrini(scontriniData || []);
 
     } catch {
       toast.error('Errore nel caricamento dei dati');
@@ -259,7 +258,7 @@ export default function CommessaDetailPage() {
     categoria: 'fattura_attiva' | 'fattura_passiva' | 'scontrino';
     numero?: string;
     cliente_fornitore: string;
-    tipologia: string;
+    tipologia?: string;
     data_emissione: string;
     data_pagamento?: string;
     importo_imponibile?: number;
@@ -281,8 +280,7 @@ export default function CommessaDetailPage() {
       categoria: 'fattura_attiva' as const,
       numero: f.numero_fattura,
       cliente_fornitore: f.cliente,
-      tipologia: f.tipologia,
-      data_emissione: f.data_emissione,
+      data_emissione: f.data_fattura,
       data_pagamento: f.data_pagamento || undefined,
       importo_imponibile: f.importo_imponibile,
       importo_iva: f.importo_iva,
@@ -301,8 +299,7 @@ export default function CommessaDetailPage() {
       categoria: 'fattura_passiva' as const,
       numero: f.numero_fattura,
       cliente_fornitore: f.fornitore,
-      tipologia: f.tipologia,
-      data_emissione: f.data_emissione,
+      data_emissione: f.data_fattura,
       data_pagamento: f.data_pagamento || undefined,
       importo_imponibile: f.importo_imponibile,
       importo_iva: f.importo_iva,
@@ -315,17 +312,18 @@ export default function CommessaDetailPage() {
       created_at: f.created_at,
       updated_at: f.updated_at,
     })),
-    ...(scontrini || []).map((s: Scontrino) => ({
-      id: s.id,
-      tipo: 'costo' as const,
-      categoria: 'scontrino' as const,
-      cliente_fornitore: s.fornitore,
-      tipologia: s.tipologia,
-      data_emissione: s.data_emissione,
-      importo_totale: s.importo_totale,
-      stato_pagamento: 'Pagato',
-      allegato_url: s.allegato_url,
-    })),
+    // Scontrini rimossi (tabella eliminata)
+    // ...(scontrini || []).map((s) => ({
+    //   id: s.id,
+    //   tipo: 'costo' as const,
+    //   categoria: 'scontrino' as const,
+    //   cliente_fornitore: s.fornitore,
+    //   tipologia: s.tipologia,
+    //   data_emissione: s.data_emissione,
+    //   importo_totale: s.importo_totale,
+    //   stato_pagamento: 'Pagato',
+    //   allegato_url: s.allegato_url,
+    // })),
   ];
 
   const getDateRange = (periodo: string) => {
@@ -388,7 +386,7 @@ export default function CommessaDetailPage() {
       const searchLower = searchTerm.toLowerCase();
       return (
         movimento.cliente_fornitore.toLowerCase().includes(searchLower) ||
-        movimento.tipologia.toLowerCase().includes(searchLower) ||
+        movimento.tipologia?.toLowerCase().includes(searchLower) ||
         movimento.numero?.toLowerCase().includes(searchLower)
       );
     }

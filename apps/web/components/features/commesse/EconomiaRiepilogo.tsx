@@ -2,7 +2,7 @@
 
 import { TrendingUp, TrendingDown, DollarSign, Plus, ArrowUpCircle, ArrowDownCircle, List, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { RiepilogoEconomico, FatturaAttiva, FatturaPassiva, Scontrino } from '@/types/fattura';
+import type { RiepilogoEconomico, FatturaAttiva, FatturaPassiva } from '@/types/fattura';
 
 interface EconomiaRiepilogoProps {
   riepilogo: RiepilogoEconomico | null;

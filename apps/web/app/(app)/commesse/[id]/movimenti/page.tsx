@@ -137,11 +137,12 @@ export default function MovimentiPage() {
         .order('data_emissione', { ascending: false });
 
       // Load scontrini (costi - scontrini)
-      const { data: scontriniData } = await supabase
-        .from('scontrini')
-        .select('*')
-        .eq('commessa_id', commessaData.id)
-        .order('data_emissione', { ascending: false });
+      // Nota: tabella scontrini eliminata nella migration 20250218000004_drop_scontrini_table.sql
+      // const { data: scontriniData } = await supabase
+      //   .from('scontrini')
+      //   .select('*')
+      //   .eq('commessa_id', commessaData.id)
+      //   .order('data_emissione', { ascending: false });
 
       // Unisci tutti i movimenti
       const allMovimenti: Movimento[] = [
@@ -170,8 +171,7 @@ export default function MovimentiPage() {
           categoria: 'fattura_passiva' as const,
           numero: f.numero_fattura,
           cliente_fornitore: f.fornitore,
-          tipologia: f.tipologia,
-          data_emissione: f.data_emissione,
+          data_emissione: f.data_fattura,
           data_pagamento: f.data_pagamento || undefined,
           importo_imponibile: f.importo_imponibile,
           importo_iva: f.importo_iva,
@@ -184,17 +184,18 @@ export default function MovimentiPage() {
           created_at: f.created_at,
           updated_at: f.updated_at,
         })),
-        ...(scontriniData || []).map((s: Scontrino) => ({
-          id: s.id,
-          tipo: 'costo' as const,
-          categoria: 'scontrino' as const,
-          cliente_fornitore: s.fornitore,
-          tipologia: s.tipologia,
-          data_emissione: s.data_emissione,
-          importo_totale: s.importo_totale,
-          stato_pagamento: 'Pagato',
-          allegato_url: s.allegato_url,
-        })),
+        // Scontrini rimossi (tabella eliminata nella migration 20250218000004)
+        // ...(scontriniData || []).map((s) => ({
+        //   id: s.id,
+        //   tipo: 'costo' as const,
+        //   categoria: 'scontrino' as const,
+        //   cliente_fornitore: s.fornitore,
+        //   tipologia: s.tipologia,
+        //   data_emissione: s.data_emissione,
+        //   importo_totale: s.importo_totale,
+        //   stato_pagamento: 'Pagato',
+        //   allegato_url: s.allegato_url,
+        // })),
       ];
 
       // Ordina per data (più recenti prima)
@@ -291,7 +292,7 @@ export default function MovimentiPage() {
         const searchLower = searchTerm.toLowerCase();
         return (
           movimento.cliente_fornitore.toLowerCase().includes(searchLower) ||
-          movimento.tipologia.toLowerCase().includes(searchLower) ||
+          movimento.tipologia?.toLowerCase().includes(searchLower) ||
           movimento.numero?.toLowerCase().includes(searchLower)
         );
       }
