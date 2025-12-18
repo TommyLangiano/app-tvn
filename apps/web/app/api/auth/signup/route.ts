@@ -65,13 +65,9 @@ export async function POST(request: NextRequest) {
 
     const { company_name, first_name, last_name, email, password } = validation.data;
 
-    // Check if email already exists
-    const { data: existingUser } = await supabaseAdmin.auth.admin.listUsers();
-    if (existingUser?.users?.some(u => u.email === email)) {
-      throw ApiErrors.conflict('Email già registrata');
-    }
-
-    // Step 1: Create auth user
+    // 🔒 SECURITY & PERFORMANCE: Non usare listUsers() - è lentissimo!
+    // Supabase gestisce automaticamente email duplicate con constraint unique
+    // Step 1: Create auth user (restituirà errore se email già esistente)
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
@@ -83,7 +79,15 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    if (authError || !authData.user) {
+    if (authError) {
+      // Check if it's a duplicate email error
+      if (authError.message?.includes('already') || authError.message?.includes('duplicate')) {
+        throw ApiErrors.conflict('Email già registrata');
+      }
+      throw new Error('Errore nella creazione dell\'utente');
+    }
+
+    if (!authData.user) {
       throw new Error('Errore nella creazione dell\'utente');
     }
 

@@ -70,10 +70,16 @@ export async function POST(request: NextRequest) {
     // 🔒 SECURITY: Log senza PII
     console.info(`[Login] Successful login from IP: ${clientIp}`);
 
+    // 🔒 SECURITY: NON esporre session token in JSON response
+    // Supabase gestisce automaticamente i cookie httpOnly
+    // Ritorna solo dati user safe (no token, no email sensibili)
     return NextResponse.json({
       success: true,
-      session: data.session,
-      user: data.user,
+      user: {
+        id: data.user.id,
+        email: data.user.email,
+        user_metadata: data.user.user_metadata,
+      },
     }, { status: 200 });
 
   } catch (error) {

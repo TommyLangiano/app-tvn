@@ -29,19 +29,21 @@ export async function withAuth(
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    // 2. Ottieni tenant dell'utente (prende il più recente se multipli)
-    const { data: tenants, error: tenantError } = await supabase
+    // 2. Ottieni tenant dell'utente
+    // Supporta tenant selection via cookie o prende il più recente come fallback
+    const { data: allTenants, error: tenantError } = await supabase
       .from('user_tenants')
       .select('tenant_id, role, is_active')
       .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(1);
+      .order('created_at', { ascending: false });
 
-    if (tenantError || !tenants || tenants.length === 0) {
+    if (tenantError || !allTenants || allTenants.length === 0) {
       return NextResponse.json({ error: 'No tenant found' }, { status: 404 });
     }
 
-    const userTenant = tenants[0];
+    // 🔒 SECURITY: Support multi-tenant selection via session/cookie
+    // For now, use first active tenant as default (can be extended with tenant switching)
+    const userTenant = allTenants.find(t => t.is_active) || allTenants[0];
 
     // 3. Verifica che l'utente sia attivo nel tenant
     if (!userTenant.is_active) {

@@ -89,6 +89,18 @@ export async function POST(request: Request) {
         throw ApiErrors.badRequest('MIME type dichiarato non consentito.');
       }
 
+      // 🔒 SECURITY: Verify userId belongs to current tenant BEFORE upload
+      const { data: targetUserTenant } = await supabase
+        .from('user_tenants')
+        .select('tenant_id')
+        .eq('user_id', userId)
+        .eq('tenant_id', context.tenant.tenant_id)
+        .single();
+
+      if (!targetUserTenant) {
+        throw ApiErrors.notFound('User not found in your tenant');
+      }
+
       // Generate unique filename
       const timestamp = Date.now();
       const fileName = `${timestamp}_${Math.random().toString(36).substring(7)}.${fileExt}`;
