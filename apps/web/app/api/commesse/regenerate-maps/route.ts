@@ -70,21 +70,26 @@ export async function POST() {
         return `https://maps.googleapis.com/maps/api/staticmap?center=${center}&zoom=${zoom}&size=${size}&scale=${scale}&maptype=${maptype}&${style}&markers=${markers}&key=${apiKey}`;
       };
 
-      // Genera info per tutte le commesse con indirizzo
-      const mapInfo = commesse.map(commessa => ({
-        id: commessa.id,
-        nome: commessa.nome_commessa || 'Senza nome',
-        indirizzo: buildAddress(commessa),
-        mapUrl: generateStaticMapUrl(commessa),
-        hasAddress: !!(commessa.via || commessa.citta)
-      })).filter(info => info.hasAddress && info.mapUrl);
+      // 🔒 SECURITY #58: NON esporre API key nella response
+      // Genera info per tutte le commesse con indirizzo (senza mapUrl che contiene API key)
+      const mapInfo = commesse.map(commessa => {
+        const address = buildAddress(commessa);
+        return {
+          id: commessa.id,
+          nome: commessa.nome_commessa || 'Senza nome',
+          indirizzo: address,
+          hasAddress: !!(commessa.via || commessa.citta),
+          // Segnala solo se la mappa può essere generata, ma non espone l'URL con la chiave
+          canGenerateMap: !!address && !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+        };
+      }).filter(info => info.hasAddress);
 
       return NextResponse.json({
         success: true,
         message: `Trovate ${mapInfo.length} commesse con indirizzi validi`,
         count: mapInfo.length,
         commesse: mapInfo,
-        info: 'Le mappe vengono generate dinamicamente al caricamento della pagina. Verifica che la variabile NEXT_PUBLIC_GOOGLE_MAPS_API_KEY sia configurata correttamente.'
+        info: 'Le mappe vengono generate client-side usando la chiave API configurata nel frontend.'
       });
 
     } catch (error) {

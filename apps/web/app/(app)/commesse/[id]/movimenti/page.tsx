@@ -28,7 +28,7 @@ type Movimento = {
   categoria: 'fattura_attiva' | 'fattura_passiva' | 'scontrino';
   numero?: string;
   cliente_fornitore: string;
-  tipologia: string;
+  tipologia?: string;
   data_emissione: string;
   data_pagamento?: string;
   importo_imponibile?: number;
@@ -151,8 +151,7 @@ export default function MovimentiPage() {
           categoria: 'fattura_attiva' as const,
           numero: f.numero_fattura,
           cliente_fornitore: f.cliente,
-          tipologia: f.tipologia,
-          data_emissione: f.data_emissione,
+          data_emissione: f.data_fattura,
           data_pagamento: f.data_pagamento || undefined,
           importo_imponibile: f.importo_imponibile,
           importo_iva: f.importo_iva,

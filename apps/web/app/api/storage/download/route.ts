@@ -10,7 +10,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'File path is required' }, { status: 400 });
     }
 
-    // 🔒 SECURITY: Prevent path traversal attacks
+    // 🔒 SECURITY #50: Path traversal protection (prevent URL encoding bypass)
+    const decodedPath = decodeURIComponent(filePath);
+    if (decodedPath.includes('..') || decodedPath.includes('\\') || decodedPath !== decodedPath.normalize() || decodedPath.startsWith('/')) {
+      return NextResponse.json({ error: 'Invalid file path' }, { status: 400 });
+    }
+
+    // Also check original path
     if (filePath.includes('..') || filePath.startsWith('/') || filePath.includes('\\')) {
       return NextResponse.json({ error: 'Invalid file path' }, { status: 400 });
     }
@@ -35,13 +41,25 @@ export async function GET(request: NextRequest) {
     // Verifica che l'utente appartenga al tenant del file
     const { data: userTenant, error: tenantError } = await supabase
       .from('user_tenants')
-      .select('tenant_id')
+      .select('tenant_id, role')
       .eq('user_id', user.id)
       .eq('tenant_id', fileTenantId)
       .single();
 
     if (tenantError || !userTenant) {
       return NextResponse.json({ error: 'Forbidden - You do not have access to this file' }, { status: 403 });
+    }
+
+    // 🔒 SECURITY #51: IDOR protection - verify user can access this specific resource
+    // For paths like tenant_id/users/user_id/... enforce same-user or admin check
+    if (pathSegments.length >= 3 && pathSegments[1] === 'users') {
+      const targetUserId = pathSegments[2];
+      const isAdmin = userTenant.role === 'admin';
+      const isOwnResource = targetUserId === user.id;
+
+      if (!isAdmin && !isOwnResource) {
+        return NextResponse.json({ error: 'Forbidden - You can only access your own resources' }, { status: 403 });
+      }
     }
 
     // Download del file

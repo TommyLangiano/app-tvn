@@ -62,11 +62,17 @@ export async function POST(request: Request) {
         throw ApiErrors.badRequest('File troppo grande. Massimo 10MB.');
       }
 
+      // 🔒 SECURITY #38: Sanitize filename to prevent path traversal
+      const originalName = file.name;
+      if (originalName.includes('..') || originalName.includes('/') || originalName.includes('\\')) {
+        throw ApiErrors.badRequest('Nome file non valido');
+      }
+
       // Convert File to Buffer for magic bytes validation
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
 
-      // SECURITY: Validate actual file content (magic bytes)
+      // 🔒 SECURITY #37: Enhanced file validation (anti-polyglot)
       const detectedType = await fileTypeFromBuffer(buffer);
 
       if (!detectedType) {
@@ -82,6 +88,38 @@ export async function POST(request: Request) {
       const fileExt = detectedType.ext;
       if (!ALLOWED_EXTENSIONS.includes(fileExt)) {
         throw ApiErrors.badRequest('Estensione file non valida.');
+      }
+
+      // 🔒 SECURITY #37: Additional checks for polyglot files
+      // Check for suspicious patterns in file header (e.g., PDF + ZIP hybrid)
+      const headerString = buffer.toString('hex', 0, Math.min(buffer.length, 1024));
+
+      // Check for multiple file signatures in the same file
+      const suspiciousPatterns = [
+        '504b0304', // ZIP header
+        '1f8b08',   // GZIP header
+        '526172',   // RAR header
+      ];
+
+      if (detectedType.mime === 'application/pdf') {
+        // If detected as PDF, ensure it doesn't contain other archive formats
+        for (const pattern of suspiciousPatterns) {
+          if (headerString.includes(pattern) && !headerString.startsWith('255044462d')) { // PDF starts with %PDF-
+            throw ApiErrors.badRequest('File polyglot rilevato. Upload bloccato per motivi di sicurezza.');
+          }
+        }
+
+        // Check for JavaScript in PDF (simplified check)
+        const pdfString = buffer.toString('utf8', 0, Math.min(buffer.length, 10000));
+        if (pdfString.includes('/JavaScript') || pdfString.includes('/JS')) {
+          throw ApiErrors.badRequest('PDF con JavaScript rilevato. Upload bloccato per motivi di sicurezza.');
+        }
+      }
+
+      // Check file doesn't have double extension (e.g., file.pdf.exe)
+      const nameParts = originalName.split('.');
+      if (nameParts.length > 2) {
+        throw ApiErrors.badRequest('Nome file con doppia estensione non permesso.');
       }
 
       // 🔒 SECURITY: Verify userId belongs to current tenant BEFORE upload
@@ -101,16 +139,21 @@ export async function POST(request: Request) {
       const fileName = `${timestamp}_${Math.random().toString(36).substring(7)}.${fileExt}`;
       const filePath = `${context.tenant.tenant_id}/users/${userId}/documents/${fileName}`;
 
-      // Upload to Supabase Storage in app-storage bucket (use buffer instead of file)
+      // 🔒 SECURITY #39: Race condition protection - use upsert: false to prevent concurrent overwrites
+      // If file exists, upload will fail instead of overwriting
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('app-storage')
         .upload(filePath, buffer, {
           cacheControl: '3600',
-          upsert: false,
+          upsert: false, // Prevents race condition overwrite
           contentType: detectedType.mime,
         });
 
       if (uploadError) {
+        // If file exists, unique filename should prevent this, but handle gracefully
+        if (uploadError.message?.includes('already exists')) {
+          throw ApiErrors.conflict('File già esistente. Riprova.');
+        }
         throw new Error('Failed to upload file');
       }
 

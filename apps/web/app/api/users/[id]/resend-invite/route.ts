@@ -2,6 +2,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { withAdminAuth } from '@/lib/middleware/auth';
 import { handleApiError, ApiErrors } from '@/lib/errors/api-errors';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 export async function POST(
   request: Request,
@@ -9,6 +10,12 @@ export async function POST(
 ) {
   return withAdminAuth(async (context) => {
     try {
+      // 🔒 SECURITY #34: Rate limiting to prevent email bombing
+      const { success, reset } = await checkRateLimit(context.user.id, 'api');
+      if (!success) {
+        throw ApiErrors.rateLimitExceeded(Math.ceil((reset - Date.now()) / 1000));
+      }
+
       const supabase = await createClient();
       const adminClient = createAdminClient();
 

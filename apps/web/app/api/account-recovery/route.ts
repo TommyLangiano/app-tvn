@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError, ApiErrors } from '@/lib/errors/api-errors';
+import { checkRateLimit } from '@/lib/rate-limit';
 import { z } from 'zod';
 
 const accountRecoverySchema = z.object({
@@ -28,6 +29,12 @@ export async function POST(request: NextRequest) {
 
     if (authError || !user) {
       throw ApiErrors.notAuthenticated();
+    }
+
+    // 🔒 SECURITY #13: Rate limiting to prevent abuse
+    const { success, reset } = await checkRateLimit(user.id, 'api');
+    if (!success) {
+      throw ApiErrors.rateLimitExceeded(Math.ceil((reset - Date.now()) / 1000));
     }
 
     const body = await request.json();
@@ -111,13 +118,16 @@ export async function POST(request: NextRequest) {
       throw new Error('Errore nella creazione del profilo tenant');
     }
 
-    // 3. Create user_tenants relation (assign as admin)
+    // 🔒 SECURITY #14: Prevent privilege escalation - only allow 'admin' role during recovery
+    // Users cannot choose their own role via this endpoint
+    // 3. Create user_tenants relation (assign as admin - hardcoded)
     const { error: userTenantError } = await supabase
       .from('user_tenants')
       .insert({
         user_id: user.id,
         tenant_id: tenantId,
-        role: 'admin',
+        role: 'admin', // Hardcoded - no user input for role
+        is_active: true,
         created_at: new Date().toISOString(),
       });
 

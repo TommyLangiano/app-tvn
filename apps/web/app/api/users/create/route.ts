@@ -44,6 +44,21 @@ export async function POST(request: Request) {
       }
 
       const adminClient = createAdminClient();
+
+      // 🔒 SECURITY #21 & #19: Validate custom_role_id BEFORE creating user (prevent timing attack)
+      if (custom_role_id) {
+        const { data: customRole } = await adminClient
+          .from('custom_roles')
+          .select('id')
+          .eq('id', custom_role_id)
+          .eq('tenant_id', context.tenant.tenant_id)
+          .single();
+
+        if (!customRole) {
+          throw ApiErrors.badRequest('Custom role not found in your tenant');
+        }
+      }
+
       let newUser;
       let inviteSent = false;
       const full_name = `${first_name} ${last_name}`;
@@ -117,20 +132,8 @@ export async function POST(request: Request) {
         is_active: true,
       };
 
-      // 🔒 SECURITY: Validate custom_role_id belongs to current tenant
+      // Assign role (validation already done above)
       if (custom_role_id) {
-        const { data: customRole } = await adminClient
-          .from('custom_roles')
-          .select('id')
-          .eq('id', custom_role_id)
-          .eq('tenant_id', context.tenant.tenant_id)
-          .single();
-
-        if (!customRole) {
-          // Rollback: delete created user
-          await adminClient.auth.admin.deleteUser(newUser.id);
-          throw ApiErrors.badRequest('Custom role not found in your tenant');
-        }
         userTenantData.custom_role_id = custom_role_id;
       } else if (role) {
         userTenantData.role = role;

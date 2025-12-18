@@ -17,6 +17,12 @@ export async function GET(request: Request) {
         throw ApiErrors.badRequest('Missing document path');
       }
 
+      // 🔒 SECURITY #44: Path traversal protection (prevent URL encoding bypass)
+      const decodedPath = decodeURIComponent(documentPath);
+      if (decodedPath.includes('..') || decodedPath.includes('\\') || decodedPath !== decodedPath.normalize()) {
+        throw ApiErrors.badRequest('Invalid document path');
+      }
+
       // 🔒 SECURITY: Validate path format (tenant_id/users/user_id/documents/file)
       const pathSegments = documentPath.split('/');
       if (pathSegments.length < 4 || pathSegments[1] !== 'users' || pathSegments[3] !== 'documents') {
@@ -27,6 +33,16 @@ export async function GET(request: Request) {
       const fileTenantId = pathSegments[0];
       if (fileTenantId !== context.tenant.tenant_id) {
         throw ApiErrors.notAuthorized();
+      }
+
+      // 🔒 SECURITY #45: IDOR protection - verify user can access this specific user's documents
+      const targetUserId = pathSegments[2];
+      const isAdmin = context.tenant.role === 'admin';
+      const isOwnDocument = targetUserId === context.user.id;
+
+      if (!isAdmin && !isOwnDocument) {
+        // Non-admin users can only access their own documents
+        throw ApiErrors.notAuthorized('You can only access your own documents');
       }
 
       // Get signed URL for download
