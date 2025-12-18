@@ -1,5 +1,23 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { handleApiError, ApiErrors } from '@/lib/errors/api-errors';
+import { z } from 'zod';
+
+const accountRecoverySchema = z.object({
+  ragione_sociale: z.string().min(1, 'Ragione sociale obbligatoria'),
+  partita_iva: z.string().min(1, 'Partita IVA obbligatoria'),
+  pec: z.string().email('PEC non valida'),
+  codice_fiscale: z.string().optional(),
+  forma_giuridica: z.string().optional(),
+  telefono: z.string().optional(),
+  settore_attivita: z.string().optional(),
+  sede_legale_via: z.string().optional(),
+  sede_legale_civico: z.string().optional(),
+  sede_legale_cap: z.string().optional(),
+  sede_legale_citta: z.string().optional(),
+  sede_legale_provincia: z.string().optional(),
+  sede_legale_nazione: z.string().optional(),
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,13 +27,17 @@ export async function POST(request: NextRequest) {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Non autenticato' },
-        { status: 401 }
-      );
+      throw ApiErrors.notAuthenticated();
     }
 
     const body = await request.json();
+
+    // Validate with Zod
+    const validation = accountRecoverySchema.safeParse(body);
+    if (!validation.success) {
+      throw ApiErrors.badRequest(validation.error.issues[0].message);
+    }
+
     const {
       ragione_sociale,
       partita_iva,
@@ -30,15 +52,7 @@ export async function POST(request: NextRequest) {
       sede_legale_citta,
       sede_legale_provincia,
       sede_legale_nazione,
-    } = body;
-
-    // Validate required fields
-    if (!ragione_sociale || !partita_iva || !pec) {
-      return NextResponse.json(
-        { error: 'Campi obbligatori mancanti' },
-        { status: 400 }
-      );
-    }
+    } = validation.data;
 
     // Check if user already has a tenant
     const { data: existingUserTenant } = await supabase
@@ -48,10 +62,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (existingUserTenant) {
-      return NextResponse.json(
-        { error: 'L\'utente ha già un tenant associato' },
-        { status: 400 }
-      );
+      throw ApiErrors.badRequest('L\'utente ha già un tenant associato');
     }
 
     // 1. Create tenant
@@ -66,11 +77,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (tenantError || !newTenant) {
-      console.error('Error creating tenant:', tenantError);
-      return NextResponse.json(
-        { error: 'Errore nella creazione del tenant' },
-        { status: 500 }
-      );
+      throw new Error('Errore nella creazione del tenant');
     }
 
     const tenantId = newTenant.id;
@@ -99,13 +106,9 @@ export async function POST(request: NextRequest) {
       });
 
     if (profileError) {
-      console.error('Error creating tenant profile:', profileError);
       // Rollback: delete the tenant
       await supabase.from('tenants').delete().eq('id', tenantId);
-      return NextResponse.json(
-        { error: 'Errore nella creazione del profilo tenant' },
-        { status: 500 }
-      );
+      throw new Error('Errore nella creazione del profilo tenant');
     }
 
     // 3. Create user_tenants relation (assign as admin)
@@ -119,14 +122,10 @@ export async function POST(request: NextRequest) {
       });
 
     if (userTenantError) {
-      console.error('Error creating user_tenant relation:', userTenantError);
       // Rollback: delete tenant and profile
       await supabase.from('tenant_profiles').delete().eq('tenant_id', tenantId);
       await supabase.from('tenants').delete().eq('id', tenantId);
-      return NextResponse.json(
-        { error: 'Errore nell\'assegnazione dell\'utente al tenant' },
-        { status: 500 }
-      );
+      throw new Error('Errore nell\'assegnazione dell\'utente al tenant');
     }
 
     // 4. Create user profile if it doesn't exist
@@ -154,10 +153,6 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Account recovery error:', error);
-    return NextResponse.json(
-      { error: 'Errore interno del server' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'POST /api/account-recovery');
   }
 }

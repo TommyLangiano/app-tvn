@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { z } from 'zod';
+import { handleApiError, ApiErrors } from '@/lib/errors/api-errors';
 
 // Validation schema
 const signupSchema = z.object({
@@ -16,11 +17,7 @@ export async function POST(request: NextRequest) {
   try {
     // Verify environment variables
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      console.error('Missing Supabase environment variables');
-      return NextResponse.json(
-        { error: 'Configurazione server non valida' },
-        { status: 500 }
-      );
+      throw new Error('Missing Supabase environment variables');
     }
 
     // Create admin client inside function to avoid build-time issues
@@ -63,10 +60,7 @@ export async function POST(request: NextRequest) {
     // Validate input with Zod
     const validation = signupSchema.safeParse(body);
     if (!validation.success) {
-      return NextResponse.json(
-        { error: validation.error.issues[0].message },
-        { status: 400 }
-      );
+      throw ApiErrors.badRequest(validation.error.issues[0].message);
     }
 
     const { company_name, first_name, last_name, email, password } = validation.data;
@@ -74,10 +68,7 @@ export async function POST(request: NextRequest) {
     // Check if email already exists
     const { data: existingUser } = await supabaseAdmin.auth.admin.listUsers();
     if (existingUser?.users?.some(u => u.email === email)) {
-      return NextResponse.json(
-        { error: 'Email già registrata' },
-        { status: 409 }
-      );
+      throw ApiErrors.conflict('Email già registrata');
     }
 
     // Step 1: Create auth user
@@ -93,11 +84,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (authError || !authData.user) {
-      console.error('Auth error:', authError);
-      return NextResponse.json(
-        { error: 'Errore nella creazione dell\'utente' },
-        { status: 500 }
-      );
+      throw new Error('Errore nella creazione dell\'utente');
     }
 
     const userId = authData.user.id;
@@ -114,14 +101,9 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (tenantError || !tenantData) {
-      console.error('Tenant error:', tenantError);
-      console.error('Tenant error details:', JSON.stringify(tenantError, null, 2));
       // Rollback: delete user
       await supabaseAdmin.auth.admin.deleteUser(userId);
-      return NextResponse.json(
-        { error: `Errore nella creazione dell'azienda: ${tenantError?.message || 'Unknown error'}` },
-        { status: 500 }
-      );
+      throw new Error('Errore nella creazione dell\'azienda');
     }
 
     const tenantId = tenantData.id;
@@ -136,14 +118,10 @@ export async function POST(request: NextRequest) {
       });
 
     if (linkError) {
-      console.error('Link error:', linkError);
       // Rollback: delete tenant and user
       await supabaseAdmin.from('tenants').delete().eq('id', tenantId);
       await supabaseAdmin.auth.admin.deleteUser(userId);
-      return NextResponse.json(
-        { error: 'Errore nel collegamento utente-azienda' },
-        { status: 500 }
-      );
+      throw new Error('Errore nel collegamento utente-azienda');
     }
 
     // Step 4: Update user_profile with full name (trigger should have created it)
@@ -156,8 +134,8 @@ export async function POST(request: NextRequest) {
       .eq('user_id', userId);
 
     if (profileError) {
-      console.error('Profile update error:', profileError);
       // Non-critical, continue
+      console.warn('Profile update warning:', profileError.message);
     }
 
     // Step 5: Create empty tenant_profile with onboarding_completed = false
@@ -170,8 +148,8 @@ export async function POST(request: NextRequest) {
       });
 
     if (tenantProfileError) {
-      console.error('Tenant profile error:', tenantProfileError);
       // Non-critical, continue
+      console.warn('Tenant profile warning:', tenantProfileError.message);
     }
 
     return NextResponse.json({
@@ -185,10 +163,6 @@ export async function POST(request: NextRequest) {
     }, { status: 201 });
 
   } catch (error) {
-    console.error('Signup error:', error);
-    return NextResponse.json(
-      { error: 'Errore interno del server' },
-      { status: 500 }
-    );
+    return handleApiError(error, 'POST /api/auth/signup');
   }
 }
