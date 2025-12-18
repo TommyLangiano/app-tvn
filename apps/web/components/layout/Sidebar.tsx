@@ -36,7 +36,7 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useSidebar } from '@/contexts/SidebarContext';
 import { useUser } from '@/contexts/UserContext';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { UserAvatar } from '@/components/common/UserAvatar';
 import {
@@ -47,7 +47,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-// Menu structure con categorie
+// Menu structure con categorie - spostato fuori dal componente per evitare ricreazione
 const menuStructure = [
   {
     type: 'single',
@@ -92,6 +92,12 @@ const menuStructure = [
       { href: '/calendario-turni', label: 'Calendario Turni', icon: Calendar },
       { href: '/scambi-modifiche', label: 'Scambi & Modifiche', icon: Repeat },
     ]
+  },
+  {
+    type: 'single',
+    href: '/scadenziario',
+    label: 'Scadenziario',
+    icon: Calendar
   },
   {
     type: 'single',
@@ -169,13 +175,13 @@ export function Sidebar() {
 
   // All data now comes from UserContext - no more API calls!
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push('/auth/signin');
-  };
+  }, [router]);
 
-  const getStatusColor = () => {
+  const getStatusColor = useCallback(() => {
     switch (userStatus) {
       case 'online':
         return 'bg-primary';
@@ -186,15 +192,15 @@ export function Sidebar() {
       default:
         return 'bg-primary';
     }
-  };
+  }, [userStatus]);
 
-  const toggleCategory = (label: string) => {
+  const toggleCategory = useCallback((label: string) => {
     setExpandedCategories(prev =>
       prev.includes(label)
         ? prev.filter(cat => cat !== label)
         : [...prev, label]
     );
-  };
+  }, []);
 
   return (
     <aside className={cn(

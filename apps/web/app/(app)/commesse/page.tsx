@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import { Search, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { CommessaCard } from '@/components/features/commesse/CommessaCard';
+import { CommessaTable } from '@/components/features/commesse/CommessaTable';
 import { createClient } from '@/lib/supabase/client';
 import type { Commessa } from '@/types/commessa';
 import {
@@ -20,7 +20,6 @@ import {
 export default function CommessePage() {
   const router = useRouter();
   const [commesse, setCommesse] = useState<Commessa[]>([]);
-  const [filteredCommesse, setFilteredCommesse] = useState<Commessa[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [marginiLordi, setMarginiLordi] = useState<Record<string, number>>({});
@@ -29,16 +28,65 @@ export default function CommessePage() {
   const [tipologiaClienteFilter, setTipologiaClienteFilter] = useState<string>('all');
   const [tipologiaCommessaFilter, setTipologiaCommessaFilter] = useState<string>('all');
   const [statoFilter, setStatoFilter] = useState<string>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'in-corso' | 'da-iniziare' | 'completate'>('all');
+  const [clienteFilter, setClienteFilter] = useState<string>('all');
+  const [clienti, setClienti] = useState<Array<{ id: string; nome: string; cognome: string }>>([]);
+  const [clienteSearch, setClienteSearch] = useState('');
   const [navbarActionsContainer, setNavbarActionsContainer] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     loadCommesse();
+    loadClienti();
     // Trova il container per i bottoni nella navbar
     setNavbarActionsContainer(document.getElementById('navbar-actions'));
   }, []);
 
-  useEffect(() => {
+  const loadClienti = useCallback(async () => {
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: tenants } = await supabase
+        .from('user_tenants')
+        .select('tenant_id')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      const userTenants = tenants && tenants.length > 0 ? tenants[0] : null;
+      if (!userTenants) return;
+
+      const { data, error } = await supabase
+        .from('clienti')
+        .select('id, nome, cognome')
+        .eq('tenant_id', userTenants.tenant_id)
+        .order('cognome', { ascending: true });
+
+      if (error) throw error;
+      setClienti(data || []);
+    } catch (error) {
+      console.error('Error loading clienti:', error);
+    }
+  }, []);
+
+  // Memoizza filtered commesse per evitare ricalcoli costosi
+  const filteredCommesse = useMemo(() => {
     let filtered = commesse;
+
+    // Filtro tab stato
+    if (activeTab !== 'all') {
+      const today = new Date();
+      filtered = filtered.filter(c => {
+        const hasStarted = c.data_inizio ? new Date(c.data_inizio) <= today : false;
+        const hasEnded = c.data_fine_prevista ? new Date(c.data_fine_prevista) < today : false;
+
+        if (activeTab === 'in-corso') return hasStarted && !hasEnded;
+        if (activeTab === 'completate') return hasEnded;
+        if (activeTab === 'da-iniziare') return !hasStarted;
+        return true;
+      });
+    }
 
     // Filtro ricerca
     if (searchQuery.trim() !== '') {
@@ -60,6 +108,11 @@ export default function CommessePage() {
       filtered = filtered.filter(c => c.tipologia_commessa === tipologiaCommessaFilter);
     }
 
+    // Filtro cliente
+    if (clienteFilter !== 'all') {
+      filtered = filtered.filter(c => c.cliente_commessa === clienteFilter);
+    }
+
     // Filtro stato
     if (statoFilter !== 'all') {
       const today = new Date();
@@ -74,11 +127,15 @@ export default function CommessePage() {
       });
     }
 
-    setFilteredCommesse(filtered);
-    setCurrentPage(1);
-  }, [searchQuery, commesse, tipologiaClienteFilter, tipologiaCommessaFilter, statoFilter]);
+    return filtered;
+  }, [searchQuery, commesse, tipologiaClienteFilter, tipologiaCommessaFilter, clienteFilter, statoFilter, activeTab]);
 
-  const loadCommesse = async () => {
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, tipologiaClienteFilter, tipologiaCommessaFilter, clienteFilter, statoFilter, activeTab]);
+
+  const loadCommesse = useCallback(async () => {
     try {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
@@ -105,8 +162,28 @@ export default function CommessePage() {
 
       if (error) throw error;
 
-      setCommesse(data || []);
-      setFilteredCommesse(data || []);
+      // Load all clients to map IDs to names
+      const { data: clientiData } = await supabase
+        .from('clienti')
+        .select('id, nome, cognome')
+        .eq('tenant_id', userTenants.tenant_id);
+
+      // Create a map of client IDs to full names
+      const clientiMap = new Map<string, string>();
+      if (clientiData) {
+        clientiData.forEach(c => {
+          clientiMap.set(c.id, `${c.cognome} ${c.nome}`.trim());
+        });
+      }
+
+      // Map data to include client full name
+      const commesseWithClientNames = data?.map(c => ({
+        ...c,
+        cliente_nome_completo: clientiMap.get(c.cliente_commessa) || c.cliente_commessa
+      })) || [];
+
+      setCommesse(commesseWithClientNames);
+      setFilteredCommesse(commesseWithClientNames);
 
       // Load margini lordi for all commesse
       if (data && data.length > 0) {
@@ -129,55 +206,159 @@ export default function CommessePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  // Pagination logic
-  const totalCommesse = filteredCommesse.length;
-  const totalPages = Math.ceil(totalCommesse / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const commessePaginate = filteredCommesse.slice(startIndex, endIndex);
+  // Memoizza pagination logic
+  const paginationData = useMemo(() => {
+    const totalCommesse = filteredCommesse.length;
+    const totalPages = Math.ceil(totalCommesse / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const commessePaginate = filteredCommesse.slice(startIndex, endIndex);
 
-  const handlePageChange = (page: number) => {
+    return { totalCommesse, totalPages, startIndex, endIndex, commessePaginate };
+  }, [filteredCommesse, currentPage, itemsPerPage]);
+
+  const handlePageChange = useCallback((page: number) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  }, []);
 
-  const handleItemsPerPageChange = (value: string) => {
+  const handleItemsPerPageChange = useCallback((value: string) => {
     setItemsPerPage(Number(value));
     setCurrentPage(1);
-  };
+  }, []);
+
+  // Memoizza contatori per ogni tab
+  const tabCounts = useMemo(() => {
+    const today = new Date();
+    const counts = {
+      all: commesse.length,
+      inCorso: 0,
+      daIniziare: 0,
+      completate: 0,
+    };
+
+    commesse.forEach(c => {
+      const hasStarted = c.data_inizio ? new Date(c.data_inizio) <= today : false;
+      const hasEnded = c.data_fine_prevista ? new Date(c.data_fine_prevista) < today : false;
+
+      if (hasStarted && !hasEnded) counts.inCorso++;
+      else if (!hasStarted) counts.daIniziare++;
+      else if (hasEnded) counts.completate++;
+    });
+
+    return counts;
+  }, [commesse]);
+
+  const { totalCommesse, totalPages, startIndex, endIndex, commessePaginate } = paginationData;
 
   return (
     <>
       {/* Portal: Bottone nella Navbar */}
       {navbarActionsContainer && createPortal(
-        <Button onClick={() => router.push('/commesse/nuova')} className="h-11 whitespace-nowrap rounded-md">
+        <Button onClick={() => router.push('/commesse/nuova')} className="h-12 px-6 py-3 text-sm whitespace-nowrap rounded-sm">
           Nuova Commessa
         </Button>,
         navbarActionsContainer
       )}
 
       <div className="space-y-6">
+        {/* Tabs */}
+        <div className="flex items-center gap-8 border-b border-border">
+          <button
+            onClick={() => setActiveTab('all')}
+            className={`px-6 py-3 text-sm font-medium transition-all relative ${
+              activeTab === 'all'
+                ? 'text-black'
+                : 'text-gray-600 hover:text-black'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              {tabCounts.all > 0 && (
+                <span className="text-xs bg-primary text-white px-3 py-0.5 rounded-full">{tabCounts.all}</span>
+              )}
+              Tutte
+            </span>
+            {activeTab === 'all' && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('in-corso')}
+            className={`px-6 py-3 text-sm font-medium transition-all relative ${
+              activeTab === 'in-corso'
+                ? 'text-black'
+                : 'text-gray-600 hover:text-black'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              {tabCounts.inCorso > 0 && (
+                <span className="text-xs bg-primary text-white px-3 py-0.5 rounded-full">{tabCounts.inCorso}</span>
+              )}
+              In corso
+            </span>
+            {activeTab === 'in-corso' && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('da-iniziare')}
+            className={`px-6 py-3 text-sm font-medium transition-all relative ${
+              activeTab === 'da-iniziare'
+                ? 'text-black'
+                : 'text-gray-600 hover:text-black'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              {tabCounts.daIniziare > 0 && (
+                <span className="text-xs bg-primary text-white px-3 py-0.5 rounded-full">{tabCounts.daIniziare}</span>
+              )}
+              Da iniziare
+            </span>
+            {activeTab === 'da-iniziare' && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('completate')}
+            className={`px-6 py-3 text-sm font-medium transition-all relative ${
+              activeTab === 'completate'
+                ? 'text-black'
+                : 'text-gray-600 hover:text-black'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              {tabCounts.completate > 0 && (
+                <span className="text-xs bg-primary text-white px-3 py-0.5 rounded-full">{tabCounts.completate}</span>
+              )}
+              Completate
+            </span>
+            {activeTab === 'completate' && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+            )}
+          </button>
+        </div>
+
         {/* Search and Filters */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <div className="relative flex-1 w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground" />
             <Input
               placeholder="Cerca commesse..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-11 border-2 border-border rounded-lg bg-card w-full"
+              className="pl-10 h-11 border-2 border-border rounded-sm bg-background text-foreground placeholder:text-muted-foreground w-full"
             />
           </div>
 
           {/* Filtro Tipologia Cliente */}
           <Select value={tipologiaClienteFilter} onValueChange={setTipologiaClienteFilter}>
-            <SelectTrigger className="w-full sm:w-[180px] h-11 border-2 border-border rounded-lg bg-card">
-              <SelectValue placeholder="Tipologia Cliente" />
+            <SelectTrigger className="w-full sm:w-[180px] h-11 border-2 border-border rounded-sm bg-background text-foreground">
+              <SelectValue placeholder="Tipologia" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tutte le Tipologie</SelectItem>
+              <SelectItem value="all">Tipologia</SelectItem>
               <SelectItem value="Privato">Privato</SelectItem>
               <SelectItem value="Pubblico">Pubblico</SelectItem>
             </SelectContent>
@@ -185,11 +366,11 @@ export default function CommessePage() {
 
           {/* Filtro Tipo Commessa */}
           <Select value={tipologiaCommessaFilter} onValueChange={setTipologiaCommessaFilter}>
-            <SelectTrigger className="w-full sm:w-[180px] h-11 border-2 border-border rounded-lg bg-card">
-              <SelectValue placeholder="Tipo Commessa" />
+            <SelectTrigger className="w-full sm:w-[180px] h-11 border-2 border-border rounded-sm bg-background text-foreground">
+              <SelectValue placeholder="Tipo" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tutti i Tipi</SelectItem>
+              <SelectItem value="all">Tipo</SelectItem>
               <SelectItem value="Appalto">Appalto</SelectItem>
               <SelectItem value="ATI">ATI</SelectItem>
               <SelectItem value="Sub Appalto">Sub Appalto</SelectItem>
@@ -197,42 +378,57 @@ export default function CommessePage() {
             </SelectContent>
           </Select>
 
-          {/* Filtro Stato */}
-          <Select value={statoFilter} onValueChange={setStatoFilter}>
-            <SelectTrigger className="w-full sm:w-[180px] h-11 border-2 border-border rounded-lg bg-card">
-              <SelectValue placeholder="Stato" />
+          {/* Filtro Cliente */}
+          <Select value={clienteFilter} onValueChange={setClienteFilter}>
+            <SelectTrigger className="w-full sm:w-[200px] h-11 border-2 border-border rounded-sm bg-background text-foreground">
+              <SelectValue placeholder="Cliente" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tutti gli Stati</SelectItem>
-              <SelectItem value="da-iniziare">Da Iniziare</SelectItem>
-              <SelectItem value="in-corso">In Corso</SelectItem>
-              <SelectItem value="completate">Completate</SelectItem>
+              <div className="px-2 pb-2">
+                <Input
+                  placeholder="Cerca cliente..."
+                  value={clienteSearch}
+                  onChange={(e) => setClienteSearch(e.target.value)}
+                  className="h-9"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+              <SelectItem value="all">Cliente</SelectItem>
+              {clienti
+                .filter(c => {
+                  const fullName = `${c.cognome || ''} ${c.nome || ''}`.trim();
+                  return fullName && fullName.toLowerCase().includes(clienteSearch.toLowerCase());
+                })
+                .map(cliente => {
+                  const fullName = `${cliente.cognome || ''} ${cliente.nome || ''}`.trim();
+                  return fullName ? (
+                    <SelectItem key={cliente.id} value={fullName}>
+                      {fullName}
+                    </SelectItem>
+                  ) : null;
+                })
+                .filter(Boolean)}
             </SelectContent>
           </Select>
         </div>
 
-      {/* Commesse Grid - 2 per riga */}
+      {/* Commesse Table */}
       {loading ? (
         <div className="text-center py-12 text-muted-foreground">Caricamento...</div>
       ) : filteredCommesse.length === 0 ? (
         <div className="text-center py-12 rounded-lg border border-dashed border-border bg-card/50">
           <p className="text-muted-foreground">
-            {searchQuery || tipologiaClienteFilter !== 'all' || tipologiaCommessaFilter !== 'all' || statoFilter !== 'all'
+            {searchQuery || tipologiaClienteFilter !== 'all' || tipologiaCommessaFilter !== 'all' || clienteFilter !== 'all'
               ? 'Nessuna commessa trovata con i filtri selezionati'
               : 'Nessuna commessa presente'}
           </p>
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {commessePaginate.map((commessa) => (
-              <CommessaCard
-                key={commessa.id}
-                commessa={commessa}
-                margineLordo={marginiLordi[commessa.id] || 0}
-              />
-            ))}
-          </div>
+          <CommessaTable
+            commesse={commessePaginate}
+            marginiLordi={marginiLordi}
+          />
 
           {/* Pagination */}
           {totalCommesse > 0 && (
