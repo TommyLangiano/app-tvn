@@ -394,21 +394,18 @@ export function MovimentiTab({ commessaId }: MovimentiTabProps) {
     },
   ];
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <p className="text-muted-foreground">Caricamento movimenti...</p>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-4">
-      <DataTable<FatturaAttiva | FatturaPassiva>
-        data={paginatedFatture}
-        columns={columns}
-        keyField="id"
-        loading={loading}
+      {loading ? (
+        <div className="flex items-center justify-center h-96">
+          <p className="text-muted-foreground">Caricamento movimenti...</p>
+        </div>
+      ) : (
+        <DataTable<FatturaAttiva | FatturaPassiva>
+          data={paginatedFatture}
+          columns={columns}
+          keyField="id"
+          loading={false}
         searchable={true}
         searchPlaceholder="Cerca per numero fattura, cliente, fornitore..."
         searchValue={searchQuery}
@@ -427,7 +424,8 @@ export function MovimentiTab({ commessaId }: MovimentiTabProps) {
         emptyIcon={Receipt}
         emptyTitle="Nessuna fattura trovata"
         emptyDescription={searchQuery ? 'Prova con una ricerca diversa' : 'Nessuna fattura associata a questa commessa'}
-      />
+        />
+      )}
 
       {/* Sheet Modal per dettagli fattura */}
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
