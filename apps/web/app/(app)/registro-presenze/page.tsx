@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Search, FileText, Trash2, ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Plus, User, Clock, Grid3x3, List, X, Download, MoreVertical, Pencil } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Search, FileText, Trash2, ChevronLeft, ChevronRight, Plus, User, Clock, Grid3x3, List, X, Download, MoreVertical, Pencil, ClipboardList, ClipboardCheck, ClipboardX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -19,6 +20,8 @@ import {
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import type { Rapportino } from '@/types/rapportino';
+import { DataTable, DataTableColumn, DataTableBulkAction } from '@/components/ui/data-table';
+import { TabsFilter } from '@/components/ui/tabs-filter';
 import { InfoRapportinoModal } from '@/components/features/registro-presenze/InfoRapportinoModal';
 import { DeleteRapportinoModal } from '@/components/features/registro-presenze/DeleteRapportinoModal';
 import { NuovoRapportinoModal } from '@/components/features/registro-presenze/NuovoRapportinoModal';
@@ -49,6 +52,8 @@ type Commessa = {
 export default function RapportiniPage() {
   const [loading, setLoading] = useState(true);
   const [rapportini, setRapportini] = useState<Rapportino[]>([]);
+  const [rapportiniDaApprovare, setRapportiniDaApprovare] = useState<Rapportino[]>([]);
+  const [rapportiniRifiutati, setRapportiniRifiutati] = useState<Rapportino[]>([]);
 
   // Data for modal
   const [users, setUsers] = useState<User[]>([]);
@@ -71,8 +76,13 @@ export default function RapportiniPage() {
   // View mode
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
 
-  // Ordinamento
-  const [ordinamento, setOrdinamento] = useState<'data_desc' | 'data_asc' | 'ore_desc' | 'ore_asc' | 'user_asc' | 'user_desc'>('data_desc');
+  // Tab state
+  type TabType = 'approvate' | 'da_approvare' | 'rifiutate';
+  const [activeTab, setActiveTab] = useState<TabType>('approvate');
+
+  // DataTable sorting states
+  const [sortField, setSortField] = useState<string>('data_rapportino');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   // Modal states
   const [selectedRapportino, setSelectedRapportino] = useState<Rapportino | null>(null);
@@ -100,11 +110,16 @@ export default function RapportiniPage() {
   // Filtri toggle
   const [showFilters, setShowFilters] = useState(false);
 
+  // Navbar actions container
+  const [navbarActionsContainer, setNavbarActionsContainer] = useState<HTMLElement | null>(null);
+
   // Generate years (current year ± 5 years)
   const years = Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i);
 
   useEffect(() => {
     loadInitialData();
+    loadRapportiniDaApprovare(); // Carica tutti i rapportini da approvare (non filtrati per mese)
+    loadRapportiniRifiutati(); // Carica tutti i rapportini rifiutati (non filtrati per mese)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -112,6 +127,11 @@ export default function RapportiniPage() {
     loadRapportini();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentMonth, currentYear]);
+
+  useEffect(() => {
+    const container = document.getElementById('navbar-actions');
+    setNavbarActionsContainer(container);
+  }, []);
 
   const loadInitialData = async () => {
     const supabase = createClient();
@@ -244,6 +264,98 @@ export default function RapportiniPage() {
     }
   };
 
+  const loadRapportiniDaApprovare = async () => {
+    try {
+      const supabase = createClient();
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: userTenants } = await supabase
+        .from('user_tenants')
+        .select('tenant_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!userTenants) return;
+
+      const { data, error } = await supabase
+        .from('rapportini')
+        .select(`
+          *,
+          commesse:commessa_id(titolo, slug),
+          dipendenti:dipendente_id(id, nome, cognome, email)
+        `)
+        .eq('tenant_id', userTenants.tenant_id)
+        .eq('stato', 'da_approvare')
+        .order('data_rapportino', { ascending: false });
+
+      if (error) throw error;
+
+      // Popola user_name e user_email dai dipendenti se mancanti
+      const rapportiniWithUserInfo = (data || []).map(r => {
+        if (!r.user_name && r.dipendenti) {
+          return {
+            ...r,
+            user_name: `${r.dipendenti.nome} ${r.dipendenti.cognome}`,
+            user_email: r.dipendenti.email
+          };
+        }
+        return r;
+      });
+
+      setRapportiniDaApprovare(rapportiniWithUserInfo);
+    } catch {
+      toast.error('Errore nel caricamento dei rapportini da approvare');
+    }
+  };
+
+  const loadRapportiniRifiutati = async () => {
+    try {
+      const supabase = createClient();
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: userTenants } = await supabase
+        .from('user_tenants')
+        .select('tenant_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!userTenants) return;
+
+      const { data, error } = await supabase
+        .from('rapportini')
+        .select(`
+          *,
+          commesse:commessa_id(titolo, slug),
+          dipendenti:dipendente_id(id, nome, cognome, email)
+        `)
+        .eq('tenant_id', userTenants.tenant_id)
+        .eq('stato', 'rifiutato')
+        .order('data_rapportino', { ascending: false });
+
+      if (error) throw error;
+
+      // Popola user_name e user_email dai dipendenti se mancanti
+      const rapportiniWithUserInfo = (data || []).map(r => {
+        if (!r.user_name && r.dipendenti) {
+          return {
+            ...r,
+            user_name: `${r.dipendenti.nome} ${r.dipendenti.cognome}`,
+            user_email: r.dipendenti.email
+          };
+        }
+        return r;
+      });
+
+      setRapportiniRifiutati(rapportiniWithUserInfo);
+    } catch {
+      toast.error('Errore nel caricamento dei rapportini rifiutati');
+    }
+  };
+
   const previousMonth = () => {
     setCurrentDate(new Date(currentYear, currentMonth - 1, 1));
   };
@@ -261,9 +373,92 @@ export default function RapportiniPage() {
     return rapportino.user_name || rapportino.user_email?.split('@')[0] || 'Utente';
   };
 
+  // Column definitions for DataTable
+  const columns: DataTableColumn<Rapportino>[] = [
+    {
+      key: 'user_name',
+      label: 'Operaio',
+      sortable: true,
+      render: (rapportino) => (
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm flex-shrink-0">
+            {getUserDisplayName(rapportino).split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+          </div>
+          <span className="text-base font-medium text-foreground">{getUserDisplayName(rapportino)}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'data_rapportino',
+      label: 'Data',
+      sortable: true,
+      width: 'w-48',
+      render: (rapportino) => (
+        <span className="text-sm text-foreground">
+          {new Date(rapportino.data_rapportino).toLocaleDateString('it-IT', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+          })}
+        </span>
+      ),
+    },
+    {
+      key: 'commessa',
+      label: 'Commessa',
+      sortable: false,
+      render: (rapportino) => (
+        <span className="text-sm text-foreground">{rapportino.commesse?.titolo}</span>
+      ),
+    },
+    {
+      key: 'ore_lavorate',
+      label: 'Ore',
+      sortable: true,
+      width: 'w-24',
+      render: (rapportino) => (
+        <span className="text-base text-foreground font-bold">
+          {rapportino.ore_lavorate}h
+        </span>
+      ),
+    },
+    {
+      key: 'arrow',
+      label: '',
+      sortable: false,
+      width: 'w-12',
+      render: () => (
+        <div className="flex justify-end">
+          <ChevronRight className="h-5 w-5 text-muted-foreground" />
+        </div>
+      ),
+    },
+  ];
+
+  // Handler per click sulla riga
+  const handleRowClick = (rapportino: Rapportino) => {
+    setSelectedRapportino(rapportino);
+    setShowInfoModal(true);
+  };
+
+  // Handle sorting for DataTable
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
   // Filtri e ordinamento
   const rapportiniFiltrati = useMemo(() => {
-    let filtered = [...rapportini];
+    // Select base data based on active tab
+    let filtered = activeTab === 'da_approvare'
+      ? [...rapportiniDaApprovare]
+      : activeTab === 'rifiutate'
+      ? [...rapportiniRifiutati]
+      : [...rapportini.filter(r => !r.stato || r.stato === 'approvato')];
 
     // Search filter
     if (searchTerm) {
@@ -276,12 +471,12 @@ export default function RapportiniPage() {
     }
 
     // Filtro Commessa
-    if (filtroCommessa) {
+    if (filtroCommessa && filtroCommessa !== 'all') {
       filtered = filtered.filter(r => r.commessa_id === filtroCommessa);
     }
 
     // Filtro Utente
-    if (filtroUtente) {
+    if (filtroUtente && filtroUtente !== 'all') {
       filtered = filtered.filter(r => r.user_id === filtroUtente);
     }
 
@@ -297,26 +492,49 @@ export default function RapportiniPage() {
 
     // Ordinamento
     filtered.sort((a, b) => {
-      switch (ordinamento) {
-        case 'data_desc':
-          return new Date(b.data_rapportino).getTime() - new Date(a.data_rapportino).getTime();
-        case 'data_asc':
-          return new Date(a.data_rapportino).getTime() - new Date(b.data_rapportino).getTime();
-        case 'ore_desc':
-          return b.ore_lavorate - a.ore_lavorate;
-        case 'ore_asc':
-          return a.ore_lavorate - b.ore_lavorate;
-        case 'user_asc':
-          return getUserDisplayName(a).localeCompare(getUserDisplayName(b));
-        case 'user_desc':
-          return getUserDisplayName(b).localeCompare(getUserDisplayName(a));
+      let aVal: any;
+      let bVal: any;
+
+      switch (sortField) {
+        case 'data_rapportino':
+          aVal = new Date(a.data_rapportino).getTime();
+          bVal = new Date(b.data_rapportino).getTime();
+          break;
+        case 'ore_lavorate':
+          aVal = a.ore_lavorate;
+          bVal = b.ore_lavorate;
+          break;
+        case 'user_name':
+          aVal = getUserDisplayName(a);
+          bVal = getUserDisplayName(b);
+          break;
         default:
           return 0;
+      }
+
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
+        aVal = aVal.toLowerCase();
+        bVal = bVal.toLowerCase();
+      }
+
+      if (sortDirection === 'asc') {
+        return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
+      } else {
+        return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
       }
     });
 
     return filtered;
-  }, [rapportini, searchTerm, filtroCommessa, filtroUtente, filtroDataInizio, filtroDataFine, ordinamento]);
+  }, [rapportini, rapportiniDaApprovare, rapportiniRifiutati, activeTab, searchTerm, filtroCommessa, filtroUtente, filtroDataInizio, filtroDataFine, sortField, sortDirection]);
+
+  // Tab counts
+  const tabCounts = useMemo(() => {
+    return {
+      approvate: rapportini.filter(r => !r.stato || r.stato === 'approvato').length,
+      da_approvare: rapportiniDaApprovare.length, // Conta tutti i rapportini da approvare (non filtrati per mese)
+      rifiutate: rapportiniRifiutati.length, // Conta tutti i rapportini rifiutati (non filtrati per mese)
+    };
+  }, [rapportini, rapportiniDaApprovare, rapportiniRifiutati]);
 
   // Paginazione
   const totalPages = Math.ceil(rapportiniFiltrati.length / itemsPerPage);
@@ -330,10 +548,16 @@ export default function RapportiniPage() {
   }, [searchTerm, filtroCommessa, filtroUtente, filtroDataInizio, filtroDataFine, itemsPerPage]);
 
   // Count active filters
-  const activeFiltersCount = [filtroCommessa, filtroUtente, filtroDataInizio, filtroDataFine].filter(Boolean).length;
+  const activeFiltersCount = [
+    filtroCommessa && filtroCommessa !== 'all' ? filtroCommessa : null,
+    filtroUtente && filtroUtente !== 'all' ? filtroUtente : null,
+    filtroDataInizio,
+    filtroDataFine
+  ].filter(Boolean).length;
 
   // Clear all filters
   const clearAllFilters = () => {
+    setSearchTerm('');
     setFiltroCommessa('');
     setFiltroUtente('');
     setFiltroDataInizio('');
@@ -1200,69 +1424,67 @@ export default function RapportiniPage() {
 
   return (
     <div className="space-y-6">
+      {/* Portal: Bottone nella Navbar */}
+      {navbarActionsContainer && createPortal(
+        <Button
+          onClick={() => setShowNuovoModal(true)}
+          className="gap-2 h-10 rounded-sm"
+        >
+          <Plus className="h-4 w-4" />
+          Nuovo Rapportino
+        </Button>,
+        navbarActionsContainer
+      )}
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="rounded-xl border-2 border-border bg-card p-6">
-          <div className="flex items-center gap-3">
-            <div className="p-3 rounded-lg bg-primary/10">
-              <FileText className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{rapportiniFiltrati.length}</p>
-              <p className="text-sm text-muted-foreground">Presenze</p>
-            </div>
-          </div>
-        </div>
+      {/* Tabs */}
+      <TabsFilter<TabType>
+        tabs={[
+          {
+            value: 'approvate',
+            label: 'Approvate',
+            icon: ClipboardCheck,
+            count: tabCounts.approvate,
+            badgeClassName: 'bg-primary/10 text-primary',
+          },
+          {
+            value: 'da_approvare',
+            label: 'Da Approvare',
+            icon: ClipboardList,
+            count: tabCounts.da_approvare,
+            badgeClassName: 'bg-primary/10 text-primary',
+          },
+          {
+            value: 'rifiutate',
+            label: 'Rifiutate',
+            icon: ClipboardX,
+            count: tabCounts.rifiutate,
+            badgeClassName: 'bg-primary/10 text-primary',
+          },
+        ]}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      />
 
-        <div className="rounded-xl border-2 border-border bg-card p-6">
-          <div className="flex items-center gap-3">
-            <div className="p-3 rounded-lg bg-emerald-500/10">
-              <Clock className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                {totaleOre.toFixed(1)}h
-              </p>
-              <p className="text-sm text-muted-foreground">Ore Totali</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-xl border-2 border-border bg-card p-6">
-          <div className="flex items-center gap-3">
-            <div className="p-3 rounded-lg bg-blue-500/10">
-              <User className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">
-                {new Set(rapportiniFiltrati.map(r => r.user_id)).size}
-              </p>
-              <p className="text-sm text-muted-foreground">Operai Attivi</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Header: Month Navigator and Buttons */}
+      {/* Header: Month Navigator and Buttons - Only for 'approvate' tab */}
+      {activeTab === 'approvate' && (
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         {/* Month Navigator */}
-        <div className="flex items-center rounded-lg border-2 border-border bg-card overflow-hidden">
+        <div className="flex items-center rounded-sm border-2 border-border bg-card overflow-hidden">
           <Button
             variant="ghost"
             size="sm"
             onClick={previousMonth}
-            className="h-11 w-11 p-0 rounded-none border-0"
+            className="h-10 w-10 p-0 rounded-none border-0"
           >
-            <ChevronLeft className="h-6 w-6" />
+            <ChevronLeft className="h-5 w-5" />
           </Button>
 
-          <div className="w-px h-7 bg-border" />
+          <div className="w-px h-6 bg-border" />
 
           <Popover open={showMonthPicker} onOpenChange={setShowMonthPicker}>
             <PopoverTrigger asChild>
               <button
-                className="h-11 px-6 font-bold text-2xl min-w-[280px] hover:text-primary transition-colors"
+                className="h-10 px-6 font-bold text-2xl min-w-[280px] hover:text-primary transition-colors"
                 onClick={() => {
                   setSelectedMonth(currentMonth);
                   setSelectedYear(currentYear);
@@ -1330,96 +1552,73 @@ export default function RapportiniPage() {
             </PopoverContent>
           </Popover>
 
-          <div className="w-px h-7 bg-border" />
+          <div className="w-px h-6 bg-border" />
 
           <Button
             variant="ghost"
             size="sm"
             onClick={nextMonth}
-            className="h-11 w-11 p-0 rounded-none border-0"
+            className="h-10 w-10 p-0 rounded-none border-0"
           >
-            <ChevronRight className="h-6 w-6" />
+            <ChevronRight className="h-5 w-5" />
           </Button>
         </div>
 
         <div className="flex-1" />
 
-        {/* Export Button - visible in both views */}
+        {/* Export Button */}
         <Button
           onClick={() => setShowExportModal(true)}
           variant="outline"
-          className="h-11 gap-2 whitespace-nowrap border-2 border-border"
+          className="gap-2 h-10 rounded-sm border-2"
         >
           <Download className="h-4 w-4" />
-          <span className="hidden sm:inline">Esporta</span>
+          Esporta
         </Button>
 
-        {/* View Toggle */}
-        <div className="flex items-center gap-0 rounded-lg border-2 border-border bg-card overflow-hidden">
-          <Button
-            variant={viewMode === 'list' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('list')}
-            className="h-11 rounded-none border-0 px-4 gap-2"
-          >
-            <List className="h-4 w-4" />
-            <span className="hidden sm:inline">Elenco</span>
-          </Button>
-          <div className="w-px h-6 bg-border" />
-          <Button
-            variant={viewMode === 'grid' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('grid')}
-            className="h-11 rounded-none border-0 px-4 gap-2"
-          >
-            <Grid3x3 className="h-4 w-4" />
-            <span className="hidden sm:inline">Griglia</span>
-          </Button>
-        </div>
-
-        {/* Nuovo Rapportino Button */}
+        {/* View Toggle - Cards or Table */}
         <Button
-          onClick={() => setShowNuovoModal(true)}
-          className="h-11 gap-2 whitespace-nowrap"
+          variant={viewMode === 'grid' ? 'default' : 'outline'}
+          size="icon"
+          onClick={() => setViewMode('grid')}
+          className="h-10 w-10 rounded-sm border-2"
         >
-          <Plus className="h-4 w-4" />
-          Nuovo Rapportino
+          <Grid3x3 className="h-4 w-4" />
+        </Button>
+        <Button
+          variant={viewMode === 'list' ? 'default' : 'outline'}
+          size="icon"
+          onClick={() => setViewMode('list')}
+          className="h-10 w-10 rounded-sm border-2"
+        >
+          <List className="h-4 w-4" />
         </Button>
       </div>
+      )}
 
-      {/* Search Bar and Filters */}
-      {viewMode === 'list' ? (
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <div className="relative flex-1 w-full">
+      {/* Search Bar and Filters - For all tabs (no date filters for Da Approvare and Rifiutate) */}
+      {(activeTab === 'approvate' || activeTab === 'da_approvare' || activeTab === 'rifiutate') && (
+      <div className="space-y-3">
+        {/* Filters - All on one row */}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Search Bar */}
+          <div className="relative w-[250px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Cerca per operaio, commessa..."
+              placeholder="Cerca..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-11 border-2 border-border rounded-lg bg-card w-full"
+              className="pl-10 h-11 border-2 border-border rounded-sm bg-white"
             />
           </div>
 
-          {/* Filtro Commessa */}
-          <Select value={filtroCommessa || undefined} onValueChange={(value) => setFiltroCommessa(value)}>
-            <SelectTrigger className="w-full sm:w-[200px] h-11 border-2 border-border rounded-lg bg-card">
-              <SelectValue placeholder="Tutte le commesse" />
-            </SelectTrigger>
-            <SelectContent>
-              {commesse.map(commessa => (
-                <SelectItem key={commessa.id} value={commessa.id}>
-                  {commessa.nome_commessa}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* Filtro Utente */}
+          {/* Filtro Dipendente */}
           <Select value={filtroUtente || undefined} onValueChange={(value) => setFiltroUtente(value)}>
-            <SelectTrigger className="w-full sm:w-[180px] h-11 border-2 border-border rounded-lg bg-card">
+            <SelectTrigger className="h-11 w-[200px] border-2 border-border rounded-sm bg-white">
               <SelectValue placeholder="Tutti i dipendenti" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="all">Tutti i dipendenti</SelectItem>
               {users.map(user => (
                 <SelectItem key={user.id} value={user.id}>
                   {user.user_metadata?.full_name || user.email}
@@ -1428,58 +1627,13 @@ export default function RapportiniPage() {
             </SelectContent>
           </Select>
 
-          {/* Filtro Data Range */}
-          <div className="flex items-center gap-0 h-11 rounded-lg border-2 border-border bg-card overflow-hidden w-full sm:w-[260px]">
-            <div className="flex-1 relative min-w-0">
-              <Input
-                type="date"
-                value={filtroDataInizio}
-                onChange={(e) => setFiltroDataInizio(e.target.value)}
-                placeholder="Da"
-                className="h-11 border-0 rounded-none bg-transparent text-xs px-2"
-              />
-            </div>
-            <div className="px-1.5 text-muted-foreground text-xs flex-shrink-0">-</div>
-            <div className="flex-1 relative min-w-0">
-              <Input
-                type="date"
-                value={filtroDataFine}
-                onChange={(e) => setFiltroDataFine(e.target.value)}
-                placeholder="A"
-                className="h-11 border-0 rounded-none bg-transparent text-xs px-2"
-              />
-            </div>
-          </div>
-
-          {activeFiltersCount > 0 && (
-            <Button
-              variant="outline"
-              onClick={clearAllFilters}
-              className="h-11 gap-2 whitespace-nowrap"
-            >
-              <X className="h-4 w-4" />
-              Azzera
-            </Button>
-          )}
-        </div>
-      ) : (
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <div className="relative flex-1 w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Cerca per commessa..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-11 border-2 border-border rounded-lg bg-card w-full"
-            />
-          </div>
-
           {/* Filtro Commessa */}
           <Select value={filtroCommessa || undefined} onValueChange={(value) => setFiltroCommessa(value)}>
-            <SelectTrigger className="w-full sm:w-[200px] h-11 border-2 border-border rounded-lg bg-card">
+            <SelectTrigger className="h-11 w-[200px] border-2 border-border rounded-sm bg-white">
               <SelectValue placeholder="Tutte le commesse" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="all">Tutte le commesse</SelectItem>
               {commesse.map(commessa => (
                 <SelectItem key={commessa.id} value={commessa.id}>
                   {commessa.nome_commessa}
@@ -1488,321 +1642,123 @@ export default function RapportiniPage() {
             </SelectContent>
           </Select>
 
-          {(filtroCommessa || searchTerm) && (
+          {/* Filtro Data Inizio - Only for 'approvate' tab */}
+          {activeTab === 'approvate' && (
+          <div className="relative w-[180px]">
+            <Input
+              type="date"
+              value={filtroDataInizio}
+              onChange={(e) => setFiltroDataInizio(e.target.value)}
+              placeholder="Data inizio"
+              className="h-11 border-2 border-border rounded-sm bg-white"
+            />
+          </div>
+          )}
+
+          {/* Filtro Data Fine - Only for 'approvate' tab */}
+          {activeTab === 'approvate' && (
+          <div className="relative w-[180px]">
+            <Input
+              type="date"
+              value={filtroDataFine}
+              onChange={(e) => setFiltroDataFine(e.target.value)}
+              placeholder="Data fine"
+              className="h-11 border-2 border-border rounded-sm bg-white"
+            />
+          </div>
+          )}
+        </div>
+
+        {/* Clear Filters Button */}
+        {activeFiltersCount > 0 && (
+          <div className="flex justify-end">
             <Button
               variant="outline"
               onClick={clearAllFilters}
-              className="h-11 gap-2 whitespace-nowrap"
+              className="gap-2"
             >
               <X className="h-4 w-4" />
-              Azzera
+              Azzera filtri
             </Button>
-          )}
-        </div>
-      )}
-
-      {/* Bulk Actions */}
-      {selectedRapportini.size > 0 && (
-        <div className="rounded-xl border-2 border-border bg-card p-4">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold">
-              {selectedRapportini.size} {selectedRapportini.size === 1 ? 'rapportino selezionato' : 'rapportini selezionati'}
-            </span>
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={() => setSelectedRapportini(new Set())}
-                variant="outline"
-                size="sm"
-              >
-                Deseleziona tutto
-              </Button>
-              <Button
-                onClick={handleBulkDelete}
-                variant="destructive"
-                size="sm"
-                className="gap-2"
-              >
-                <Trash2 className="h-4 w-4" />
-                Elimina selezionati
-              </Button>
-            </div>
           </div>
-        </div>
-      )}
-
-      {/* List View */}
-      {viewMode === 'list' && (
-        <>
-        <div className="rounded-xl border-2 border-border bg-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-background border-b-2 border-border">
-              <tr>
-                <th className="text-center p-4 w-12">
-                  <input
-                    type="checkbox"
-                    checked={rapportiniPaginati.length > 0 && selectedRapportini.size === rapportiniPaginati.length}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedRapportini(new Set(rapportiniPaginati.map(r => r.id)));
-                      } else {
-                        setSelectedRapportini(new Set());
-                      }
-                    }}
-                    className="h-5 w-5 rounded border-2 border-border cursor-pointer"
-                  />
-                </th>
-
-                {/* Operaio - Sortable */}
-                <th className="text-left p-4 font-semibold text-sm">
-                  <div className="flex items-center gap-2">
-                    <span>Operaio</span>
-                    <button
-                      onClick={() => setOrdinamento(ordinamento === 'user_asc' ? 'user_desc' : 'user_asc')}
-                      className="p-1 rounded hover:bg-muted/50"
-                    >
-                      {ordinamento === 'user_asc' ? (
-                        <ArrowUp className="h-3.5 w-3.5 text-primary" />
-                      ) : ordinamento === 'user_desc' ? (
-                        <ArrowDown className="h-3.5 w-3.5 text-primary" />
-                      ) : (
-                        <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
-                      )}
-                    </button>
-                  </div>
-                </th>
-
-                {/* Data - Sortable */}
-                <th className="text-left p-4 font-semibold text-sm">
-                  <div className="flex items-center gap-2">
-                    <span>Data</span>
-                    <button
-                      onClick={() => setOrdinamento(ordinamento === 'data_asc' ? 'data_desc' : 'data_asc')}
-                      className="p-1 rounded hover:bg-muted/50"
-                    >
-                      {ordinamento === 'data_asc' ? (
-                        <ArrowUp className="h-3.5 w-3.5 text-primary" />
-                      ) : ordinamento === 'data_desc' ? (
-                        <ArrowDown className="h-3.5 w-3.5 text-primary" />
-                      ) : (
-                        <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
-                      )}
-                    </button>
-                  </div>
-                </th>
-
-                <th className="text-left p-4 font-semibold text-sm">Commessa</th>
-
-                {/* Ore - Sortable */}
-                <th className="text-center p-4 font-semibold text-sm">
-                  <div className="flex items-center justify-center gap-2">
-                    <span>Ore Lavorate</span>
-                    <button
-                      onClick={() => setOrdinamento(ordinamento === 'ore_asc' ? 'ore_desc' : 'ore_asc')}
-                      className="p-1 rounded hover:bg-muted/50"
-                    >
-                      {ordinamento === 'ore_asc' ? (
-                        <ArrowUp className="h-3.5 w-3.5 text-primary" />
-                      ) : ordinamento === 'ore_desc' ? (
-                        <ArrowDown className="h-3.5 w-3.5 text-primary" />
-                      ) : (
-                        <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
-                      )}
-                    </button>
-                  </div>
-                </th>
-
-                <th className="text-center p-4 font-semibold text-sm w-12">Allegato</th>
-                <th className="text-center p-4 font-semibold text-sm">Azioni</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={7} className="text-center py-12 text-muted-foreground">
-                    Caricamento...
-                  </td>
-                </tr>
-              ) : rapportiniPaginati.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="text-center py-12 text-muted-foreground">
-                    Nessun rapportino trovato
-                  </td>
-                </tr>
-              ) : (
-                rapportiniPaginati.map((rapportino) => (
-                  <tr key={rapportino.id} className="border-b border-border hover:bg-muted/10 transition-colors">
-                    <td className="p-4 text-center">
-                      <input
-                        type="checkbox"
-                        checked={selectedRapportini.has(rapportino.id)}
-                        onChange={(e) => {
-                          const newSelected = new Set(selectedRapportini);
-                          if (e.target.checked) {
-                            newSelected.add(rapportino.id);
-                          } else {
-                            newSelected.delete(rapportino.id);
-                          }
-                          setSelectedRapportini(newSelected);
-                        }}
-                        className="h-5 w-5 rounded border-2 border-border cursor-pointer"
-                      />
-                    </td>
-
-                    <td className="p-4">
-                      <span className="text-sm">{getUserDisplayName(rapportino)}</span>
-                    </td>
-
-                    <td className="p-4">
-                      <span className="text-sm">
-                        {new Date(rapportino.data_rapportino).toLocaleDateString('it-IT', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric'
-                        })}
-                      </span>
-                    </td>
-
-                    <td className="p-4">
-                      <span className="text-sm text-muted-foreground">{rapportino.commesse?.titolo}</span>
-                    </td>
-
-                    <td className="p-4 text-center">
-                      <span className="text-base font-bold text-green-600">
-                        {rapportino.ore_lavorate}h {rapportino.tempo_pausa && rapportino.tempo_pausa > 0 && <span className="text-xs font-normal text-muted-foreground">({rapportino.tempo_pausa}')</span>}
-                      </span>
-                    </td>
-
-                    <td className="p-4 text-center">
-                      {rapportino.allegato_url ? (
-                        <button
-                          onClick={(e) => handleAllegatoClick(rapportino.allegato_url || null, e)}
-                          className="inline-flex items-center justify-center p-1.5 rounded hover:bg-muted transition-colors cursor-pointer"
-                          title="Apri allegato"
-                        >
-                          <FileText className="h-4 w-4 text-primary" />
-                        </button>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </td>
-
-                    <td className="p-4">
-                      <div className="flex items-center justify-center">
-                        <button
-                          onClick={() => {
-                            setSelectedRapportino(rapportino);
-                            setShowInfoModal(true);
-                          }}
-                          className="p-2 rounded-lg border-2 border-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors"
-                          title="Dettagli"
-                        >
-                          <MoreVertical className="h-4 w-4 text-blue-600" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-        </div>
-
-        {/* Pagination */}
-        {rapportiniFiltrati.length > 0 && (
-          <>
-            <hr className="border-border" />
-
-            <div className="flex items-center justify-between px-4 py-4">
-              {/* Left side - Info and Items per page */}
-              <div className="flex items-center gap-6">
-                <span className="text-sm text-muted-foreground">
-                  Mostrando {startIndex + 1}-{Math.min(endIndex, rapportiniFiltrati.length)} di {rapportiniFiltrati.length} elementi
-                </span>
-
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Elementi per pagina:</span>
-                  <Select
-                    value={itemsPerPage.toString()}
-                    onValueChange={(value) => {
-                      setItemsPerPage(Number(value));
-                      setCurrentPage(1);
-                    }}
-                  >
-                    <SelectTrigger className="w-20 h-9 rounded-lg border-2 border-border bg-background">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="10">10</SelectItem>
-                      <SelectItem value="25">25</SelectItem>
-                      <SelectItem value="50">50</SelectItem>
-                      <SelectItem value="100">100</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Right side - Page navigation */}
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                  className="h-9 w-9 p-0"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1)
-                    .filter(page => {
-                      // Mostra sempre prima pagina, ultima pagina, e pagine vicine a quella corrente
-                      if (page === 1 || page === totalPages) return true;
-                      if (page >= currentPage - 1 && page <= currentPage + 1) return true;
-                      return false;
-                    })
-                    .map((page, index, array) => {
-                      // Aggiungi "..." se c'è un gap
-                      const showEllipsis = index > 0 && page - array[index - 1] > 1;
-                      return (
-                        <div key={page} className="flex items-center gap-1">
-                          {showEllipsis && (
-                            <span className="px-2 text-muted-foreground">...</span>
-                          )}
-                          <Button
-                            variant={currentPage === page ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setCurrentPage(page)}
-                            className="h-9 w-9 p-0"
-                          >
-                            {page}
-                          </Button>
-                        </div>
-                      );
-                    })}
-                </div>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
-                  className="h-9 w-9 p-0"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </>
         )}
-        </>
+      </div>
       )}
 
-      {/* Grid View - Timesheet Style */}
-      {viewMode === 'grid' && (
+      {/* List View - For all tabs (with different bulk actions) */}
+      {viewMode === 'list' && (
+        <DataTable<Rapportino>
+          columns={columns}
+          data={rapportiniPaginati}
+          totalItems={rapportiniFiltrati.length}
+          currentPage={currentPage}
+          pageSize={itemsPerPage}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(value: number) => {
+            setItemsPerPage(value);
+            setCurrentPage(1);
+          }}
+          sortField={sortField}
+          sortDirection={sortDirection}
+          onSort={handleSort}
+          selectedRows={selectedRapportini}
+          onSelectionChange={setSelectedRapportini}
+          onRowClick={handleRowClick}
+          bulkActions={
+            activeTab === 'da_approvare'
+              ? [
+                  {
+                    label: 'Approva selezionati',
+                    icon: ClipboardCheck,
+                    variant: 'default',
+                    action: async (selected) => {
+                      // TODO: Implementare approvazione
+                      console.log('Approva:', selected);
+                    },
+                  },
+                  {
+                    label: 'Rifiuta selezionati',
+                    icon: ClipboardX,
+                    variant: 'destructive',
+                    action: async (selected) => {
+                      // TODO: Implementare rifiuto
+                      console.log('Rifiuta:', selected);
+                    },
+                  },
+                ]
+              : activeTab === 'rifiutate'
+              ? [
+                  {
+                    label: 'Approva selezionati',
+                    icon: ClipboardCheck,
+                    variant: 'default',
+                    action: async (selected) => {
+                      // TODO: Implementare approvazione (ripristino)
+                      console.log('Approva:', selected);
+                    },
+                  },
+                  {
+                    label: 'Elimina selezionati',
+                    icon: Trash2,
+                    variant: 'destructive',
+                    action: handleBulkDelete,
+                  },
+                ]
+              : [
+                  {
+                    label: 'Elimina selezionati',
+                    icon: Trash2,
+                    variant: 'destructive',
+                    action: handleBulkDelete,
+                  },
+                ]
+          }
+          bulkActionsPosition="top"
+        />
+      )}
+
+      {/* Grid View - Timesheet Style - Only for 'approvate' tab */}
+      {viewMode === 'grid' && activeTab === 'approvate' && (
         <div className="rounded-xl border-2 border-border bg-card overflow-hidden">
           <div
             className="overflow-x-auto"
@@ -2079,15 +2035,17 @@ export default function RapportiniPage() {
       {showInfoModal && selectedRapportino && (
         <InfoRapportinoModal
           rapportino={selectedRapportino}
-          rapportini={selectedRapportiniForInfo}
+          users={users}
+          commesse={commesse}
           onClose={() => {
             setShowInfoModal(false);
             setSelectedRapportino(null);
             setSelectedRapportiniForInfo([]);
           }}
-          onEdit={() => {
-            setShowInfoModal(false);
-            setShowEditModal(true);
+          onUpdate={() => {
+            loadRapportini();
+            loadRapportiniDaApprovare();
+            loadRapportiniRifiutati();
           }}
           onDelete={() => {
             setShowInfoModal(false);

@@ -13,6 +13,7 @@ export interface Rapportino {
   orario_fine?: string;
   note?: string;
   allegato_url?: string;
+  stato?: 'approvato' | 'da_approvare' | 'rifiutato'; // Stato del rapportino
   created_at: string;
   updated_at: string;
   created_by: string;

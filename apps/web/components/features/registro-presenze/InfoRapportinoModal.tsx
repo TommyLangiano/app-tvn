@@ -1,29 +1,85 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Calendar, User, Briefcase, Clock, FileText, Edit, Trash2 } from 'lucide-react';
-import { ModalWrapper } from '@/components/common/ModalWrapper';
+import { FileText, Edit, Trash2, Save, XCircle, Upload, Trash } from 'lucide-react';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getSignedUrl } from '@/lib/utils/storage';
+import { createClient } from '@/lib/supabase/client';
+import { toast } from 'sonner';
 import type { Rapportino } from '@/types/rapportino';
+import type { User, Commessa } from '@/types';
 
 interface InfoRapportinoModalProps {
   rapportino: Rapportino;
-  rapportini?: Rapportino[];
+  users: User[];
+  commesse: Commessa[];
   onClose: () => void;
-  onEdit?: () => void;
+  onUpdate: () => void;
   onDelete?: () => void;
 }
 
-export function InfoRapportinoModal({ rapportino, rapportini, onClose, onEdit, onDelete }: InfoRapportinoModalProps) {
+export function InfoRapportinoModal({ rapportino, users, commesse, onClose, onUpdate, onDelete }: InfoRapportinoModalProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editedData, setEditedData] = useState<Partial<Rapportino>>(rapportino);
   const [allegatoUrl, setAllegatoUrl] = useState<string | null>(null);
-  const allRapportini = rapportini && rapportini.length > 0 ? rapportini : [rapportino];
-  const isSingleRapportino = allRapportini.length === 1;
+  const [newFile, setNewFile] = useState<File | null>(null);
+  const [deleteCurrentFile, setDeleteCurrentFile] = useState(false);
 
   useEffect(() => {
     if (rapportino.allegato_url) {
       getSignedUrl(rapportino.allegato_url).then(setAllegatoUrl);
     }
   }, [rapportino.allegato_url]);
+
+  // Upload file to Supabase storage
+  const uploadFile = async (file: File, folder: string): Promise<string | null> => {
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      // Get tenant_id from user metadata
+      const tenantId = user.user_metadata?.tenant_id;
+      if (!tenantId) throw new Error('Tenant ID not found');
+
+      const originalFileName = file.name;
+      const filePath = `${tenantId}/${folder}/${rapportino.id}/${originalFileName}`;
+
+      const { data, error } = await supabase.storage
+        .from('app-storage')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true,
+        });
+
+      if (error) throw error;
+      return data.path;
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      toast.error('Errore durante l\'upload del file');
+      return null;
+    }
+  };
+
+  // Delete file from Supabase storage
+  const deleteFile = async (filePath: string): Promise<void> => {
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.storage
+        .from('app-storage')
+        .remove([filePath]);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error deleting file:', error);
+      toast.error('Errore durante l\'eliminazione del file');
+    }
+  };
 
   const getUserDisplayName = (rapp: Rapportino) => {
     return rapp.user_name || rapp.user_email?.split('@')[0] || 'Utente';
@@ -48,173 +104,392 @@ export function InfoRapportinoModal({ rapportino, rapportini, onClose, onEdit, o
     });
   };
 
+  const handleEdit = () => {
+    setIsEditing(true);
+    setEditedData(rapportino);
+  };
+
+  const handleCancelEdit = () => {
+    setEditedData(rapportino);
+    setIsEditing(false);
+    setNewFile(null);
+    setDeleteCurrentFile(false);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setNewFile(e.target.files[0]);
+      setDeleteCurrentFile(false);
+    }
+  };
+
+  const handleDeleteFile = () => {
+    setDeleteCurrentFile(true);
+    setNewFile(null);
+  };
+
+  const handleSave = async () => {
+    try {
+      setIsSaving(true);
+      const supabase = createClient();
+
+      let finalAllegatoUrl = editedData.allegato_url;
+
+      // Gestione file allegato
+      if (deleteCurrentFile && rapportino.allegato_url) {
+        await deleteFile(rapportino.allegato_url);
+        finalAllegatoUrl = null;
+      }
+
+      if (newFile) {
+        if (rapportino.allegato_url) {
+          await deleteFile(rapportino.allegato_url);
+        }
+        const uploadedPath = await uploadFile(newFile, 'rapportini-documents');
+        finalAllegatoUrl = uploadedPath;
+      }
+
+      // Update rapportino
+      const { error } = await supabase
+        .from('rapportini')
+        .update({
+          user_id: editedData.user_id,
+          dipendente_id: editedData.dipendente_id,
+          commessa_id: editedData.commessa_id,
+          data_rapportino: editedData.data_rapportino,
+          ore_lavorate: editedData.ore_lavorate,
+          tempo_pausa: editedData.tempo_pausa || null,
+          orario_inizio: editedData.orario_inizio || null,
+          orario_fine: editedData.orario_fine || null,
+          note: editedData.note || null,
+          allegato_url: finalAllegatoUrl,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', rapportino.id);
+
+      if (error) throw error;
+
+      toast.success('Rapportino aggiornato con successo');
+      setIsEditing(false);
+      setNewFile(null);
+      setDeleteCurrentFile(false);
+      onUpdate();
+      onClose();
+    } catch (error) {
+      console.error('Errore nel salvataggio:', error);
+      toast.error('Errore nel salvataggio del rapportino');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
-    <ModalWrapper onClose={onClose}>
-      <div className="bg-background rounded-xl border-2 border-border max-w-4xl mx-auto max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b-2 border-border">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-blue-50">
-              <FileText className="h-5 w-5 text-blue-600" />
+    <Sheet open={true} onOpenChange={(open) => !open && onClose()}>
+      <SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col">
+        {/* Header fisso */}
+        <div className="px-6 py-4 border-b border-border flex-shrink-0">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <FileText className="h-6 w-6 text-primary flex-shrink-0" />
+              <SheetTitle className="text-2xl font-bold truncate">
+                Dettagli Rapportino
+              </SheetTitle>
             </div>
-            <div>
-              <h2 className="text-xl font-bold">
-                {isSingleRapportino ? 'Rapportino' : `${allRapportini.length} Rapportini`}
-              </h2>
-              <p className="text-sm text-muted-foreground">Dettagli Lavoro</p>
+
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {!isEditing ? (
+                <>
+                  {onDelete && (
+                    <Button
+                      onClick={() => {
+                        onClose();
+                        setTimeout(() => onDelete(), 200);
+                      }}
+                      variant="outline"
+                      size="sm"
+                      className="gap-2 border-2 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Elimina
+                    </Button>
+                  )}
+                  <Button
+                    onClick={handleEdit}
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                  >
+                    <Edit className="h-4 w-4" />
+                    Modifica
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    onClick={handleCancelEdit}
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    disabled={isSaving}
+                  >
+                    <XCircle className="h-4 w-4" />
+                    Annulla
+                  </Button>
+                  <Button
+                    onClick={handleSave}
+                    size="sm"
+                    className="gap-2"
+                    disabled={isSaving}
+                  >
+                    <Save className="h-4 w-4" />
+                    {isSaving ? 'Salvataggio...' : 'Salva'}
+                  </Button>
+                </>
+              )}
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="h-11 w-11 flex items-center justify-center bg-surface border border-border rounded-lg hover:border-primary/20 hover:bg-primary/5 transition-all flex-shrink-0"
-            title="Chiudi"
-          >
-            <X className="h-5 w-5" />
-          </button>
         </div>
 
-        {/* Content */}
-        <div className="p-6">
-          {allRapportini.map((rapp, index) => (
-            <div key={rapp.id} className={index > 0 ? 'mt-8 pt-8 border-t-2 border-border' : ''}>
-              {!isSingleRapportino && (
-                <h3 className="text-lg font-semibold text-primary mb-5">
-                  Rapportino #{index + 1}
-                </h3>
-              )}
+        {/* Contenuto scrollabile */}
+        <div className="flex-1 overflow-y-auto px-6 pt-2 pb-6">
+          <div className="space-y-6">
+            {/* Dati Rapportino */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold border-b pb-2">Dati Rapportino</h3>
 
-              <div className="grid grid-cols-3 gap-x-8 gap-y-5">
-                <div className="flex items-start gap-3">
-                  <User className="h-5 w-5 text-muted-foreground mt-0.5" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-muted-foreground">Operaio</p>
-                    <p className="font-semibold break-words">{getUserDisplayName(rapp)}</p>
-                    {rapp.user_email && (
-                      <p className="text-xs text-muted-foreground mt-0.5">{rapp.user_email}</p>
-                    )}
-                  </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">Operaio</p>
+                  {isEditing ? (
+                    <Select
+                      value={editedData.user_id || editedData.dipendente_id || ''}
+                      onValueChange={(value) => {
+                        const user = users.find(u => u.id === value);
+                        if (user) {
+                          setEditedData({
+                            ...editedData,
+                            user_id: user.id,
+                            dipendente_id: undefined,
+                            user_name: user.user_metadata?.full_name || user.email,
+                            user_email: user.email
+                          });
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="h-11 border-2 border-border bg-white">
+                        <SelectValue placeholder="Seleziona operaio" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {users.map((user) => (
+                          <SelectItem key={user.id} value={user.id}>
+                            {user.user_metadata?.full_name || user.email}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <>
+                      <p className="font-semibold">{getUserDisplayName(rapportino)}</p>
+                      {rapportino.user_email && (
+                        <p className="text-xs text-muted-foreground mt-1">{rapportino.user_email}</p>
+                      )}
+                    </>
+                  )}
                 </div>
 
-                <div className="flex items-start gap-3">
-                  <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-muted-foreground">Data Rapportino</p>
-                    <p className="font-semibold">{formatDate(rapp.data_rapportino)}</p>
-                  </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">Data Rapportino</p>
+                  {isEditing ? (
+                    <Input
+                      type="date"
+                      value={editedData.data_rapportino || ''}
+                      onChange={(e) => setEditedData({...editedData, data_rapportino: e.target.value})}
+                      className="h-11 border-2 border-border bg-white"
+                    />
+                  ) : (
+                    <p className="font-semibold">{formatDate(rapportino.data_rapportino)}</p>
+                  )}
                 </div>
 
-                <div className="flex items-start gap-3">
-                  <Briefcase className="h-5 w-5 text-muted-foreground mt-0.5" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-muted-foreground">Commessa</p>
-                    <p className="font-semibold break-words">{rapp.commesse?.titolo || 'N/A'}</p>
-                  </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">Commessa</p>
+                  {isEditing ? (
+                    <Select
+                      value={editedData.commessa_id || ''}
+                      onValueChange={(value) => setEditedData({...editedData, commessa_id: value})}
+                    >
+                      <SelectTrigger className="h-11 border-2 border-border bg-white">
+                        <SelectValue placeholder="Seleziona commessa" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {commesse.map((commessa) => (
+                          <SelectItem key={commessa.id} value={commessa.id}>
+                            {commessa.nome_commessa}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <p className="font-semibold">{rapportino.commesse?.titolo || 'N/A'}</p>
+                  )}
                 </div>
 
-                <div className="flex items-start gap-3">
-                  <Clock className="h-5 w-5 text-muted-foreground mt-0.5" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-muted-foreground">Ore Lavorate</p>
-                    <p className="text-lg font-bold text-green-600">
-                      {rapp.ore_lavorate}h {rapp.tempo_pausa && rapp.tempo_pausa > 0 && <span className="text-xs font-normal text-muted-foreground">({rapp.tempo_pausa}')</span>}
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">Ore Lavorate</p>
+                  {isEditing ? (
+                    <Input
+                      type="number"
+                      step="0.5"
+                      value={editedData.ore_lavorate || ''}
+                      onChange={(e) => setEditedData({...editedData, ore_lavorate: parseFloat(e.target.value)})}
+                      className="h-11 border-2 border-border bg-white"
+                    />
+                  ) : (
+                    <p className="text-2xl font-bold text-primary">{rapportino.ore_lavorate}h</p>
+                  )}
+                </div>
+
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">Pausa (minuti)</p>
+                  {isEditing ? (
+                    <Input
+                      type="number"
+                      value={editedData.tempo_pausa || ''}
+                      onChange={(e) => setEditedData({...editedData, tempo_pausa: parseInt(e.target.value) || undefined})}
+                      className="h-11 border-2 border-border bg-white"
+                      placeholder="es. 60"
+                    />
+                  ) : (
+                    <p className="font-semibold">{rapportino.tempo_pausa ? `${rapportino.tempo_pausa} min` : '—'}</p>
+                  )}
+                </div>
+
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">Orario</p>
+                  {isEditing ? (
+                    <div className="flex gap-2">
+                      <Input
+                        type="time"
+                        value={editedData.orario_inizio || ''}
+                        onChange={(e) => setEditedData({...editedData, orario_inizio: e.target.value})}
+                        className="h-11 border-2 border-border bg-white"
+                        placeholder="Inizio"
+                      />
+                      <Input
+                        type="time"
+                        value={editedData.orario_fine || ''}
+                        onChange={(e) => setEditedData({...editedData, orario_fine: e.target.value})}
+                        className="h-11 border-2 border-border bg-white"
+                        placeholder="Fine"
+                      />
+                    </div>
+                  ) : (
+                    <p className="font-semibold">
+                      {rapportino.orario_inizio || '—'} - {rapportino.orario_fine || '—'}
                     </p>
-                  </div>
+                  )}
                 </div>
-
-                {rapp.tempo_pausa !== null && rapp.tempo_pausa !== undefined && (
-                  <div className="flex items-start gap-3">
-                    <Clock className="h-5 w-5 text-muted-foreground mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-muted-foreground">Pausa</p>
-                      <p className="font-semibold">{rapp.tempo_pausa} min</p>
-                    </div>
-                  </div>
-                )}
-
-                {(rapp.orario_inizio || rapp.orario_fine) && (
-                  <div className="flex items-start gap-3">
-                    <Clock className="h-5 w-5 text-muted-foreground mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-muted-foreground">Orario</p>
-                      <p className="font-semibold">
-                        {rapp.orario_inizio || '—'} - {rapp.orario_fine || '—'}
-                      </p>
-                    </div>
-                  </div>
-                )}
               </div>
+            </div>
 
-              {rapp.note && (
-                <div className="mt-6 rounded-xl border-2 border-border bg-background p-5">
-                  <p className="text-sm text-muted-foreground mb-2">Note</p>
-                  <p className="text-base whitespace-pre-wrap">{rapp.note}</p>
+            {/* Note */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold border-b pb-2">Note</h3>
+              {isEditing ? (
+                <Textarea
+                  value={editedData.note || ''}
+                  onChange={(e) => setEditedData({...editedData, note: e.target.value})}
+                  className="min-h-[100px] border-2 border-border bg-white"
+                  placeholder="Inserisci note..."
+                />
+              ) : (
+                <div className="p-4 bg-muted/30 rounded-lg">
+                  <p className="text-sm whitespace-pre-wrap">{rapportino.note || 'Nessuna nota'}</p>
                 </div>
               )}
+            </div>
 
-              {rapp.allegato_url && (
-                <div className="mt-5 flex items-start gap-3">
-                  <FileText className="h-5 w-5 text-muted-foreground mt-0.5" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-muted-foreground">Allegato</p>
-                    {allegatoUrl ? (
+            {/* Allegato */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold border-b pb-2">Allegato</h3>
+              {isEditing ? (
+                <div className="space-y-2">
+                  {rapportino.allegato_url && !deleteCurrentFile && !newFile && (
+                    <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                       <a
-                        href={allegatoUrl}
+                        href={allegatoUrl || '#'}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm font-semibold text-primary hover:underline"
+                        className="text-sm text-primary hover:underline flex-1"
                       >
-                        Visualizza Documento →
+                        File corrente
                       </a>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">Caricamento...</span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleDeleteFile}
+                        className="gap-2 text-red-600 hover:text-red-700"
+                      >
+                        <Trash className="h-4 w-4" />
+                        Rimuovi
+                      </Button>
+                    </div>
+                  )}
+                  <div>
+                    <Input
+                      type="file"
+                      onChange={handleFileChange}
+                      className="h-11 border-2 border-border bg-white"
+                    />
+                    {newFile && (
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Nuovo file: {newFile.name}
+                      </p>
                     )}
                   </div>
                 </div>
+              ) : (
+                <div>
+                  {allegatoUrl ? (
+                    <a
+                      href={allegatoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline"
+                    >
+                      <FileText className="h-4 w-4" />
+                      Visualizza Documento →
+                    </a>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Nessun allegato</p>
+                  )}
+                </div>
               )}
             </div>
-          ))}
-        </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between p-6 border-t-2 border-border">
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            {rapportino.created_at && (
-              <div className="flex items-center gap-1.5">
-                <Clock className="h-3 w-3" />
-                <span>Aggiunto il {formatDateTime(rapportino.created_at)}</span>
-              </div>
-            )}
-            {rapportino.updated_at && rapportino.updated_at !== rapportino.created_at && (
-              <div className="flex items-center gap-1.5">
-                <Clock className="h-3 w-3" />
-                <span>Modificato il {formatDateTime(rapportino.updated_at)}</span>
+            {/* Metadata */}
+            {!isEditing && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold border-b pb-2">Informazioni Sistema</h3>
+                <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
+                  {rapportino.created_at && (
+                    <div>
+                      <p className="mb-1">Creato il</p>
+                      <p className="font-medium text-foreground">{formatDateTime(rapportino.created_at)}</p>
+                    </div>
+                  )}
+                  {rapportino.updated_at && rapportino.updated_at !== rapportino.created_at && (
+                    <div>
+                      <p className="mb-1">Ultima modifica</p>
+                      <p className="font-medium text-foreground">{formatDateTime(rapportino.updated_at)}</p>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
-
-          <div className="flex gap-2">
-            {isSingleRapportino && onEdit && (
-              <button
-                onClick={onEdit}
-                className="h-10 px-4 flex items-center gap-2 bg-orange-100 border border-orange-300 rounded-lg hover:border-orange-400 hover:bg-orange-200 transition-all text-orange-700 font-medium"
-              >
-                <Edit className="h-4 w-4" />
-                Modifica
-              </button>
-            )}
-            {isSingleRapportino && onDelete && (
-              <button
-                onClick={onDelete}
-                className="h-10 px-4 flex items-center gap-2 bg-red-100 border border-red-300 rounded-lg hover:border-red-400 hover:bg-red-200 transition-all text-red-700 font-medium"
-              >
-                <Trash2 className="h-4 w-4" />
-                Elimina
-              </button>
-            )}
-          </div>
         </div>
-      </div>
-    </ModalWrapper>
+      </SheetContent>
+    </Sheet>
   );
 }

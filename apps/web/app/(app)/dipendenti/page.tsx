@@ -1,111 +1,163 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
-import { Users, Plus, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Users, Plus, Download, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
+import { DateRange } from 'react-day-picker';
+import { DataTable, DataTableColumn } from '@/components/ui/data-table';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
-type Dipendente = {
+// ===== TYPES =====
+
+interface Dipendente {
   id: string;
-  slug?: string;
   nome: string;
   cognome: string;
-  email?: string;
-  telefono?: string;
-  qualifica?: string;
-  mansione?: string;
-  stato: 'attivo' | 'sospeso' | 'licenziato' | 'pensionato';
-  data_assunzione?: string;
-  user_id?: string;
-  avatar_url?: string;
-  role_name?: string;
-};
+  email: string | null;
+  telefono: string | null;
+  mansione: string | null;
+  qualifica: string | null;
+  stato: string;
+  data_assunzione: string | null;
+  user_id: string | null;
+  role_name: string | null;
+  avatar_url: string | null;
+  slug: string | null;
+}
+
+type SortField = 'nome' | 'mansione' | 'qualifica' | 'stato' | 'data_assunzione' | 'email';
+type SortDirection = 'asc' | 'desc';
+
+// ===== COMPONENT =====
 
 export default function DipendentiPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
+
+  // Data
   const [dipendenti, setDipendenti] = useState<Dipendente[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [navbarActionsContainer, setNavbarActionsContainer] = useState<HTMLElement | null>(null);
+
+  // Search & Filters
   const [searchTerm, setSearchTerm] = useState('');
+  const [statoFilter, setStatoFilter] = useState('tutti');
+  const [qualificaFilter, setQualificaFilter] = useState('tutti');
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
-  // Filter states
-  const [statoFilter, setStatoFilter] = useState<string>('all');
-  const [qualificaFilter, setQualificaFilter] = useState<string>('all');
-  const [mansioneFilter, setMansioneFilter] = useState<string>('all');
+  // Advanced Filters
+  const [mansioneFilter, setMansioneFilter] = useState('tutti');
+  const [accountFilter, setAccountFilter] = useState('tutti');
+  const [ruoloFilter, setRuoloFilter] = useState('tutti');
+  const [dateRangeAssunzione, setDateRangeAssunzione] = useState<DateRange | undefined>();
 
-  // Pagination states
+  // Sorting
+  const [sortField, setSortField] = useState<SortField>('nome');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+
+  // Selection
+
+  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(12);
+  const [itemsPerPage, setItemsPerPage] = useState(25);
+
+  // ===== LOAD DATA =====
 
   useEffect(() => {
     loadDipendenti();
+    setNavbarActionsContainer(document.getElementById('navbar-actions'));
   }, []);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, statoFilter, qualificaFilter, mansioneFilter]);
 
   const loadDipendenti = async () => {
     try {
-      setLoading(true);
       const supabase = createClient();
-
-      // Get current user's tenant
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data: userTenants } = await supabase
+      const { data: tenants } = await supabase
         .from('user_tenants')
         .select('tenant_id')
         .eq('user_id', user.id)
-        .single();
+        .order('created_at', { ascending: false })
+        .limit(1);
 
+      const userTenants = tenants && tenants.length > 0 ? tenants[0] : null;
       if (!userTenants) return;
 
-      // Load dipendenti with role information
-      const { data: dipendentiData, error } = await supabase
+      const { data, error } = await supabase
         .from('dipendenti')
-        .select('id, slug, nome, cognome, email, telefono, qualifica, mansione, stato, data_assunzione, user_id, avatar_url')
+        .select(`
+          id,
+          nome,
+          cognome,
+          email,
+          telefono,
+          mansione,
+          qualifica,
+          stato,
+          data_assunzione,
+          user_id,
+          avatar_url,
+          slug
+        `)
         .eq('tenant_id', userTenants.tenant_id)
-        .order('cognome', { ascending: true });
+        .order('cognome, nome');
 
       if (error) throw error;
 
-      // For each dipendente with user_id, get the role name
-      const dipendentiWithRoles = await Promise.all(
-        (dipendentiData || []).map(async (dip) => {
-          if (!dip.user_id) return { ...dip, role_name: undefined };
+      // Load role names separately for dipendenti with user_id
+      const dipendentiWithUsers = (data || []).filter(d => d.user_id);
+      const userIds = dipendentiWithUsers.map(d => d.user_id);
 
-          // Get user_tenant with custom_role_id
-          const { data: userTenant } = await supabase
-            .from('user_tenants')
-            .select('custom_role_id')
-            .eq('user_id', dip.user_id)
-            .eq('tenant_id', userTenants.tenant_id)
-            .single();
+      let rolesMap: Record<string, string> = {};
 
-          if (!userTenant?.custom_role_id) return { ...dip, role_name: undefined };
+      if (userIds.length > 0) {
+        const { data: usersData } = await supabase
+          .from('users')
+          .select('id, custom_role:custom_roles(name)')
+          .in('id', userIds);
 
-          // Get role name
-          const { data: role } = await supabase
-            .from('custom_roles')
-            .select('name')
-            .eq('id', userTenant.custom_role_id)
-            .single();
+        if (usersData) {
+          rolesMap = usersData.reduce((acc: Record<string, string>, user: any) => {
+            acc[user.id] = user.custom_role?.name || null;
+            return acc;
+          }, {});
+        }
+      }
 
-          return { ...dip, role_name: role?.name };
-        })
-      );
+      const formattedData = (data || []).map((d: any) => ({
+        ...d,
+        role_name: d.user_id ? rolesMap[d.user_id] || null : null,
+      }));
 
-      setDipendenti(dipendentiWithRoles);
-    } catch {
+      setDipendenti(formattedData);
+    } catch (error) {
+      console.error('Error loading dipendenti:', error);
       toast.error('Errore nel caricamento dei dipendenti');
     } finally {
       setLoading(false);
     }
+  };
+
+  // ===== HELPERS =====
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const months = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+    const day = date.getDate();
+    const month = months[date.getMonth()];
+    const year = date.getFullYear();
+    return `${day} ${month} ${year}`;
   };
 
   const getDisplayName = (dipendente: Dipendente) => {
@@ -113,313 +165,471 @@ export default function DipendentiPage() {
   };
 
   const getInitials = (dipendente: Dipendente) => {
-    const nome = dipendente.nome?.charAt(0).toUpperCase() || '';
-    const cognome = dipendente.cognome?.charAt(0).toUpperCase() || '';
-    return `${nome}${cognome}`;
+    const nome = dipendente.nome?.[0] || '';
+    const cognome = dipendente.cognome?.[0] || '';
+    return (cognome + nome).toUpperCase();
   };
 
-  const getAvatarUrl = (avatarPath: string | undefined) => {
-    if (!avatarPath) return null;
+  const getAvatarUrl = (avatarUrl: string | null) => {
+    if (!avatarUrl) return null;
+    if (avatarUrl.startsWith('http')) return avatarUrl;
     const supabase = createClient();
-    const { data } = supabase.storage.from('app-storage').getPublicUrl(avatarPath);
+    const { data } = supabase.storage.from('avatars').getPublicUrl(avatarUrl);
     return data.publicUrl;
   };
 
-  const getStatoBadgeColor = (stato: string) => {
-    switch (stato) {
-      case 'attivo': return 'bg-green-100 text-green-700 border-green-200';
-      case 'sospeso': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-      case 'licenziato': return 'bg-red-100 text-red-700 border-red-200';
-      case 'pensionato': return 'bg-gray-100 text-gray-700 border-gray-200';
-      default: return 'bg-gray-100 text-gray-700 border-gray-200';
-    }
-  };
-
   // Get unique values for filters
-  const uniqueQualifiche = Array.from(new Set(dipendenti.map(d => d.qualifica).filter((q): q is string => !!q))).sort();
-  const uniqueMansioni = Array.from(new Set(dipendenti.map(d => d.mansione).filter((m): m is string => !!m))).sort();
+  const uniqueMansioni = Array.from(new Set(dipendenti.map(d => d.mansione).filter(Boolean)));
+  const uniqueQualifiche = Array.from(new Set(dipendenti.map(d => d.qualifica).filter(Boolean)));
+  const uniqueRuoli = Array.from(new Set(dipendenti.map(d => d.role_name).filter(Boolean)));
 
-  // Filter dipendenti based on search and filters
-  const dipendentiFiltrati = dipendenti.filter(dipendente => {
+  // ===== FILTERING & SORTING =====
+
+  const filteredAndSortedDipendenti = useMemo(() => {
+    let result = [...dipendenti];
+
     // Search filter
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
-      const displayName = getDisplayName(dipendente).toLowerCase();
-      const matchesSearch = (
-        displayName.includes(searchLower) ||
-        dipendente.qualifica?.toLowerCase().includes(searchLower) ||
-        dipendente.mansione?.toLowerCase().includes(searchLower) ||
-        dipendente.email?.toLowerCase().includes(searchLower) ||
-        dipendente.telefono?.includes(searchTerm)
+      result = result.filter(dipendente => {
+        const displayName = getDisplayName(dipendente).toLowerCase();
+        return (
+          displayName.includes(searchLower) ||
+          dipendente.qualifica?.toLowerCase().includes(searchLower) ||
+          dipendente.mansione?.toLowerCase().includes(searchLower) ||
+          dipendente.email?.toLowerCase().includes(searchLower) ||
+          dipendente.telefono?.includes(searchTerm)
+        );
+      });
+    }
+
+    // Basic filters
+    if (statoFilter !== 'tutti') {
+      result = result.filter(d => d.stato === statoFilter);
+    }
+
+    if (qualificaFilter !== 'tutti') {
+      result = result.filter(d => d.qualifica === qualificaFilter);
+    }
+
+    // Advanced filters
+    if (mansioneFilter !== 'tutti') {
+      result = result.filter(d => d.mansione === mansioneFilter);
+    }
+
+    if (accountFilter !== 'tutti') {
+      if (accountFilter === 'con_account') {
+        result = result.filter(d => d.user_id !== null);
+      } else {
+        result = result.filter(d => d.user_id === null);
+      }
+    }
+
+    if (ruoloFilter !== 'tutti') {
+      result = result.filter(d => d.role_name === ruoloFilter);
+    }
+
+    if (dateRangeAssunzione?.from) {
+      result = result.filter(d =>
+        d.data_assunzione && new Date(d.data_assunzione) >= dateRangeAssunzione.from!
       );
-      if (!matchesSearch) return false;
     }
 
-    // Stato filter
-    if (statoFilter !== 'all' && dipendente.stato !== statoFilter) {
-      return false;
+    if (dateRangeAssunzione?.to) {
+      result = result.filter(d =>
+        d.data_assunzione && new Date(d.data_assunzione) <= dateRangeAssunzione.to!
+      );
     }
 
-    // Qualifica filter
-    if (qualificaFilter !== 'all' && dipendente.qualifica !== qualificaFilter) {
-      return false;
-    }
+    // Sorting
+    result.sort((a, b) => {
+      let aVal: any;
+      let bVal: any;
 
-    // Mansione filter
-    if (mansioneFilter !== 'all' && dipendente.mansione !== mansioneFilter) {
-      return false;
-    }
+      switch (sortField) {
+        case 'nome':
+          aVal = getDisplayName(a).toLowerCase();
+          bVal = getDisplayName(b).toLowerCase();
+          break;
+        case 'mansione':
+          aVal = a.mansione?.toLowerCase() || '';
+          bVal = b.mansione?.toLowerCase() || '';
+          break;
+        case 'qualifica':
+          aVal = a.qualifica?.toLowerCase() || '';
+          bVal = b.qualifica?.toLowerCase() || '';
+          break;
+        case 'stato':
+          aVal = a.stato?.toLowerCase() || '';
+          bVal = b.stato?.toLowerCase() || '';
+          break;
+        case 'data_assunzione':
+          aVal = a.data_assunzione ? new Date(a.data_assunzione).getTime() : 0;
+          bVal = b.data_assunzione ? new Date(b.data_assunzione).getTime() : 0;
+          break;
+        case 'email':
+          aVal = a.email?.toLowerCase() || '';
+          bVal = b.email?.toLowerCase() || '';
+          break;
+        default:
+          return 0;
+      }
 
-    return true;
-  });
+      if (sortDirection === 'asc') {
+        return aVal > bVal ? 1 : -1;
+      } else {
+        return aVal < bVal ? 1 : -1;
+      }
+    });
+
+    return result;
+  }, [
+    dipendenti,
+    searchTerm,
+    statoFilter,
+    qualificaFilter,
+    mansioneFilter,
+    accountFilter,
+    ruoloFilter,
+    dateRangeAssunzione,
+    sortField,
+    sortDirection,
+  ]);
 
   // Pagination
-  const totalItems = dipendentiFiltrati.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const dipendentiPaginati = dipendentiFiltrati.slice(startIndex, endIndex);
+  const paginatedDipendenti = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredAndSortedDipendenti.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredAndSortedDipendenti, currentPage, itemsPerPage]);
 
-  // Group paginated dipendenti alphabetically
-  const dipendentiRaggruppati = dipendentiPaginati.reduce((acc, dipendente) => {
-    let firstLetter = '#';
-    if (dipendente.cognome) {
-      firstLetter = dipendente.cognome.charAt(0).toUpperCase();
+  // ===== HANDLERS =====
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field as SortField);
+      setSortDirection('asc');
     }
-    if (!acc[firstLetter]) {
-      acc[firstLetter] = [];
+  };
+
+
+  const handleExport = (format: 'csv' | 'excel' | 'pdf') => {
+    if (format === 'csv') {
+      const headers = ['Nome', 'Cognome', 'Email', 'Telefono', 'Mansione', 'Qualifica', 'Stato', 'Data Assunzione', 'Account', 'Ruolo'];
+      const rows = filteredAndSortedDipendenti.map(d => [
+        d.nome,
+        d.cognome,
+        d.email || '',
+        d.telefono || '',
+        d.mansione || '',
+        d.qualifica || '',
+        d.stato,
+        d.data_assunzione ? formatDate(d.data_assunzione) : '',
+        d.user_id ? 'Sì' : 'No',
+        d.role_name || '',
+      ]);
+
+      const csv = [
+        headers.join(','),
+        ...rows.map(row => row.map(val => `"${val}"`).join(',')),
+      ].join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `dipendenti_${new Date().toISOString().split('T')[0]}.csv`;
+      link.click();
+
+      toast.success('Export CSV completato');
+    } else {
+      toast.info(`Export ${format.toUpperCase()} in sviluppo`);
     }
-    acc[firstLetter].push(dipendente);
-    return acc;
-  }, {} as Record<string, Dipendente[]>);
+  };
+
+  const resetAdvancedFilters = () => {
+    setMansioneFilter('tutti');
+    setAccountFilter('tutti');
+    setRuoloFilter('tutti');
+    setDateRangeAssunzione(undefined);
+  };
+
+  const hasActiveAdvancedFilters =
+    mansioneFilter !== 'tutti' ||
+    accountFilter !== 'tutti' ||
+    ruoloFilter !== 'tutti' ||
+    dateRangeAssunzione?.from !== undefined ||
+    dateRangeAssunzione?.to !== undefined;
+
+  // ===== DATATABLE COLUMNS =====
+
+  const columns: DataTableColumn<Dipendente>[] = [
+    {
+      key: 'avatar',
+      label: '',
+      sortable: false,
+      width: 'w-12',
+      className: 'px-2',
+      render: (dipendente) => (
+        <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-semibold text-sm overflow-hidden">
+          {getAvatarUrl(dipendente.avatar_url) ? (
+            <img
+              src={getAvatarUrl(dipendente.avatar_url)!}
+              alt={getDisplayName(dipendente)}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            getInitials(dipendente)
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'nome',
+      label: 'Nome',
+      sortable: true,
+      render: (dipendente) => (
+        <div className="text-sm text-foreground font-medium">
+          {getDisplayName(dipendente)}
+        </div>
+      ),
+    },
+    {
+      key: 'mansione',
+      label: 'Mansione',
+      sortable: true,
+      render: (dipendente) => (
+        <div className="text-sm text-foreground">
+          {dipendente.mansione || '-'}
+        </div>
+      ),
+    },
+    {
+      key: 'stato',
+      label: 'Stato',
+      sortable: true,
+      className: 'pl-4 pr-2',
+      render: (dipendente) => (
+        <span
+          className={`inline-flex items-center px-3 py-1 rounded-sm text-xs font-medium ${
+            dipendente.stato === 'attivo'
+              ? 'bg-green-100 text-green-700'
+              : dipendente.stato === 'licenziato'
+              ? 'bg-red-100 text-red-700'
+              : 'bg-gray-100 text-gray-700'
+          }`}
+        >
+          {dipendente.stato === 'attivo' ? 'Attivo' : dipendente.stato === 'licenziato' ? 'Licenziato' : dipendente.stato}
+        </span>
+      ),
+    },
+    {
+      key: 'data_assunzione',
+      label: 'Data Assunzione',
+      sortable: true,
+      render: (dipendente) => (
+        <div className="text-sm text-foreground">
+          {dipendente.data_assunzione ? formatDate(dipendente.data_assunzione) : '-'}
+        </div>
+      ),
+    },
+    {
+      key: 'email',
+      label: 'Email',
+      sortable: true,
+      render: (dipendente) => (
+        <div className="text-sm text-foreground">
+          {dipendente.email || '-'}
+        </div>
+      ),
+    },
+    {
+      key: 'account',
+      label: 'Account',
+      sortable: false,
+      render: (dipendente) => (
+        <div className="text-sm text-foreground">
+          {dipendente.user_id ? (
+            <span className="inline-flex items-center px-2 py-1 rounded-sm text-xs font-medium bg-blue-100 text-blue-700">
+              Attivo
+            </span>
+          ) : (
+            '-'
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'role_name',
+      label: 'Ruolo',
+      sortable: false,
+      render: (dipendente) => (
+        <div className="text-sm text-foreground">
+          {dipendente.role_name || '-'}
+        </div>
+      ),
+    },
+    {
+      key: 'arrow',
+      label: '',
+      sortable: false,
+      width: 'w-12',
+      render: () => (
+        <div className="flex items-center justify-end">
+          <ChevronRight className="h-5 w-5 text-muted-foreground" />
+        </div>
+      ),
+    },
+  ];
+
+  // ===== RENDER =====
 
   return (
     <div className="space-y-6">
-      {/* Search Bar, Filters and New Button */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-        <div className="relative flex-1 w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Cerca dipendente per nome, qualifica, mansione, email o telefono..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 h-11 border-2 border-border rounded-lg bg-card w-full"
-          />
-        </div>
+      {/* Navbar Portal Button */}
+      {navbarActionsContainer &&
+        createPortal(
+          <Button
+            onClick={() => router.push('/dipendenti/nuovo')}
+            className="gap-2 h-10 rounded-sm"
+          >
+            <Plus className="h-4 w-4" />
+            Nuovo Dipendente
+          </Button>,
+          navbarActionsContainer
+        )}
 
-        {/* Filtro Stato */}
-        <Select value={statoFilter} onValueChange={setStatoFilter}>
-          <SelectTrigger className="w-full sm:w-[160px] h-11 border-2 border-border rounded-lg bg-card">
-            <SelectValue placeholder="Stato" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tutti gli Stati</SelectItem>
-            <SelectItem value="attivo">Attivo</SelectItem>
-            <SelectItem value="sospeso">Sospeso</SelectItem>
-            <SelectItem value="licenziato">Licenziato</SelectItem>
-            <SelectItem value="pensionato">Pensionato</SelectItem>
-          </SelectContent>
-        </Select>
+      {/* DataTable */}
+      <DataTable<Dipendente>
+        data={paginatedDipendenti}
+        columns={columns}
+        keyField="id"
+        loading={loading}
+        emptyIcon={Users}
+        emptyTitle="Nessun dipendente trovato"
+        emptyDescription={searchTerm ? 'Prova con una ricerca diversa' : 'Inizia aggiungendo un nuovo dipendente'}
+        // Search
+        searchable
+        searchPlaceholder="Cerca dipendenti..."
+        searchValue={searchTerm}
+        onSearchChange={setSearchTerm}
+        // Toolbar Filters
+        toolbarFilters={
+          <>
+            <Select value={statoFilter} onValueChange={setStatoFilter}>
+              <SelectTrigger className="h-11 w-full lg:w-[180px] border-2 border-border rounded-sm bg-white">
+                <SelectValue placeholder="Stato" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="tutti">Tutti gli stati</SelectItem>
+                <SelectItem value="attivo">Attivo</SelectItem>
+                <SelectItem value="licenziato">Licenziato</SelectItem>
+              </SelectContent>
+            </Select>
 
-        {/* Filtro Qualifica */}
-        <Select value={qualificaFilter} onValueChange={setQualificaFilter}>
-          <SelectTrigger className="w-full sm:w-[160px] h-11 border-2 border-border rounded-lg bg-card">
-            <SelectValue placeholder="Qualifica" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tutte le Qualifiche</SelectItem>
-            {uniqueQualifiche.map(qualifica => (
-              <SelectItem key={qualifica} value={qualifica}>{qualifica}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Filtro Mansione */}
-        <Select value={mansioneFilter} onValueChange={setMansioneFilter}>
-          <SelectTrigger className="w-full sm:w-[160px] h-11 border-2 border-border rounded-lg bg-card">
-            <SelectValue placeholder="Mansione" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tutte le Mansioni</SelectItem>
-            {uniqueMansioni.map(mansione => (
-              <SelectItem key={mansione} value={mansione}>{mansione}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Button
-          onClick={() => router.push('/dipendenti/nuovo')}
-          className="bg-emerald-600 hover:bg-emerald-700 gap-2 h-11 whitespace-nowrap"
-        >
-          <Plus className="h-4 w-4" />
-          <span className="hidden sm:inline">Nuovo Dipendente</span>
-          <span className="sm:hidden">Nuovo</span>
-        </Button>
-      </div>
-
-      {/* Dipendenti List */}
-      {loading ? (
-        <div className="text-center py-12 text-muted-foreground">Caricamento...</div>
-      ) : Object.keys(dipendentiRaggruppati).length === 0 ? (
-        <div className="text-center py-12 rounded-lg border border-dashed border-border bg-card/50">
-          <p className="text-muted-foreground mb-4">
-            {searchTerm ? 'Nessun dipendente trovato' : 'Nessun dipendente inserito'}
-          </p>
-          {!searchTerm && (
-            <Button
-              onClick={() => router.push('/dipendenti/nuovo')}
-              className="bg-emerald-600 hover:bg-emerald-700"
-            >
-              <Plus className="h-5 w-5 mr-2" />
-              Aggiungi il primo dipendente
-            </Button>
-          )}
-        </div>
-      ) : (
-        <>
-          {/* Grid Layout con Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {dipendentiPaginati.map((dipendente) => (
-              <div
-                key={dipendente.id}
-                onClick={() => router.push(`/dipendenti/${dipendente.slug || dipendente.id}`)}
-                className="rounded-xl border-2 border-border bg-card p-6 transition-all hover:border-emerald-500 hover:shadow-lg cursor-pointer group"
-              >
-                {/* Avatar */}
-                <div className="flex justify-center mb-4">
-                  <div className="w-28 h-28 rounded-full bg-emerald-100 text-emerald-700 overflow-hidden flex items-center justify-center font-bold text-3xl transition-colors">
-                    {getAvatarUrl(dipendente.avatar_url) ? (
-                      <img
-                        src={getAvatarUrl(dipendente.avatar_url)!}
-                        alt={getDisplayName(dipendente)}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <span className="group-hover:text-white transition-colors">{getInitials(dipendente)}</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Nome Cognome */}
-                <h3 className="text-center font-bold text-lg mb-1 group-hover:text-emerald-600 transition-colors">
-                  {getDisplayName(dipendente)}
-                </h3>
-
-                {/* Mansione */}
-                {dipendente.mansione && (
-                  <p className="text-center text-sm text-muted-foreground mb-3">
-                    {dipendente.mansione}
-                  </p>
-                )}
-
-                {/* Badges */}
-                <div className="flex flex-col gap-2 items-center mt-4">
-                  {/* Prima riga: Stato e Account */}
-                  <div className="flex items-center gap-2">
-                    <span className={`text-xs px-3 py-1 rounded-full border ${getStatoBadgeColor(dipendente.stato)}`}>
-                      {dipendente.stato.charAt(0).toUpperCase() + dipendente.stato.slice(1)}
-                    </span>
-                    {dipendente.user_id && (
-                      <span className="text-xs px-3 py-1 rounded-full border bg-blue-100 text-blue-700 border-blue-200">
-                        Account
-                      </span>
-                    )}
-                  </div>
-                  {/* Seconda riga: Ruolo (se presente) */}
-                  {dipendente.role_name && (
-                    <span className="text-xs px-3 py-1 rounded-full border bg-purple-100 text-purple-700 border-purple-200 font-medium">
-                      {dipendente.role_name}
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Pagination */}
-          {totalItems > 0 && (
-            <div className="flex items-center justify-between px-4 py-4 border-t border-border">
-              {/* Left side - Info and Items per page */}
-              <div className="flex items-center gap-6">
-                <span className="text-sm text-muted-foreground">
-                  Mostrando {startIndex + 1}-{Math.min(endIndex, totalItems)} di {totalItems} dipendenti
-                </span>
-
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Elementi per pagina:</span>
-                  <Select
-                    value={itemsPerPage.toString()}
-                    onValueChange={(value) => {
-                      setItemsPerPage(Number(value));
-                      setCurrentPage(1);
-                    }}
-                  >
-                    <SelectTrigger className="w-20 h-9 rounded-lg border-2 border-border bg-background">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="12">12</SelectItem>
-                      <SelectItem value="20">20</SelectItem>
-                      <SelectItem value="32">32</SelectItem>
-                      <SelectItem value="40">40</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Right side - Page navigation */}
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                  className="h-9 w-9 p-0"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1)
-                    .filter(page => {
-                      if (page === 1 || page === totalPages) return true;
-                      if (page >= currentPage - 1 && page <= currentPage + 1) return true;
-                      return false;
-                    })
-                    .map((page, index, array) => {
-                      const showEllipsis = index > 0 && page - array[index - 1] > 1;
-                      return (
-                        <div key={page} className="flex items-center gap-1">
-                          {showEllipsis && (
-                            <span className="px-2 text-muted-foreground">...</span>
-                          )}
-                          <Button
-                            variant={currentPage === page ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setCurrentPage(page)}
-                            className="h-9 w-9 p-0"
-                          >
-                            {page}
-                          </Button>
-                        </div>
-                      );
-                    })}
-                </div>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
-                  className="h-9 w-9 p-0"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
+            <Select value={qualificaFilter} onValueChange={setQualificaFilter}>
+              <SelectTrigger className="h-11 w-full lg:w-[180px] border-2 border-border rounded-sm bg-white">
+                <SelectValue placeholder="Qualifica" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="tutti">Tutte le qualifiche</SelectItem>
+                {uniqueQualifiche.map(q => (
+                  <SelectItem key={q} value={q!}>{q}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </>
+        }
+        // Advanced Filters
+        advancedFilters={
+          <div className="p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold">Filtri Avanzati</h3>
+              <Button variant="ghost" size="sm" onClick={resetAdvancedFilters}>
+                Reset
+              </Button>
             </div>
-          )}
-        </>
-      )}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              <Select value={mansioneFilter} onValueChange={setMansioneFilter}>
+                <SelectTrigger className="h-11 border-2 border-border rounded-sm bg-white">
+                  <SelectValue placeholder="Mansione" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="tutti">Tutte le mansioni</SelectItem>
+                  {uniqueMansioni.map(m => (
+                    <SelectItem key={m} value={m!}>{m}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={accountFilter} onValueChange={setAccountFilter}>
+                <SelectTrigger className="h-11 border-2 border-border rounded-sm bg-white">
+                  <SelectValue placeholder="Account" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="tutti">Tutti</SelectItem>
+                  <SelectItem value="con_account">Con Account</SelectItem>
+                  <SelectItem value="senza_account">Senza Account</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={ruoloFilter} onValueChange={setRuoloFilter}>
+                <SelectTrigger className="h-11 border-2 border-border rounded-sm bg-white">
+                  <SelectValue placeholder="Ruolo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="tutti">Tutti i ruoli</SelectItem>
+                  {uniqueRuoli.map(r => (
+                    <SelectItem key={r} value={r!}>{r}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <DateRangePicker
+                date={dateRangeAssunzione}
+                onDateChange={setDateRangeAssunzione}
+                placeholder="Data Assunzione"
+                className="h-11 border-2 border-border rounded-sm bg-white"
+              />
+            </div>
+          </div>
+        }
+        showAdvancedFilters={showAdvancedFilters}
+        onToggleAdvancedFilters={() => setShowAdvancedFilters(!showAdvancedFilters)}
+        hasActiveAdvancedFilters={hasActiveAdvancedFilters}
+        // Sorting
+        sortField={sortField}
+        sortDirection={sortDirection}
+        onSort={handleSort}
+        // Export
+        exportButton={
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="h-11 gap-2 border-2 border-border rounded-sm bg-white">
+                <Download className="h-4 w-4" />
+                <span className="hidden lg:inline">Esporta</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleExport('csv')}>Esporta CSV</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('excel')}>Esporta Excel</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('pdf')}>Esporta PDF</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        }
+        // Pagination
+        currentPage={currentPage}
+        pageSize={itemsPerPage}
+        totalItems={filteredAndSortedDipendenti.length}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={(size) => {
+          setItemsPerPage(size);
+          setCurrentPage(1);
+        }}
+        pageSizeOptions={[10, 25, 50, 100]}
+        // Row Click
+        onRowClick={(dipendente) => router.push(`/dipendenti/${dipendente.slug || dipendente.id}`)}
+      />
     </div>
   );
 }

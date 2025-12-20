@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { Receipt, Plus, Search, ArrowUpCircle, ArrowDownCircle, FileText, X, Edit, Save, XCircle, ChevronsUpDown, Check, CloudUpload, Trash2, Filter, ArrowUpDown, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react';
+import { DataTable, DataTableColumn } from '@/components/ui/data-table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -14,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { DateRange } from 'react-day-picker';
+import { TabsFilter, TabItem } from '@/components/ui/tabs-filter';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -324,11 +326,21 @@ export default function FatturePage() {
   };
 
   // Funzione per gestire ordinamento
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
+  const handleSort = (field: string) => {
+    // Map DataTable column keys to SortField
+    const sortFieldMap: Record<string, SortField> = {
+      'descrizione': 'cliente_fornitore',
+      'data_fattura': 'data_fattura',
+      'scadenza_pagamento': 'scadenza_pagamento',
+      'importo_totale': 'importo_totale',
+    };
+
+    const mappedField = sortFieldMap[field] || field as SortField;
+
+    if (sortField === mappedField) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
-      setSortField(field);
+      setSortField(mappedField);
       setSortDirection('asc');
     }
   };
@@ -482,6 +494,207 @@ export default function FatturePage() {
     emesse: fattureAttive.length,
     ricevute: fatturePassive.length,
   };
+
+  // Helper per aggiornare lo stato di una fattura
+  const handleUpdateStatoPagamento = async (
+    fattura: FatturaAttiva | FatturaPassiva,
+    value: 'Pagato' | 'Non Pagato' | 'Da Incassare'
+  ) => {
+    try {
+      const supabase = createClient();
+      const isEmessa = 'cliente' in fattura;
+      const tableName = isEmessa ? 'fatture_attive' : 'fatture_passive';
+
+      // Aggiorna ottimisticamente la UI
+      const updatedFatture = isEmessa ? [...fattureAttive] : [...fatturePassive];
+      const index = updatedFatture.findIndex(f => f.id === fattura.id);
+      if (index !== -1) {
+        updatedFatture[index] = {
+          ...updatedFatture[index],
+          stato_pagamento: value,
+          data_pagamento: value === 'Pagato' ? new Date().toISOString().split('T')[0] : null
+        };
+        if (isEmessa) {
+          setFattureAttive(updatedFatture as FatturaAttiva[]);
+        } else {
+          setFatturePassive(updatedFatture as FatturaPassiva[]);
+        }
+      }
+
+      const { error } = await supabase
+        .from(tableName)
+        .update({
+          stato_pagamento: value,
+          data_pagamento: value === 'Pagato' ? new Date().toISOString().split('T')[0] : null
+        })
+        .eq('id', fattura.id);
+
+      if (error) throw error;
+
+      toast.success('Stato aggiornato');
+    } catch (error) {
+      toast.error('Errore nell\'aggiornamento');
+      await loadFatture();
+    }
+  };
+
+  // Configurazione colonne per DataTable
+  const columns: DataTableColumn<FatturaAttiva | FatturaPassiva>[] = [
+    {
+      key: 'descrizione',
+      label: 'Descrizione',
+      sortable: true,
+      width: 'w-auto',
+      render: (fattura) => {
+        const isEmessa = 'cliente' in fattura;
+        const nomeCompleto = isEmessa ? fattura.cliente : (fattura as FatturaPassiva).fornitore;
+        return (
+          <div className="flex items-center gap-3">
+            {isEmessa ? (
+              <ArrowUpCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+            ) : (
+              <ArrowDownCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
+            )}
+            <div className="flex flex-col">
+              <span className="text-sm text-foreground">{nomeCompleto}</span>
+              <span className="text-xs font-bold text-foreground">
+                {fattura.numero_fattura}
+                {fattura.commesse?.nome_commessa && (
+                  <span className="font-bold text-foreground"> - {fattura.commesse.nome_commessa}</span>
+                )}
+              </span>
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      key: 'data_fattura',
+      label: 'Data Emissione',
+      sortable: true,
+      width: 'w-40',
+      render: (fattura) => (
+        <div className="text-sm text-foreground">
+          {formatDate(fattura.data_fattura)}
+        </div>
+      ),
+    },
+    {
+      key: 'scadenza_pagamento',
+      label: 'Data Scadenza',
+      sortable: true,
+      width: 'w-40',
+      render: (fattura) => (
+        <div className={`text-sm ${
+          fattura.scadenza_pagamento && new Date(fattura.scadenza_pagamento) < new Date() && fattura.stato_pagamento !== 'Pagato'
+            ? 'text-red-600 font-semibold'
+            : 'text-foreground'
+        }`}>
+          {fattura.scadenza_pagamento ? formatDate(fattura.scadenza_pagamento) : '-'}
+        </div>
+      ),
+    },
+    {
+      key: 'importo_totale',
+      label: 'Importo Totale',
+      sortable: true,
+      width: 'w-36',
+      headerClassName: 'whitespace-nowrap',
+      render: (fattura) => (
+        <div className="text-sm text-foreground font-bold">
+          {new Intl.NumberFormat('it-IT', {
+            style: 'currency',
+            currency: 'EUR'
+          }).format(fattura.importo_totale)}
+        </div>
+      ),
+    },
+    {
+      key: 'categoria',
+      label: 'Categoria',
+      sortable: false,
+      width: 'w-32',
+      render: (fattura) => (
+        <div className="text-sm text-foreground">
+          {fattura.categoria}
+        </div>
+      ),
+    },
+    {
+      key: 'stato',
+      label: 'Stato',
+      sortable: false,
+      width: 'w-36',
+      render: (fattura) => (
+        <Select
+          value={fattura.stato_pagamento}
+          onValueChange={(value: 'Pagato' | 'Non Pagato' | 'Da Incassare') =>
+            handleUpdateStatoPagamento(fattura, value)
+          }
+        >
+          <SelectTrigger
+            className={`inline-flex items-center px-3 py-1 rounded-sm text-xs font-medium border-0 h-7 w-auto ${
+              fattura.stato_pagamento === 'Pagato'
+                ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+            }`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <SelectValue>
+              {fattura.stato_pagamento === 'Pagato'
+                ? 'Pagato'
+                : ('cliente' in fattura ? 'Da Incassare' : 'Non Pagato')}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent onClick={(e) => e.stopPropagation()}>
+            {'cliente' in fattura ? (
+              <>
+                <SelectItem value="Da Incassare">Da Incassare</SelectItem>
+                <SelectItem value="Pagato">Pagato</SelectItem>
+              </>
+            ) : (
+              <>
+                <SelectItem value="Non Pagato">Non Pagato</SelectItem>
+                <SelectItem value="Pagato">Pagato</SelectItem>
+              </>
+            )}
+          </SelectContent>
+        </Select>
+      ),
+    },
+    {
+      key: 'allegato',
+      label: 'Allegato',
+      sortable: false,
+      width: 'w-24',
+      render: (fattura) => (
+        <>
+          {fattura.allegato_url && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenFile(fattura.allegato_url!);
+              }}
+              className="inline-flex items-center justify-center hover:bg-primary/10 rounded-md p-2 transition-colors"
+            >
+              <FileText className="h-5 w-5 text-primary" />
+            </button>
+          )}
+        </>
+      ),
+    },
+    {
+      key: 'arrow',
+      label: '',
+      sortable: false,
+      width: 'w-12',
+      render: () => (
+        <div className="flex items-center justify-end">
+          <ChevronRight className="h-5 w-5 text-muted-foreground" />
+        </div>
+      ),
+    },
+  ];
 
   const toggleSelectAll = () => {
     const allIds = paginatedFatture.map(f => f.id);
@@ -765,482 +978,170 @@ export default function FatturePage() {
   };
 
   return (
-    <>
+    <div className="space-y-6">
       {/* Portal: Bottoni nella Navbar */}
       {navbarActionsContainer && createPortal(
         <div className="flex items-center gap-2">
           <Button
             onClick={() => router.push('/fatture/nuova-emessa')}
             variant="outline"
-            className="h-12 px-6 py-3 text-sm whitespace-nowrap rounded-sm"
+            className="gap-2 h-10 rounded-sm"
           >
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="h-4 w-4" />
             Nuova Emessa
           </Button>
           <Button
             onClick={() => router.push('/fatture/nuova-ricevuta')}
-            className="h-12 px-6 py-3 text-sm whitespace-nowrap rounded-sm"
+            className="gap-2 h-10 rounded-sm"
           >
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="h-4 w-4" />
             Nuova Ricevuta
           </Button>
         </div>,
         navbarActionsContainer
       )}
 
-      <div className="space-y-6">
-        {/* Tabs */}
-        <div className="flex items-center gap-8 border-b border-border">
-          <button
-            onClick={() => setActiveTab('all')}
-            className={`px-6 py-3 text-sm font-medium transition-all relative ${
-              activeTab === 'all'
-                ? 'text-black'
-                : 'text-gray-600 hover:text-black'
-            }`}
-          >
-            <span className="flex items-center gap-2">
-              {counts.all > 0 && (
-                <span className="text-xs bg-primary text-white px-3 py-0.5 rounded-full">{counts.all}</span>
-              )}
-              Tutte
-            </span>
-            {activeTab === 'all' && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab('emesse')}
-            className={`px-6 py-3 text-sm font-medium transition-all relative ${
-              activeTab === 'emesse'
-                ? 'text-black'
-                : 'text-gray-600 hover:text-black'
-            }`}
-          >
-            <span className="flex items-center gap-2">
-              {counts.emesse > 0 && (
-                <span className="text-xs bg-primary text-white px-3 py-0.5 rounded-full">{counts.emesse}</span>
-              )}
-              Emesse
-            </span>
-            {activeTab === 'emesse' && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab('ricevute')}
-            className={`px-6 py-3 text-sm font-medium transition-all relative ${
-              activeTab === 'ricevute'
-                ? 'text-black'
-                : 'text-gray-600 hover:text-black'
-            }`}
-          >
-            <span className="flex items-center gap-2">
-              {counts.ricevute > 0 && (
-                <span className="text-xs bg-primary text-white px-3 py-0.5 rounded-full">{counts.ricevute}</span>
-              )}
-              Ricevute
-            </span>
-            {activeTab === 'ricevute' && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
-            )}
-          </button>
+      {/* Tabs */}
+      <TabsFilter<TabType>
+          tabs={[
+            {
+              value: 'all',
+              label: 'Tutte',
+              icon: Receipt,
+              count: counts.all,
+              badgeClassName: 'bg-primary/10 text-primary',
+            },
+            {
+              value: 'emesse',
+              label: 'Emesse',
+              icon: ArrowUpCircle,
+              count: counts.emesse,
+              activeColor: 'border-green-500 text-green-700',
+              badgeClassName: 'bg-primary/10 text-primary',
+            },
+            {
+              value: 'ricevute',
+              label: 'Ricevute',
+              icon: ArrowDownCircle,
+              count: counts.ricevute,
+              activeColor: 'border-red-500 text-red-700',
+              badgeClassName: 'bg-primary/10 text-primary',
+            },
+          ]}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+        />
+
+      {/* Search and Filters */}
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
+        {/* Campo ricerca */}
+        <div className="relative w-full lg:w-[400px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground" />
+          <Input
+            placeholder="Cerca per codice, cliente/fornitore, commessa"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 h-11 border-2 border-border rounded-sm bg-background text-foreground placeholder:text-muted-foreground w-full"
+          />
         </div>
 
-        {/* Search and Filters */}
-        <div className="space-y-4">
-          {/* Barra filtri principale */}
-          <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
-            {/* Campo ricerca */}
-            <div className="relative w-full lg:w-[400px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground" />
-              <Input
-                placeholder="Cerca per codice, cliente/fornitore, commessa"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 h-11 border-2 border-border rounded-sm bg-background text-foreground placeholder:text-muted-foreground w-full"
-              />
-            </div>
+        {/* Spazio vuoto al posto del filtro Tipo */}
+        <div className="h-11 w-full lg:w-[180px]"></div>
 
-            {/* Spazio vuoto al posto del filtro Tipo */}
-            <div className="h-11 w-full lg:w-[180px]"></div>
+        {/* Spazio flessibile per spingere a destra */}
+        <div className="flex-1"></div>
 
-            {/* Spazio flessibile per spingere a destra */}
-            <div className="flex-1"></div>
-
-            {/* Pulsante elimina selezionate */}
-            {selectedFatture.size > 0 && (
-              <Button
-                onClick={() => setShowBulkDeleteModal(true)}
-                variant="outline"
-                className="h-11 gap-2 bg-red-50 text-red-600 border-red-200 hover:bg-red-100 hover:text-red-700"
-              >
-                <Trash2 className="h-4 w-4" />
-                Elimina ({selectedFatture.size})
-              </Button>
-            )}
-
-            {/* Stato */}
-            <Select value={statoFattura} onValueChange={setStatoFattura}>
-              <SelectTrigger className="h-11 w-full lg:w-[180px] border-2 border-border rounded-sm bg-white">
-                <SelectValue>
-                  {statoFattura === 'tutti' ? 'Stato: Tutti' :
-                   statoFattura === 'Pagato' ? 'Stato: Pagato' :
-                   statoFattura === 'Non Pagato' ? 'Stato: Non Pagato' :
-                   statoFattura === 'Da Incassare' ? 'Stato: Da Incassare' : 'Stato'}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="tutti">Tutti</SelectItem>
-                <SelectItem value="Pagato">Pagato</SelectItem>
-                <SelectItem value="Non Pagato">Non Pagato</SelectItem>
-                <SelectItem value="Da Incassare">Da Incassare</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Periodo emissione */}
-            <DateRangePicker
-              date={dateRangeEmissione}
-              onDateChange={setDateRangeEmissione}
-              placeholder="Periodo"
-              className="w-full lg:w-[240px]"
-            />
-
-            {/* Pulsante filtri avanzati */}
-            <Button
-              onClick={() => setShowAdvancedFilters(true)}
-              variant="outline"
-              className="h-11 w-11 border-2 border-border rounded-sm relative bg-white"
-              size="icon"
-            >
-              <Filter className="h-4 w-4" />
-              {(dateRangeScadenza?.from || dateRangeScadenza?.to || metodoPagamento !== 'tutti' || annoFiscale !== 'tutti' || importoDa || importoA) && (
-                <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-primary"></span>
-              )}
-            </Button>
-          </div>
-        </div>
-
-        {/* Content */}
-        {loading ? (
-          <div className="text-center py-12 text-muted-foreground">Caricamento...</div>
-        ) : filteredFatture().length === 0 ? (
-          <div className="flex items-center justify-center min-h-[400px] rounded-lg border-2 border-dashed border-border bg-card/50">
-            <div className="text-center space-y-3">
-              <Receipt className="h-12 w-12 text-muted-foreground mx-auto" />
-              <div>
-                <h3 className="text-lg font-medium">Nessuna fattura trovata</h3>
-                <p className="text-sm text-muted-foreground max-w-sm">
-                  {searchQuery ? 'Prova con una ricerca diversa' : 'Inizia creando una nuova fattura'}
-                </p>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <>
-            <div className="w-full overflow-hidden">
-              <table className="w-full border-collapse">
-              <thead>
-                <tr className="bg-gray-100 border-b-2 border-border">
-                  <th className="px-4 py-6 text-left w-12">
-                    <Checkbox
-                      checked={selectedFatture.size === paginatedFatture.length && paginatedFatture.length > 0}
-                      onCheckedChange={toggleSelectAll}
-                    />
-                  </th>
-                  <th
-                    className="px-4 py-6 text-left text-sm font-semibold text-foreground cursor-pointer hover:bg-gray-200 transition-colors"
-                    onClick={() => handleSort('cliente_fornitore')}
-                  >
-                    <div className="flex items-center gap-2">
-                      Descrizione
-                      {sortField === 'cliente_fornitore' && (
-                        sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                      )}
-                      {sortField !== 'cliente_fornitore' && <ArrowUpDown className="h-4 w-4 opacity-30" />}
-                    </div>
-                  </th>
-                  <th
-                    className="px-4 py-6 text-left text-sm font-semibold text-foreground cursor-pointer hover:bg-gray-200 transition-colors"
-                    onClick={() => handleSort('data_fattura')}
-                  >
-                    <div className="flex items-center gap-2">
-                      Data Emissione
-                      {sortField === 'data_fattura' && (
-                        sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                      )}
-                      {sortField !== 'data_fattura' && <ArrowUpDown className="h-4 w-4 opacity-30" />}
-                    </div>
-                  </th>
-                  <th
-                    className="px-4 py-6 text-left text-sm font-semibold text-foreground cursor-pointer hover:bg-gray-200 transition-colors"
-                    onClick={() => handleSort('scadenza_pagamento')}
-                  >
-                    <div className="flex items-center gap-2">
-                      Data Scadenza
-                      {sortField === 'scadenza_pagamento' && (
-                        sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                      )}
-                      {sortField !== 'scadenza_pagamento' && <ArrowUpDown className="h-4 w-4 opacity-30" />}
-                    </div>
-                  </th>
-                  <th
-                    className="px-4 py-6 text-left text-sm font-semibold text-foreground cursor-pointer hover:bg-gray-200 transition-colors"
-                    onClick={() => handleSort('importo_totale')}
-                  >
-                    <div className="flex items-center gap-2">
-                      Importo Totale
-                      {sortField === 'importo_totale' && (
-                        sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
-                      )}
-                      {sortField !== 'importo_totale' && <ArrowUpDown className="h-4 w-4 opacity-30" />}
-                    </div>
-                  </th>
-                  <th className="px-4 py-6 text-left text-sm font-semibold text-foreground">Categoria</th>
-                  <th className="pl-4 pr-2 py-6 text-left text-sm font-semibold text-foreground">Stato</th>
-                  <th className="pl-2 pr-4 py-6 text-left text-sm font-semibold text-foreground w-12">Allegato</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedFatture.map((fattura) => {
-                  const isEmessa = 'cliente' in fattura;
-                  const nomeCompleto = isEmessa ? fattura.cliente : (fattura as FatturaPassiva).fornitore;
-                  const isSelected = selectedFatture.has(fattura.id);
-
-                  return (
-                    <tr
-                      key={fattura.id}
-                      onClick={() => handleRowClick(fattura)}
-                      className={`border-b border-border hover:bg-primary/10 cursor-pointer transition-colors ${isSelected ? 'bg-primary/5' : ''}`}
-                    >
-                      <td className="px-4 py-5">
-                        <Checkbox
-                          checked={isSelected}
-                          onCheckedChange={() => toggleSelect(fattura.id)}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      </td>
-                      <td className="px-4 py-5">
-                        <div className="flex items-center gap-3">
-                          {isEmessa ? (
-                            <ArrowUpCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
-                          ) : (
-                            <ArrowDownCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
-                          )}
-                          <div className="flex flex-col">
-                            <span className="text-sm text-foreground">{nomeCompleto}</span>
-                            <span className="text-xs font-bold text-foreground">
-                              {fattura.numero_fattura}
-                              {fattura.commesse?.nome_commessa && (
-                                <span className="font-bold text-foreground"> - {fattura.commesse.nome_commessa}</span>
-                              )}
-                            </span>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-5">
-                        <div className="text-sm text-foreground">
-                          {formatDate(fattura.data_fattura)}
-                        </div>
-                      </td>
-                      <td className="px-4 py-5">
-                        <div className={`text-sm ${
-                          fattura.scadenza_pagamento && new Date(fattura.scadenza_pagamento) < new Date() && fattura.stato_pagamento !== 'Pagato'
-                            ? 'text-red-600 font-semibold'
-                            : 'text-foreground'
-                        }`}>
-                          {fattura.scadenza_pagamento ? formatDate(fattura.scadenza_pagamento) : '-'}
-                        </div>
-                      </td>
-                      <td className="px-4 py-5">
-                        <div className="text-sm text-foreground font-bold">
-                          {new Intl.NumberFormat('it-IT', {
-                            style: 'currency',
-                            currency: 'EUR'
-                          }).format(fattura.importo_totale)}
-                        </div>
-                      </td>
-                      <td className="px-4 py-5">
-                        <div className="text-sm text-foreground">
-                          {fattura.categoria}
-                        </div>
-                      </td>
-                      <td className="pl-4 pr-2 py-5">
-                        <Select
-                          value={fattura.stato_pagamento}
-                          onValueChange={async (value: 'Pagato' | 'Non Pagato') => {
-                            try {
-                              const supabase = createClient();
-                              const isEmessa = 'cliente' in fattura;
-                              const tableName = isEmessa ? 'fatture_attive' : 'fatture_passive';
-
-                              // Aggiorna ottimisticamente la UI
-                              const updatedFatture = isEmessa ? [...fattureAttive] : [...fatturePassive];
-                              const index = updatedFatture.findIndex(f => f.id === fattura.id);
-                              if (index !== -1) {
-                                updatedFatture[index] = {
-                                  ...updatedFatture[index],
-                                  stato_pagamento: value,
-                                  data_pagamento: value === 'Pagato' ? new Date().toISOString().split('T')[0] : null
-                                };
-                                if (isEmessa) {
-                                  setFattureAttive(updatedFatture as FatturaAttiva[]);
-                                } else {
-                                  setFatturePassive(updatedFatture as FatturaPassiva[]);
-                                }
-                              }
-
-                              const { error } = await supabase
-                                .from(tableName)
-                                .update({
-                                  stato_pagamento: value,
-                                  data_pagamento: value === 'Pagato' ? new Date().toISOString().split('T')[0] : null
-                                })
-                                .eq('id', fattura.id);
-
-                              if (error) throw error;
-
-                              toast.success('Stato aggiornato');
-                            } catch (error) {
-                              toast.error('Errore nell\'aggiornamento');
-                              // Ricarica in caso di errore
-                              await loadFatture();
-                            }
-                          }}
-                        >
-                          <SelectTrigger
-                            className={`inline-flex items-center px-3 py-1 rounded-sm text-xs font-medium border-0 h-7 w-auto ${
-                              fattura.stato_pagamento === 'Pagato'
-                                ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                                : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
-                            }`}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <SelectValue>
-                              {fattura.stato_pagamento === 'Pagato'
-                                ? 'Pagato'
-                                : ('cliente' in fattura ? 'Da Incassare' : 'Non Pagato')}
-                            </SelectValue>
-                          </SelectTrigger>
-                          <SelectContent onClick={(e) => e.stopPropagation()}>
-                            {'cliente' in fattura ? (
-                              <>
-                                <SelectItem value="Da Incassare">Da Incassare</SelectItem>
-                                <SelectItem value="Pagato">Pagato</SelectItem>
-                              </>
-                            ) : (
-                              <>
-                                <SelectItem value="Non Pagato">Non Pagato</SelectItem>
-                                <SelectItem value="Pagato">Pagato</SelectItem>
-                              </>
-                            )}
-                          </SelectContent>
-                        </Select>
-                      </td>
-                      <td className="pl-2 pr-4 py-5 text-left">
-                        {fattura.allegato_url && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenFile(fattura.allegato_url!);
-                            }}
-                            className="inline-flex items-center justify-center hover:bg-primary/10 rounded-md p-2 transition-colors"
-                          >
-                            <FileText className="h-5 w-5 text-primary" />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          {totalFatture > 0 && (
-            <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-white">
-              {/* Left side - Info and Items per page */}
-              <div className="flex items-center gap-6">
-                <span className="text-sm text-muted-foreground">
-                  Mostrando {startIndex + 1}-{Math.min(endIndex, totalFatture)} di {totalFatture} elementi
-                </span>
-
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Elementi per pagina:</span>
-                  <Select
-                    value={itemsPerPage.toString()}
-                    onValueChange={handleItemsPerPageChange}
-                  >
-                    <SelectTrigger className="w-20 h-9 rounded-lg border-2 border-border bg-background">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="10">10</SelectItem>
-                      <SelectItem value="25">25</SelectItem>
-                      <SelectItem value="50">50</SelectItem>
-                      <SelectItem value="100">100</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Right side - Page navigation */}
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className="h-9 w-9 p-0"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1)
-                    .filter(page => {
-                      // Mostra sempre prima pagina, ultima pagina, e pagine vicine a quella corrente
-                      if (page === 1 || page === totalPages) return true;
-                      if (page >= currentPage - 1 && page <= currentPage + 1) return true;
-                      return false;
-                    })
-                    .map((page, index, array) => {
-                      // Aggiungi "..." se c'è un gap
-                      const showEllipsis = index > 0 && page - array[index - 1] > 1;
-                      return (
-                        <div key={page} className="flex items-center gap-1">
-                          {showEllipsis && (
-                            <span className="px-2 text-muted-foreground">...</span>
-                          )}
-                          <Button
-                            variant={currentPage === page ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => handlePageChange(page)}
-                            className="h-9 w-9 p-0"
-                          >
-                            {page}
-                          </Button>
-                        </div>
-                      );
-                    })}
-                </div>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className="h-9 w-9 p-0"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
-          </>
+        {/* Pulsante elimina selezionate */}
+        {selectedFatture.size > 0 && (
+          <Button
+            onClick={() => setShowBulkDeleteModal(true)}
+            variant="outline"
+            className="h-11 gap-2 bg-red-50 text-red-600 border-red-200 hover:bg-red-100 hover:text-red-700"
+          >
+            <Trash2 className="h-4 w-4" />
+            Elimina ({selectedFatture.size})
+          </Button>
         )}
+
+        {/* Stato */}
+        <Select value={statoFattura} onValueChange={setStatoFattura}>
+          <SelectTrigger className="h-11 w-full lg:w-[180px] border-2 border-border rounded-sm bg-white">
+            <SelectValue>
+              {statoFattura === 'tutti' ? 'Stato: Tutti' :
+               statoFattura === 'Pagato' ? 'Stato: Pagato' :
+               statoFattura === 'Non Pagato' ? 'Stato: Non Pagato' :
+               statoFattura === 'Da Incassare' ? 'Stato: Da Incassare' : 'Stato'}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="tutti">Tutti</SelectItem>
+            <SelectItem value="Pagato">Pagato</SelectItem>
+            <SelectItem value="Non Pagato">Non Pagato</SelectItem>
+            <SelectItem value="Da Incassare">Da Incassare</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Periodo emissione */}
+        <DateRangePicker
+          date={dateRangeEmissione}
+          onDateChange={setDateRangeEmissione}
+          placeholder="Periodo"
+          className="w-full lg:w-[240px]"
+        />
+
+        {/* Pulsante filtri avanzati */}
+        <Button
+          onClick={() => setShowAdvancedFilters(true)}
+          variant="outline"
+          className="h-11 w-11 border-2 border-border rounded-sm relative bg-white"
+          size="icon"
+        >
+          <Filter className="h-4 w-4" />
+          {(dateRangeScadenza?.from || dateRangeScadenza?.to || metodoPagamento !== 'tutti' || annoFiscale !== 'tutti' || importoDa || importoA) && (
+            <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-primary"></span>
+          )}
+        </Button>
       </div>
+
+      {/* Content */}
+      {loading ? (
+        <div className="text-center py-12 text-muted-foreground">Caricamento...</div>
+      ) : filteredFatture().length === 0 ? (
+        <div className="flex items-center justify-center min-h-[400px] rounded-lg border-2 border-dashed border-border bg-card/50">
+          <div className="text-center space-y-3">
+            <Receipt className="h-12 w-12 text-muted-foreground mx-auto" />
+            <div>
+              <h3 className="text-lg font-medium">Nessuna fattura trovata</h3>
+              <p className="text-sm text-muted-foreground max-w-sm">
+                {searchQuery ? 'Prova con una ricerca diversa' : 'Inizia creando una nuova fattura'}
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <DataTable<FatturaAttiva | FatturaPassiva>
+          data={allFilteredFatture}
+          columns={columns}
+          keyField="id"
+          loading={loading}
+          searchable={false}
+          sortField={sortField}
+          sortDirection={sortDirection}
+          onSort={handleSort}
+          selectedRows={selectedFatture}
+          onSelectionChange={setSelectedFatture}
+          currentPage={currentPage}
+          pageSize={itemsPerPage}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setItemsPerPage}
+          onRowClick={handleRowClick}
+          emptyState={{
+            icon: Receipt,
+            title: 'Nessuna fattura trovata',
+            description: searchQuery ? 'Prova con una ricerca diversa' : 'Inizia creando una nuova fattura',
+          }}
+        />
+      )}
 
       {/* Sheet Modal per dettagli fattura */}
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
@@ -2312,6 +2213,6 @@ export default function FatturePage() {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
