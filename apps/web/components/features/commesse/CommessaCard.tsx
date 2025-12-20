@@ -16,10 +16,10 @@ import { Button } from '@/components/ui/button';
 
 interface CommessaCardProps {
   commessa: Commessa;
-  margineLordo?: number;
+  margine?: number;
 }
 
-export const CommessaCard = memo(function CommessaCard({ commessa, margineLordo = 0 }: CommessaCardProps) {
+export const CommessaCard = memo(function CommessaCard({ commessa, margine = 0 }: CommessaCardProps) {
   const router = useRouter();
   const [showMargine, setShowMargine] = useState(false);
 
@@ -232,19 +232,19 @@ export const CommessaCard = memo(function CommessaCard({ commessa, margineLordo 
           <span className="text-xs text-muted-foreground">Margine Lordo:</span>
           <div className="flex items-baseline gap-1">
             <span className={`font-bold text-lg ${
-              margineLordo >= 0 ? 'text-emerald-600' : 'text-red-600'
+              margine >= 0 ? 'text-emerald-600' : 'text-red-600'
             }`}>
               €
             </span>
             <span
               className={`font-bold text-lg tabular-nums ${
-                margineLordo >= 0 ? 'text-emerald-600' : 'text-red-600'
+                margine >= 0 ? 'text-emerald-600' : 'text-red-600'
               }`}
               onMouseEnter={() => setShowMargine(true)}
               onMouseLeave={() => setShowMargine(false)}
               onClick={(e) => e.stopPropagation()}
             >
-              {showMargine ? formatMargine(margineLordo).replace('€', '').trim() : getMaskedMargine(margineLordo)}
+              {showMargine ? formatMargine(margine).replace('€', '').trim() : getMaskedMargine(margine)}
             </span>
           </div>
         </div>
