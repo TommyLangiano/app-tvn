@@ -53,7 +53,7 @@ export default function MobilePresenzePage() {
           ore_lavorate,
           note,
           stato,
-          commesse (
+          commesse!inner (
             nome_commessa,
             cliente_commessa
           )
@@ -62,7 +62,7 @@ export default function MobilePresenzePage() {
         .order('data_rapportino', { ascending: false })
         .limit(50);
 
-      setRapportini(data || []);
+      setRapportini((data || []) as Rapportino[]);
       setLoading(false);
     } catch (error) {
       console.error('Error loading rapportini:', error);
