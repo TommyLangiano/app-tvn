@@ -74,7 +74,7 @@ export async function middleware(request: NextRequest) {
       // Check if user needs onboarding
       const { data: userTenant, error: tenantError } = await supabase
         .from('user_tenants')
-        .select('tenant_id, role')
+        .select('tenant_id, role, custom_role_id')
         .eq('user_id', user.id)
         .single();
 
@@ -101,15 +101,70 @@ export async function middleware(request: NextRequest) {
       if (needsOnboarding) {
         return NextResponse.redirect(new URL('/onboarding/step-1', request.url));
       } else {
+        // Check if user is dipendente - redirect to mobile
+        if (userTenant.custom_role_id) {
+          const { data: customRole } = await supabase
+            .from('custom_roles')
+            .select('system_role_key')
+            .eq('id', userTenant.custom_role_id)
+            .single();
+
+          if (customRole?.system_role_key === 'dipendente') {
+            return NextResponse.redirect(new URL('/mobile/home', request.url));
+          }
+        }
+
         return NextResponse.redirect(new URL('/dashboard', request.url));
       }
     }
 
+    // Protect mobile routes - only dipendenti can access
+    if (pathname.startsWith('/mobile')) {
+      const { data: userTenant } = await supabase
+        .from('user_tenants')
+        .select('custom_role_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (userTenant?.custom_role_id) {
+        const { data: customRole } = await supabase
+          .from('custom_roles')
+          .select('system_role_key')
+          .eq('id', userTenant.custom_role_id)
+          .single();
+
+        if (customRole?.system_role_key !== 'dipendente') {
+          return NextResponse.redirect(new URL('/dashboard', request.url));
+        }
+      }
+    }
+
+    // Protect admin routes - dipendenti cannot access
+    if (pathname.startsWith('/dashboard') || pathname.startsWith('/(app)')) {
+      const { data: userTenant } = await supabase
+        .from('user_tenants')
+        .select('custom_role_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (userTenant?.custom_role_id) {
+        const { data: customRole } = await supabase
+          .from('custom_roles')
+          .select('system_role_key')
+          .eq('id', userTenant.custom_role_id)
+          .single();
+
+        if (customRole?.system_role_key === 'dipendente') {
+          return NextResponse.redirect(new URL('/mobile/home', request.url));
+        }
+      }
+    }
+
     // Check if user needs to complete onboarding
-    if (!pathname.startsWith('/onboarding') && !pathname.startsWith('/api') && !pathname.startsWith('/tenant-error') && !pathname.startsWith('/account-recovery')) {
+    if (!pathname.startsWith('/onboarding') && !pathname.startsWith('/api') && !pathname.startsWith('/tenant-error') && !pathname.startsWith('/account-recovery') && !pathname.startsWith('/mobile')) {
       const { data: userTenant, error: tenantError } = await supabase
         .from('user_tenants')
-        .select('tenant_id, role')
+        .select('tenant_id, role, custom_role_id')
         .eq('user_id', user.id)
         .single();
 
@@ -148,6 +203,7 @@ export const config = {
     '/sign-in',
     '/signup',
     '/onboarding/:path*',
-    '/(app)/:path*'
+    '/(app)/:path*',
+    '/mobile/:path*'
   ],
 };

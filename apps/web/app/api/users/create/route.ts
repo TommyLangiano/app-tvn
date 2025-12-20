@@ -82,7 +82,12 @@ export async function POST(request: Request) {
         });
 
         if (inviteError) {
-          throw ApiErrors.badRequest(inviteError.message);
+          console.error('[User Create] Invite email error:', {
+            error: inviteError,
+            email,
+            timestamp: new Date().toISOString(),
+          });
+          throw ApiErrors.badRequest(`Error sending invite email: ${inviteError.message}`);
         }
 
         newUser = data.user;
