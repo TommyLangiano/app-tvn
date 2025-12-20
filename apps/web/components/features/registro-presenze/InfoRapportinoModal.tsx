@@ -17,6 +17,9 @@ interface User {
   nome?: string;
   cognome?: string;
   email?: string;
+  user_metadata?: {
+    full_name?: string;
+  };
 }
 
 interface Commessa {
