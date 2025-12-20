@@ -62,7 +62,13 @@ export default function MobilePresenzePage() {
         .order('data_rapportino', { ascending: false })
         .limit(50);
 
-      setRapportini((data || []) as Rapportino[]);
+      // Map data to correct format (Supabase returns commesse as array, we need object)
+      const mappedData: Rapportino[] = (data || []).map((item: any) => ({
+        ...item,
+        commesse: Array.isArray(item.commesse) ? item.commesse[0] : item.commesse,
+      }));
+
+      setRapportini(mappedData);
       setLoading(false);
     } catch (error) {
       console.error('Error loading rapportini:', error);
