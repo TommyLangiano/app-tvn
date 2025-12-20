@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Receipt, ArrowUpCircle, ArrowDownCircle, FileText, ChevronRight } from 'lucide-react';
 import { DataTable, DataTableColumn } from '@/components/ui/data-table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -53,12 +53,12 @@ interface FatturaPassiva {
 
 interface MovimentiTabProps {
   commessaId: string;
+  fattureAttive: FatturaAttiva[];
+  fatturePassive: FatturaPassiva[];
+  onReload?: () => void;
 }
 
-export function MovimentiTab({ commessaId }: MovimentiTabProps) {
-  const [loading, setLoading] = useState(true);
-  const [fattureAttive, setFattureAttive] = useState<FatturaAttiva[]>([]);
-  const [fatturePassive, setFatturePassive] = useState<FatturaPassiva[]>([]);
+export function MovimentiTab({ commessaId, fattureAttive, fatturePassive, onReload }: MovimentiTabProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortField, setSortField] = useState<string>('data_fattura');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -67,49 +67,6 @@ export function MovimentiTab({ commessaId }: MovimentiTabProps) {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [selectedFatturaDetail, setSelectedFatturaDetail] = useState<FatturaAttiva | FatturaPassiva | null>(null);
-
-  useEffect(() => {
-    loadFatture();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [commessaId]);
-
-  const loadFatture = async () => {
-    try {
-      setLoading(true);
-      const supabase = createClient();
-
-      if (!commessaId) {
-        setLoading(false);
-        return;
-      }
-
-      // Load fatture attive
-      const { data: fattureAttiveData, error: fattureAttiveError } = await supabase
-        .from('fatture_attive')
-        .select('*')
-        .eq('commessa_id', commessaId)
-        .order('data_fattura', { ascending: false });
-
-      if (fattureAttiveError) throw fattureAttiveError;
-      setFattureAttive(fattureAttiveData || []);
-
-      // Load fatture passive
-      const { data: fatturePassiveData, error: fatturePassiveError } = await supabase
-        .from('fatture_passive')
-        .select('*')
-        .eq('commessa_id', commessaId)
-        .order('data_fattura', { ascending: false });
-
-      if (fatturePassiveError) throw fatturePassiveError;
-      setFatturePassive(fatturePassiveData || []);
-
-    } catch (error) {
-      console.error('Error loading fatture:', error);
-      toast.error('Errore nel caricamento delle fatture');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleUpdateStatoPagamento = async (
     fattura: FatturaAttiva | FatturaPassiva,
@@ -135,7 +92,7 @@ export function MovimentiTab({ commessaId }: MovimentiTabProps) {
       if (error) throw error;
 
       toast.success('Stato aggiornato con successo');
-      await loadFatture();
+      if (onReload) await onReload();
     } catch (error) {
       console.error('Error updating stato:', error);
       toast.error('Errore nell\'aggiornamento dello stato');
@@ -396,12 +353,7 @@ export function MovimentiTab({ commessaId }: MovimentiTabProps) {
 
   return (
     <div className="space-y-4">
-      {loading ? (
-        <div className="flex items-center justify-center h-96">
-          <p className="text-muted-foreground">Caricamento movimenti...</p>
-        </div>
-      ) : (
-        <DataTable<FatturaAttiva | FatturaPassiva>
+      <DataTable<FatturaAttiva | FatturaPassiva>
           data={paginatedFatture}
           columns={columns}
           keyField="id"
@@ -424,8 +376,7 @@ export function MovimentiTab({ commessaId }: MovimentiTabProps) {
         emptyIcon={Receipt}
         emptyTitle="Nessuna fattura trovata"
         emptyDescription={searchQuery ? 'Prova con una ricerca diversa' : 'Nessuna fattura associata a questa commessa'}
-        />
-      )}
+      />
 
       {/* Sheet Modal per dettagli fattura */}
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>

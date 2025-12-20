@@ -752,7 +752,12 @@ export default function CommessaDetailPage() {
 
         {/* TAB: Movimenti */}
         <TabsContent value="movimenti" className="space-y-4">
-          <MovimentiTab commessaId={commessa?.id || ''} />
+          <MovimentiTab
+            commessaId={commessa?.id || ''}
+            fattureAttive={fatture}
+            fatturePassive={fatturePassive}
+            onReload={loadCommessaData}
+          />
         </TabsContent>
 
         {/* TAB: Rapportini */}
