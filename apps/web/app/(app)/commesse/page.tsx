@@ -22,6 +22,8 @@ import { Input } from '@/components/ui/input';
 import { TabsFilter, TabItem } from '@/components/ui/tabs-filter';
 import { toast } from 'sonner';
 
+type TabType = 'all' | 'in-corso' | 'da-iniziare' | 'completate';
+
 export default function CommessePage() {
   const router = useRouter();
   const [commesse, setCommesse] = useState<Commessa[]>([]);
