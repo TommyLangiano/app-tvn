@@ -14,6 +14,7 @@ export interface Commessa {
   cliente_commessa: string;
 
   // Optional fields
+  cliente_nome_completo?: string; // Populated from clienti table join
   codice_commessa?: string;
   importo_commessa?: number;
   cig?: string; // Required for Pubblico
