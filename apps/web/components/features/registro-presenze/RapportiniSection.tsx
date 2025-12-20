@@ -2108,16 +2108,14 @@ export function RapportiniSection({ commessaId, hideMonthSelector = false }: Rap
       {showInfoModal && selectedRapportino && (
         <InfoRapportinoModal
           rapportino={selectedRapportino}
-          rapportini={selectedRapportiniForInfo}
+          users={users}
+          commesse={commesse}
           onClose={() => {
             setShowInfoModal(false);
             setSelectedRapportino(null);
             setSelectedRapportiniForInfo([]);
           }}
-          onEdit={() => {
-            setShowInfoModal(false);
-            setShowEditModal(true);
-          }}
+          onUpdate={loadData}
           onDelete={() => {
             setShowInfoModal(false);
             setShowDeleteModal(true);
