@@ -11,13 +11,17 @@ import { getSignedUrl } from '@/lib/utils/storage';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import type { Rapportino } from '@/types/rapportino';
-import type { Commessa } from '@/types/commessa';
 
 interface User {
   id: string;
   nome?: string;
   cognome?: string;
   email?: string;
+}
+
+interface Commessa {
+  id: string;
+  nome_commessa: string;
 }
 
 interface InfoRapportinoModalProps {
