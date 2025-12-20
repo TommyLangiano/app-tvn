@@ -16,7 +16,7 @@ interface Rapportino {
   commesse: {
     nome_commessa: string;
     cliente_commessa: string;
-  };
+  } | null;
 }
 
 export default function MobilePresenzePage() {
@@ -236,7 +236,7 @@ export default function MobilePresenzePage() {
                       {formatDate(rapportino.data_rapportino)}
                     </p>
                     <p className="text-xs text-gray-500">
-                      {rapportino.commesse.nome_commessa}
+                      {rapportino.commesse?.nome_commessa || 'Commessa non disponibile'}
                     </p>
                   </div>
                 </div>
