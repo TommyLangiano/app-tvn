@@ -127,14 +127,14 @@ export default function MovimentiPage() {
         .from('fatture_attive')
         .select('*')
         .eq('commessa_id', commessaData.id)
-        .order('data_emissione', { ascending: false });
+        .order('data_fattura', { ascending: false });
 
       // Load fatture passive (costi - fatture)
       const { data: fatturePassiveData } = await supabase
         .from('fatture_passive')
         .select('*')
         .eq('commessa_id', commessaData.id)
-        .order('data_emissione', { ascending: false });
+        .order('data_fattura', { ascending: false });
 
       // Load scontrini (costi - scontrini)
       // Nota: tabella scontrini eliminata nella migration 20250218000004_drop_scontrini_table.sql
