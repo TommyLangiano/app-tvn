@@ -114,7 +114,7 @@ export default function CommessaDetailPage() {
         .from('fatture_attive')
         .select('*')
         .eq('commessa_id', commessaData.id)
-        .order('data_emissione', { ascending: false });
+        .order('data_fattura', { ascending: false });
 
       if (fattureError) throw fattureError;
       setFatture(fattureData || []);
@@ -124,7 +124,7 @@ export default function CommessaDetailPage() {
         .from('fatture_passive')
         .select('*')
         .eq('commessa_id', commessaData.id)
-        .order('data_emissione', { ascending: false });
+        .order('data_fattura', { ascending: false });
 
       setFatturePassive(fatturePassiveData || []);
 
