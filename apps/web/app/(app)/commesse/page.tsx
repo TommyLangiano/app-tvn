@@ -701,7 +701,6 @@ export default function CommessePage() {
                   key={commessa.id}
                   commessa={commessa}
                   margine={marginiLordi[commessa.id]}
-                  onClick={() => router.push(`/commesse/${commessa.slug}`)}
                 />
               ))}
             </div>
