@@ -144,7 +144,7 @@ export function InfoRapportinoModal({ rapportino, users, commesse, onClose, onUp
       setIsSaving(true);
       const supabase = createClient();
 
-      let finalAllegatoUrl = editedData.allegato_url;
+      let finalAllegatoUrl: string | null | undefined = editedData.allegato_url;
 
       // Gestione file allegato
       if (deleteCurrentFile && rapportino.allegato_url) {
