@@ -1135,11 +1135,9 @@ export default function FatturePage() {
           onPageChange={setCurrentPage}
           onPageSizeChange={setItemsPerPage}
           onRowClick={handleRowClick}
-          emptyState={{
-            icon: Receipt,
-            title: 'Nessuna fattura trovata',
-            description: searchQuery ? 'Prova con una ricerca diversa' : 'Inizia creando una nuova fattura',
-          }}
+          emptyIcon={Receipt}
+          emptyTitle="Nessuna fattura trovata"
+          emptyDescription={searchQuery ? 'Prova con una ricerca diversa' : 'Inizia creando una nuova fattura'}
         />
       )}
 
