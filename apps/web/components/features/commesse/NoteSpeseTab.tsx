@@ -20,6 +20,7 @@ import { formatCurrency } from '@/lib/utils/currency';
 import { NuovaNotaSpesaModal } from '@/components/features/note-spesa/NuovaNotaSpesaModal';
 import { InfoNotaSpesaModal } from '@/components/features/note-spesa/InfoNotaSpesaModal';
 import { DeleteNotaSpesaModal } from '@/components/features/note-spesa/DeleteNotaSpesaModal';
+import { ApprovazioneNotaSpesaModal } from '@/components/features/note-spesa/ApprovazioneNotaSpesaModal';
 
 type User = {
   id: string;
@@ -66,7 +67,7 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<TabType>('da_approvare');
+  const [activeTab, setActiveTab] = useState<TabType>('approvate');
 
   // DataTable sorting states
   const [sortField, setSortField] = useState<string>('data_nota');
@@ -77,6 +78,7 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showNuovaModal, setShowNuovaModal] = useState(false);
+  const [showApprovazioneModal, setShowApprovazioneModal] = useState(false);
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -428,7 +430,7 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
   const totaleImporto = noteSpeseFiltrate.reduce((sum, n) => sum + n.importo, 0);
 
   // DataTable columns - Stile uguale a fatture
-  const columns: DataTableColumn<NotaSpesa>[] = [
+  const baseColumns: DataTableColumn<NotaSpesa>[] = [
     {
       key: 'descrizione',
       label: 'Descrizione',
@@ -542,18 +544,60 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
         </>
       ),
     },
-    {
-      key: 'arrow',
-      label: '',
-      sortable: false,
-      width: 'w-12',
-      render: () => (
-        <div className="flex items-center justify-end">
-          <ChevronRight className="h-5 w-5 text-muted-foreground" />
-        </div>
-      ),
-    },
   ];
+
+  // Colonna azioni per tab "Da Approvare"
+  const azioniColumn: DataTableColumn<NotaSpesa> = {
+    key: 'azioni',
+    label: 'Azioni',
+    sortable: false,
+    width: 'w-32',
+    render: (notaSpesa) => (
+      <div className="flex items-center gap-2">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleApprova(notaSpesa);
+          }}
+          className="inline-flex items-center justify-center hover:bg-green-100 rounded-md p-2 transition-colors group"
+          title="Approva"
+        >
+          <CheckCircle className="h-5 w-5 text-green-600 group-hover:text-green-700" />
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleRifiuta(notaSpesa);
+          }}
+          className="inline-flex items-center justify-center hover:bg-red-100 rounded-md p-2 transition-colors group"
+          title="Rifiuta"
+        >
+          <XCircle className="h-5 w-5 text-red-600 group-hover:text-red-700" />
+        </button>
+      </div>
+    ),
+  };
+
+  // Arrow column
+  const arrowColumn: DataTableColumn<NotaSpesa> = {
+    key: 'arrow',
+    label: '',
+    sortable: false,
+    width: 'w-12',
+    render: () => (
+      <div className="flex items-center justify-end">
+        <ChevronRight className="h-5 w-5 text-muted-foreground" />
+      </div>
+    ),
+  };
+
+  // Costruisci le colonne in base al tab attivo
+  const columns: DataTableColumn<NotaSpesa>[] = useMemo(() => {
+    if (activeTab === 'da_approvare') {
+      return [...baseColumns, azioniColumn, arrowColumn];
+    }
+    return [...baseColumns, arrowColumn];
+  }, [activeTab]);
 
   const handleRowClick = (notaSpesa: NotaSpesa) => {
     setSelectedNotaSpesa(notaSpesa);
@@ -641,6 +685,49 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
     loadNoteSpeseRifiutate();
   };
 
+  const handleApprova = async (notaSpesa: NotaSpesa) => {
+    try {
+      const supabase = createClient();
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      // Get dipendente_id from user
+      const { data: dipendenteData } = await supabase
+        .from('dipendenti')
+        .select('id, tenant_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!dipendenteData) throw new Error('Dipendente not found');
+
+      // Call RPC function
+      const { error: rpcError } = await supabase.rpc('approva_nota_spesa', {
+        p_nota_spesa_id: notaSpesa.id,
+        p_approvato_da: dipendenteData.id
+      });
+
+      if (rpcError) throw rpcError;
+
+      toast.success('Nota spesa approvata con successo');
+
+      // Reload all lists
+      await Promise.all([
+        loadNoteSpese(),
+        loadNoteSpeseDaApprovare(),
+        loadNoteSpeseRifiutate()
+      ]);
+    } catch (error: any) {
+      console.error('Error approving nota spesa:', error);
+      toast.error(error?.message || 'Errore nell\'approvazione della nota spesa');
+    }
+  };
+
+  const handleRifiuta = (notaSpesa: NotaSpesa) => {
+    setSelectedNotaSpesa(notaSpesa);
+    setShowApprovazioneModal(true);
+  };
+
   // Loading state
   if (loading) {
     return (
@@ -660,24 +747,6 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
         {/* Tabs - Inline style come Fatture */}
         <div className="inline-flex rounded-md border border-border bg-background p-1">
           <button
-            onClick={() => setActiveTab('da_approvare')}
-            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-              (activeTab as TabType) === 'da_approvare'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Receipt className="h-4 w-4" />
-            Da Approvare
-            <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
-              (activeTab as TabType) === 'da_approvare'
-                ? 'bg-primary-foreground/20 text-primary-foreground'
-                : 'bg-yellow-100 text-yellow-700'
-            }`}>
-              {tabCounts.da_approvare}
-            </span>
-          </button>
-          <button
             onClick={() => setActiveTab('approvate')}
             className={`inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
               (activeTab as TabType) === 'approvate'
@@ -693,6 +762,24 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
                 : 'bg-green-100 text-green-700'
             }`}>
               {tabCounts.approvate}
+            </span>
+          </button>
+          <button
+            onClick={() => setActiveTab('da_approvare')}
+            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+              (activeTab as TabType) === 'da_approvare'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Receipt className="h-4 w-4" />
+            Da Approvare
+            <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
+              (activeTab as TabType) === 'da_approvare'
+                ? 'bg-primary-foreground/20 text-primary-foreground'
+                : 'bg-yellow-100 text-yellow-700'
+            }`}>
+              {tabCounts.da_approvare}
             </span>
           </button>
           <button
@@ -917,6 +1004,21 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
           onClose={() => setShowNuovaModal(false)}
           onSuccess={handleNotaSpesaCreated}
           commessaId={commessaId}
+        />
+      )}
+
+      {showApprovazioneModal && selectedNotaSpesa && (
+        <ApprovazioneNotaSpesaModal
+          notaSpesa={selectedNotaSpesa}
+          onClose={() => {
+            setShowApprovazioneModal(false);
+            setSelectedNotaSpesa(null);
+          }}
+          onSuccess={() => {
+            setShowApprovazioneModal(false);
+            setSelectedNotaSpesa(null);
+            handleNotaSpesaUpdated();
+          }}
         />
       )}
     </div>
