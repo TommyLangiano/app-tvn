@@ -922,7 +922,7 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
                                         setShowInfoModal(true);
                                       }}
                                       className="w-full h-12 rounded-lg bg-emerald-500/10 border-2 border-emerald-500/30 hover:bg-emerald-500/20 transition-colors flex flex-col items-center justify-center gap-0.5"
-                                      title={`${rapportiniDelGiorno[0].ore_lavorate}h - ${rapportiniDelGiorno[0].commesse?.nome_commessa || ''}\n${rapportiniDelGiorno[0].note ? `Note: ${rapportiniDelGiorno[0].note}` : ''}`}
+                                      title={`${rapportiniDelGiorno[0].ore_lavorate}h - ${rapportiniDelGiorno[0].commesse?.titolo || ''}\n${rapportiniDelGiorno[0].note ? `Note: ${rapportiniDelGiorno[0].note}` : ''}`}
                                     >
                                       <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
                                         {rapportiniDelGiorno[0].ore_lavorate}h
