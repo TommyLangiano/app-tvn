@@ -212,7 +212,7 @@ export function EditNotaSpesaModal({ notaSpesa, onClose, onSuccess }: EditNotaSp
       // Remove allegati marked for deletion
       for (const filePath of allegatiToRemove) {
         await supabase.storage
-          .from('note_spesa_allegati')
+          .from('app-storage')
           .remove([filePath]);
       }
 
@@ -222,7 +222,7 @@ export function EditNotaSpesaModal({ notaSpesa, onClose, onSuccess }: EditNotaSp
         const filePath = `${userTenants.tenant_id}/note-spesa/${notaSpesa.commessa_id}/${Date.now()}_${file.name}`;
 
         const { error: uploadError } = await supabase.storage
-          .from('note_spesa_allegati')
+          .from('app-storage')
           .upload(filePath, file);
 
         if (uploadError) {
@@ -261,9 +261,10 @@ export function EditNotaSpesaModal({ notaSpesa, onClose, onSuccess }: EditNotaSp
 
       // Create azione log
       await supabase
-        .from('nota_spesa_azioni')
+        .from('note_spesa_azioni')
         .insert({
           nota_spesa_id: notaSpesa.id,
+          tenant_id: userTenants.tenant_id,
           azione: 'modificata',
           eseguita_da: user.id,
         });

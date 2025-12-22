@@ -48,6 +48,12 @@ export interface NotaSpesa {
     cognome: string;
     email: string;
   };
+  categorie_note_spesa?: {
+    id: string;
+    nome: string;
+    colore: string;
+    icona: string;
+  };
 }
 
 export interface NotaSpesaFormData {

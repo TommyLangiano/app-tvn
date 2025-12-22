@@ -36,10 +36,10 @@ export function InfoNotaSpesaModal({ notaSpesa, onClose, onUpdate, onDelete }: I
     try {
       const supabase = createClient();
       const { data } = await supabase
-        .from('nota_spesa_azioni')
+        .from('note_spesa_azioni')
         .select(`
           *,
-          utente:dipendenti!nota_spesa_azioni_eseguita_da_fkey (
+          utente:dipendenti!note_spesa_azioni_eseguita_da_fkey (
             nome,
             cognome,
             email
@@ -90,7 +90,7 @@ export function InfoNotaSpesaModal({ notaSpesa, onClose, onUpdate, onDelete }: I
       // Check if user is approvatore for this commessa
       const { data: dipendenteData } = await supabase
         .from('dipendenti')
-        .select('id')
+        .select('id, tenant_id')
         .eq('user_id', user.id)
         .single();
 
@@ -341,12 +341,12 @@ export function InfoNotaSpesaModal({ notaSpesa, onClose, onUpdate, onDelete }: I
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold border-b pb-2">Cronologia Approvazione</h3>
                   <div className="space-y-3">
-                    {notaSpesa.approvato_da && notaSpesa.approvatore && (
+                    {notaSpesa.approvato_da && (
                       <div className="flex items-start gap-3 p-3 bg-green-50 rounded-lg">
                         <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
                         <div className="flex-1">
                           <p className="text-sm font-medium text-green-900">
-                            Approvata da {notaSpesa.approvatore.nome} {notaSpesa.approvatore.cognome}
+                            Approvata
                           </p>
                           <p className="text-xs text-green-700 mt-1">
                             {notaSpesa.approvato_il && formatDateTime(notaSpesa.approvato_il)}
@@ -355,12 +355,12 @@ export function InfoNotaSpesaModal({ notaSpesa, onClose, onUpdate, onDelete }: I
                       </div>
                     )}
 
-                    {notaSpesa.rifiutato_da && notaSpesa.approvatore && (
+                    {notaSpesa.rifiutato_da && (
                       <div className="flex items-start gap-3 p-3 bg-red-50 rounded-lg">
                         <XCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
                         <div className="flex-1">
                           <p className="text-sm font-medium text-red-900">
-                            Rifiutata da {notaSpesa.approvatore.nome} {notaSpesa.approvatore.cognome}
+                            Rifiutata
                           </p>
                           <p className="text-xs text-red-700 mt-1">
                             {notaSpesa.rifiutato_il && formatDateTime(notaSpesa.rifiutato_il)}

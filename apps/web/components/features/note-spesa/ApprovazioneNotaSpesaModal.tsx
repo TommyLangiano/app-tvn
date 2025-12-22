@@ -48,7 +48,7 @@ export function ApprovazioneNotaSpesaModal({ notaSpesa, onClose, onSuccess }: Ap
       // Get dipendente_id from user
       const { data: dipendenteData } = await supabase
         .from('dipendenti')
-        .select('id')
+        .select('id, tenant_id')
         .eq('user_id', user.id)
         .single();
 
@@ -88,7 +88,7 @@ export function ApprovazioneNotaSpesaModal({ notaSpesa, onClose, onSuccess }: Ap
       // Get dipendente_id from user
       const { data: dipendenteData } = await supabase
         .from('dipendenti')
-        .select('id')
+        .select('id, tenant_id')
         .eq('user_id', user.id)
         .single();
 

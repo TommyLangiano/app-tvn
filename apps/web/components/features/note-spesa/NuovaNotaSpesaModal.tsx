@@ -114,7 +114,7 @@ export function NuovaNotaSpesaModal({ onClose, onSuccess, commessaId }: NuovaNot
         // Auto-select current user's dipendente if exists
         const { data: currentDipendente } = await supabase
           .from('dipendenti')
-          .select('id')
+          .select('id, tenant_id')
           .eq('user_id', user.id)
           .eq('tenant_id', userTenants.tenant_id)
           .single();
@@ -268,7 +268,7 @@ export function NuovaNotaSpesaModal({ onClose, onSuccess, commessaId }: NuovaNot
         const filePath = `${userTenants.tenant_id}/note-spesa/${commessaId}/${Date.now()}_${file.name}`;
 
         const { error: uploadError } = await supabase.storage
-          .from('note_spesa_allegati')
+          .from('app-storage')
           .upload(filePath, file);
 
         if (uploadError) {
@@ -306,9 +306,10 @@ export function NuovaNotaSpesaModal({ onClose, onSuccess, commessaId }: NuovaNot
 
       // Create azione log
       await supabase
-        .from('nota_spesa_azioni')
+        .from('note_spesa_azioni')
         .insert({
           nota_spesa_id: notaSpesaData.id,
+          tenant_id: userTenants.tenant_id,
           azione: 'creata',
           eseguita_da: user.id,
           stato_nuovo: 'da_approvare',
@@ -377,7 +378,7 @@ export function NuovaNotaSpesaModal({ onClose, onSuccess, commessaId }: NuovaNot
               value={selectedDipendenteId}
               onValueChange={setSelectedDipendenteId}
             >
-              <SelectTrigger id="dipendente" className="bg-white">
+              <SelectTrigger id="dipendente" className="h-11 border-2 border-border bg-background">
                 <SelectValue placeholder="Seleziona dipendente" />
               </SelectTrigger>
               <SelectContent>
@@ -568,27 +569,27 @@ export function NuovaNotaSpesaModal({ onClose, onSuccess, commessaId }: NuovaNot
               </div>
             )}
           </div>
-
-          {/* Footer Actions */}
-          <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-6">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={loading}
-              className="border-2 h-11 px-6 font-semibold"
-            >
-              Annulla
-            </Button>
-            <Button
-              type="submit"
-              disabled={loading}
-              className="h-11 px-6 font-semibold"
-            >
-              {loading ? 'Creazione in corso...' : 'Crea Nota Spesa'}
-            </Button>
-          </div>
         </form>
+
+        {/* Footer Actions - Fixed */}
+        <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 p-6 border-t-2 border-border sticky bottom-0 bg-card z-10">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            disabled={loading}
+            className="border-2 h-11 px-6 font-semibold"
+          >
+            Annulla
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="h-11 px-6 font-semibold"
+          >
+            {loading ? 'Creazione in corso...' : 'Crea Nota Spesa'}
+          </Button>
+        </div>
       </div>
     </ModalWrapper>
   );

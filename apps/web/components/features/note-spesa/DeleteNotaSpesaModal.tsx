@@ -41,19 +41,28 @@ export function DeleteNotaSpesaModal({ notaSpesa, onClose, onDelete }: DeleteNot
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      const { data: userTenants } = await supabase
+        .from('user_tenants')
+        .select('tenant_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!userTenants) throw new Error('No tenant found');
+
       // Delete allegati from storage
       if (notaSpesa.allegati && notaSpesa.allegati.length > 0) {
         const filePaths = notaSpesa.allegati.map(a => a.file_path);
         await supabase.storage
-          .from('note_spesa_allegati')
+          .from('app-storage')
           .remove(filePaths);
       }
 
       // Create azione log before deletion
       await supabase
-        .from('nota_spesa_azioni')
+        .from('note_spesa_azioni')
         .insert({
           nota_spesa_id: notaSpesa.id,
+          tenant_id: userTenants.tenant_id,
           azione: 'eliminata',
           eseguita_da: user.id,
           stato_precedente: notaSpesa.stato,

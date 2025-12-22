@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Search, Plus, Receipt, CheckCircle, XCircle, Download, Grid3x3, List, X, ChevronRight, User, Paperclip } from 'lucide-react';
+import { Search, Plus, Receipt, CheckCircle, XCircle, Download, Grid3x3, List, X, ChevronRight, User, Paperclip, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -205,6 +205,12 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
           nome,
           cognome,
           email
+        ),
+        categorie_note_spesa!note_spesa_categoria_fkey (
+          id,
+          nome,
+          colore,
+          icona
         )
       `)
       .eq('tenant_id', userTenant.tenant_id)
@@ -251,6 +257,12 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
           nome,
           cognome,
           email
+        ),
+        categorie_note_spesa!note_spesa_categoria_fkey (
+          id,
+          nome,
+          colore,
+          icona
         )
       `)
       .eq('tenant_id', userTenant.tenant_id)
@@ -289,6 +301,12 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
           nome,
           cognome,
           email
+        ),
+        categorie_note_spesa!note_spesa_categoria_fkey (
+          id,
+          nome,
+          colore,
+          icona
         )
       `)
       .eq('tenant_id', userTenant.tenant_id)
@@ -409,62 +427,101 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
   // Calcola totale importo
   const totaleImporto = noteSpeseFiltrate.reduce((sum, n) => sum + n.importo, 0);
 
-  // DataTable columns
+  // DataTable columns - Stile uguale a fatture
   const columns: DataTableColumn<NotaSpesa>[] = [
     {
-      key: 'numero_nota',
-      label: 'Numero',
+      key: 'descrizione',
+      label: 'Descrizione',
       sortable: true,
-      width: 'w-32',
+      width: 'w-auto',
       render: (notaSpesa) => (
-        <span className="text-sm text-foreground font-medium">
-          {notaSpesa.numero_nota}
-        </span>
-      ),
-    },
-    {
-      key: 'dipendente',
-      label: 'Dipendente',
-      sortable: true,
-      render: (notaSpesa) => (
-        <span className="text-sm text-foreground font-medium">
-          {getUserDisplayName(notaSpesa)}
-        </span>
+        <div className="flex items-center gap-3">
+          <Receipt className="h-5 w-5 text-primary flex-shrink-0" />
+          <div className="flex flex-col">
+            <span className="text-sm text-foreground">{getUserDisplayName(notaSpesa)}</span>
+            <span className="text-xs font-bold text-foreground">
+              {notaSpesa.numero_nota}
+            </span>
+          </div>
+        </div>
       ),
     },
     {
       key: 'data_nota',
       label: 'Data',
       sortable: true,
+      width: 'w-40',
       render: (notaSpesa) => (
-        <span className="text-sm text-muted-foreground">
+        <div className="text-sm text-foreground">
           {new Date(notaSpesa.data_nota).toLocaleDateString('it-IT', {
             day: '2-digit',
             month: 'short',
             year: 'numeric'
           })}
-        </span>
-      ),
-    },
-    {
-      key: 'categoria',
-      label: 'Categoria',
-      sortable: true,
-      render: (notaSpesa) => (
-        <span className="text-sm text-foreground">
-          {notaSpesa.categoria}
-        </span>
+        </div>
       ),
     },
     {
       key: 'importo',
       label: 'Importo',
       sortable: true,
+      width: 'w-36',
+      headerClassName: 'whitespace-nowrap',
+      render: (notaSpesa) => (
+        <div className="text-sm text-foreground font-bold">
+          {formatCurrency(notaSpesa.importo)}
+        </div>
+      ),
+    },
+    {
+      key: 'categoria',
+      label: 'Categoria',
+      sortable: false,
       width: 'w-32',
       render: (notaSpesa) => (
-        <span className="text-base text-foreground font-bold">
-          {formatCurrency(notaSpesa.importo)}
-        </span>
+        <div className="text-sm text-foreground">
+          {notaSpesa.categorie_note_spesa?.nome || notaSpesa.categoria}
+        </div>
+      ),
+    },
+    {
+      key: 'stato',
+      label: 'Stato',
+      sortable: false,
+      width: 'w-36',
+      render: (notaSpesa) => (
+        <Select
+          value={notaSpesa.stato}
+          onValueChange={(value: 'bozza' | 'da_approvare' | 'approvato' | 'rifiutato') =>
+            handleUpdateStato(notaSpesa, value)
+          }
+        >
+          <SelectTrigger
+            className={`inline-flex items-center px-3 py-1 rounded-sm text-xs font-medium border-0 h-7 w-auto ${
+              notaSpesa.stato === 'approvato'
+                ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                : notaSpesa.stato === 'da_approvare'
+                ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                : notaSpesa.stato === 'rifiutato'
+                ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <SelectValue>
+              {notaSpesa.stato === 'approvato' ? 'Approvata' :
+               notaSpesa.stato === 'da_approvare' ? 'Da Approvare' :
+               notaSpesa.stato === 'rifiutato' ? 'Rifiutata' :
+               'Bozza'}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent onClick={(e) => e.stopPropagation()}>
+            <SelectItem value="bozza">Bozza</SelectItem>
+            <SelectItem value="da_approvare">Da Approvare</SelectItem>
+            <SelectItem value="approvato">Approvata</SelectItem>
+            <SelectItem value="rifiutato">Rifiutata</SelectItem>
+          </SelectContent>
+        </Select>
       ),
     },
     {
@@ -473,35 +530,16 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
       sortable: false,
       width: 'w-24',
       render: (notaSpesa) => (
-        <div className="flex items-center gap-1">
-          {notaSpesa.allegati && notaSpesa.allegati.length > 0 ? (
-            <>
-              <Paperclip className="h-4 w-4 text-primary" />
-              <span className="text-sm text-foreground font-medium">{notaSpesa.allegati.length}</span>
-            </>
-          ) : (
-            <span className="text-sm text-muted-foreground">-</span>
+        <>
+          {notaSpesa.allegati && notaSpesa.allegati.length > 0 && (
+            <button
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center justify-center hover:bg-primary/10 rounded-md p-2 transition-colors"
+            >
+              <FileText className="h-5 w-5 text-primary" />
+            </button>
           )}
-        </div>
-      ),
-    },
-    {
-      key: 'stato',
-      label: 'Stato',
-      sortable: false,
-      width: 'w-32',
-      render: (notaSpesa) => (
-        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-          notaSpesa.stato === 'approvato' ? 'bg-green-100 text-green-700' :
-          notaSpesa.stato === 'da_approvare' ? 'bg-yellow-100 text-yellow-700' :
-          notaSpesa.stato === 'rifiutato' ? 'bg-red-100 text-red-700' :
-          'bg-gray-100 text-gray-700'
-        }`}>
-          {notaSpesa.stato === 'approvato' ? 'Approvata' :
-           notaSpesa.stato === 'da_approvare' ? 'Da Approvare' :
-           notaSpesa.stato === 'rifiutato' ? 'Rifiutata' :
-           'Bozza'}
-        </span>
+        </>
       ),
     },
     {
@@ -510,7 +548,7 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
       sortable: false,
       width: 'w-12',
       render: () => (
-        <div className="flex justify-end">
+        <div className="flex items-center justify-end">
           <ChevronRight className="h-5 w-5 text-muted-foreground" />
         </div>
       ),
@@ -528,6 +566,60 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
     } else {
       setSortField(field);
       setSortDirection('asc');
+    }
+  };
+
+  const handleUpdateStato = async (
+    notaSpesa: NotaSpesa,
+    value: 'bozza' | 'da_approvare' | 'approvato' | 'rifiutato'
+  ) => {
+    try {
+      const supabase = createClient();
+
+      // Optimistic UI update
+      const updateList = (list: NotaSpesa[]) => {
+        const index = list.findIndex(n => n.id === notaSpesa.id);
+        if (index !== -1) {
+          const updated = [...list];
+          updated[index] = { ...updated[index], stato: value };
+          return updated;
+        }
+        return list;
+      };
+
+      // Update appropriate state
+      if (activeTab === 'da_approvare') {
+        setNoteSpeseDaApprovare(prev => updateList(prev));
+      } else if (activeTab === 'approvate') {
+        setNoteSpese(prev => updateList(prev));
+      } else if (activeTab === 'rifiutate') {
+        setNoteSpeseRifiutate(prev => updateList(prev));
+      }
+
+      // Update in database
+      const { error } = await supabase
+        .from('note_spesa')
+        .update({ stato: value })
+        .eq('id', notaSpesa.id);
+
+      if (error) throw error;
+
+      toast.success('Stato aggiornato');
+
+      // Reload all lists to ensure consistency across tabs
+      await Promise.all([
+        loadNoteSpese(),
+        loadNoteSpeseDaApprovare(),
+        loadNoteSpeseRifiutate()
+      ]);
+    } catch (error) {
+      toast.error('Errore nell\'aggiornamento dello stato');
+      // Reload on error
+      await Promise.all([
+        loadNoteSpese(),
+        loadNoteSpeseDaApprovare(),
+        loadNoteSpeseRifiutate()
+      ]);
     }
   };
 
@@ -635,52 +727,35 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
         </Button>
       </div>
 
-      {/* Search Bar and Filters */}
-      <div className="space-y-0">
-        <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
-          {/* Search Bar */}
-          <div className="relative w-full lg:w-[400px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground" />
-            <Input
-              placeholder="Cerca per numero, dipendente, categoria..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-11 border-2 border-border rounded-sm bg-background text-foreground placeholder:text-muted-foreground w-full"
-            />
-          </div>
-
-          {/* Spazio flessibile per spingere i filtri a destra */}
-          <div className="flex-1"></div>
-
-          {/* Filtro Dipendente */}
-          <Select value={filtroUtente || undefined} onValueChange={(value) => setFiltroUtente(value)}>
-            <SelectTrigger className="h-11 w-full lg:w-[200px] border-2 border-border rounded-sm bg-white">
-              <SelectValue placeholder="Tutti i dipendenti" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tutti i dipendenti</SelectItem>
-              {users.map(user => (
-                <SelectItem key={user.id} value={user.dipendente_id || user.id}>
-                  {user.user_metadata?.full_name || user.email}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      {/* Search and Filters - Stile uguale a fatture */}
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
+        {/* Search field */}
+        <div className="relative w-full lg:w-[400px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground" />
+          <Input
+            placeholder="Cerca per numero, dipendente, categoria..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 h-11 border-2 border-border rounded-sm bg-background text-foreground w-full"
+          />
         </div>
 
-        {/* Clear Filters Button */}
-        {activeFiltersCount > 0 && (
-          <div className="flex justify-end">
-            <Button
-              variant="outline"
-              onClick={clearAllFilters}
-              className="gap-2"
-            >
-              <X className="h-4 w-4" />
-              Azzera filtri
-            </Button>
-          </div>
-        )}
+        <div className="flex-1"></div>
+
+        {/* Filtro Dipendente */}
+        <Select value={filtroUtente || undefined} onValueChange={(value) => setFiltroUtente(value)}>
+          <SelectTrigger className="h-11 w-full lg:w-[200px] border-2 border-border rounded-sm bg-white">
+            <SelectValue placeholder="Tutti i dipendenti" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tutti i dipendenti</SelectItem>
+            {users.map(user => (
+              <SelectItem key={user.id} value={user.dipendente_id || user.id}>
+                {user.user_metadata?.full_name || user.email}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Month Navigator + Export e View Toggle - Solo per tab approvate */}
