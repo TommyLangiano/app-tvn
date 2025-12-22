@@ -429,7 +429,7 @@ export default function CommessaDetailPage() {
         nome: d.nome,
         cognome: d.cognome,
         email: d.email,
-        ruolo: d.ruolo || d.qualifica || d.mansione || ''
+        ruolo: d.qualifica || d.mansione || ''
       }));
 
       console.log('loadTeamData: Loaded all dipendenti:', dipendentiWithRuolo.length);
