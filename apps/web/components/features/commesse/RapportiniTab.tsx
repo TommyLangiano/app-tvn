@@ -540,9 +540,9 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
             </span>
           </button>
           <button
-            onClick={() => setActiveRapportiniTab('da_approvare')}
+            onClick={() => setActiveRapportiniTab('da_approvare' as TabType)}
             className={`inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-              activeRapportiniTab === 'da_approvare'
+              (activeRapportiniTab as TabType) === 'da_approvare'
                 ? 'bg-primary text-primary-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
@@ -550,7 +550,7 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
             <ClipboardList className="h-4 w-4" />
             Da Approvare
             <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
-              activeRapportiniTab === 'da_approvare'
+              (activeRapportiniTab as TabType) === 'da_approvare'
                 ? 'bg-primary-foreground/20 text-primary-foreground'
                 : 'bg-green-100 text-green-700'
             }`}>
@@ -558,9 +558,9 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
             </span>
           </button>
           <button
-            onClick={() => setActiveRapportiniTab('rifiutate')}
+            onClick={() => setActiveRapportiniTab('rifiutate' as TabType)}
             className={`inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-              activeRapportiniTab === 'rifiutate'
+              (activeRapportiniTab as TabType) === 'rifiutate'
                 ? 'bg-primary text-primary-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
@@ -568,7 +568,7 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
             <ClipboardX className="h-4 w-4" />
             Rifiutate
             <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
-              activeRapportiniTab === 'rifiutate'
+              (activeRapportiniTab as TabType) === 'rifiutate'
                 ? 'bg-primary-foreground/20 text-primary-foreground'
                 : 'bg-green-100 text-green-700'
             }`}>
