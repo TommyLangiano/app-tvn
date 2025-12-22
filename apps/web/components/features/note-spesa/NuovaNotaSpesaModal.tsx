@@ -37,10 +37,13 @@ export function NuovaNotaSpesaModal({ onClose, onSuccess, commessaId }: NuovaNot
   const [dragActive, setDragActive] = useState(false);
   const [loading, setLoading] = useState(false);
   const [categorie, setCategorie] = useState<CategoriaNotaSpesa[]>([]);
+  const [dipendenti, setDipendenti] = useState<Array<{id: string; nome: string; cognome: string}>>([]);
+  const [selectedDipendenteId, setSelectedDipendenteId] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadCategorie();
+    loadDipendenti();
   }, []);
 
   const loadCategorie = async () => {
@@ -69,6 +72,59 @@ export function NuovaNotaSpesaModal({ onClose, onSuccess, commessaId }: NuovaNot
       }
     } catch (error) {
       console.error('Error loading categorie:', error);
+    }
+  };
+
+  const loadDipendenti = async () => {
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: userTenants } = await supabase
+        .from('user_tenants')
+        .select('tenant_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!userTenants) return;
+
+      // Load dipendenti from commesse_team
+      const { data: teamData } = await supabase
+        .from('commesse_team')
+        .select(`
+          dipendente_id,
+          dipendenti!commesse_team_dipendente_id_fkey (
+            id,
+            nome,
+            cognome
+          )
+        `)
+        .eq('commessa_id', commessaId)
+        .eq('tenant_id', userTenants.tenant_id);
+
+      if (teamData) {
+        const dipendentiList = teamData.map((t: any) => ({
+          id: t.dipendenti.id,
+          nome: t.dipendenti.nome,
+          cognome: t.dipendenti.cognome
+        }));
+        setDipendenti(dipendentiList);
+
+        // Auto-select current user's dipendente if exists
+        const { data: currentDipendente } = await supabase
+          .from('dipendenti')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('tenant_id', userTenants.tenant_id)
+          .single();
+
+        if (currentDipendente && dipendentiList.some(d => d.id === currentDipendente.id)) {
+          setSelectedDipendenteId(currentDipendente.id);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading dipendenti:', error);
     }
   };
 
@@ -159,6 +215,11 @@ export function NuovaNotaSpesaModal({ onClose, onSuccess, commessaId }: NuovaNot
     e.preventDefault();
 
     // Validazione
+    if (!selectedDipendenteId) {
+      toast.error('Seleziona un dipendente');
+      return;
+    }
+
     if (!formData.categoria || !formData.importo || !formData.data_nota) {
       toast.error('Compila tutti i campi obbligatori');
       return;
@@ -198,18 +259,8 @@ export function NuovaNotaSpesaModal({ onClose, onSuccess, commessaId }: NuovaNot
 
       if (!userTenants) throw new Error('No tenant found');
 
-      // Get dipendente_id from user
-      const { data: dipendenteData, error: dipendenteError } = await supabase
-        .from('dipendenti')
-        .select('id, tenant_id')
-        .eq('user_id', user.id)
-        .eq('tenant_id', userTenants.tenant_id)
-        .single();
-
-      if (dipendenteError || !dipendenteData) {
-        console.error('Dipendente error:', dipendenteError);
-        throw new Error('Dipendente non trovato per questo utente');
-      }
+      // Use selected dipendente_id
+      const dipendenteId = selectedDipendenteId;
 
       // Upload allegati
       const allegati = [];
@@ -239,7 +290,7 @@ export function NuovaNotaSpesaModal({ onClose, onSuccess, commessaId }: NuovaNot
         .insert({
           tenant_id: userTenants.tenant_id,
           commessa_id: commessaId,
-          dipendente_id: dipendenteData.id,
+          dipendente_id: dipendenteId,
           data_nota: formData.data_nota,
           importo: importoNum,
           categoria: formData.categoria,
@@ -317,6 +368,34 @@ export function NuovaNotaSpesaModal({ onClose, onSuccess, commessaId }: NuovaNot
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {/* Dipendente */}
+          <div className="space-y-2">
+            <Label htmlFor="dipendente">
+              Dipendente <span className="text-destructive">*</span>
+            </Label>
+            <Select
+              value={selectedDipendenteId}
+              onValueChange={setSelectedDipendenteId}
+            >
+              <SelectTrigger id="dipendente" className="bg-white">
+                <SelectValue placeholder="Seleziona dipendente" />
+              </SelectTrigger>
+              <SelectContent>
+                {dipendenti.length === 0 ? (
+                  <div className="px-2 py-6 text-center text-sm text-muted-foreground">
+                    Nessun dipendente nel team
+                  </div>
+                ) : (
+                  dipendenti.map((dip) => (
+                    <SelectItem key={dip.id} value={dip.id}>
+                      {dip.cognome} {dip.nome}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Row: Data e Categoria */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Data Nota */}
