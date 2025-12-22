@@ -339,7 +339,7 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
       const searchLower = searchTerm.toLowerCase();
       filtered = filtered.filter(r =>
         getUserDisplayName(r).toLowerCase().includes(searchLower) ||
-        r.commesse?.nome_commessa.toLowerCase().includes(searchLower) ||
+        r.commesse?.titolo.toLowerCase().includes(searchLower) ||
         r.note?.toLowerCase().includes(searchLower)
       );
     }
