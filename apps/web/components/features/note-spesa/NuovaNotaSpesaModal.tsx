@@ -199,14 +199,17 @@ export function NuovaNotaSpesaModal({ onClose, onSuccess, commessaId }: NuovaNot
       if (!userTenants) throw new Error('No tenant found');
 
       // Get dipendente_id from user
-      const { data: dipendenteData } = await supabase
+      const { data: dipendenteData, error: dipendenteError } = await supabase
         .from('dipendenti')
-        .select('id')
+        .select('id, tenant_id')
         .eq('user_id', user.id)
         .eq('tenant_id', userTenants.tenant_id)
         .single();
 
-      if (!dipendenteData) throw new Error('Dipendente not found');
+      if (dipendenteError || !dipendenteData) {
+        console.error('Dipendente error:', dipendenteError);
+        throw new Error('Dipendente non trovato per questo utente');
+      }
 
       // Upload allegati
       const allegati = [];
