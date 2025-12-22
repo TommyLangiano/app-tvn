@@ -692,19 +692,20 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      // Get dipendente_id from user
-      const { data: dipendenteData } = await supabase
-        .from('dipendenti')
-        .select('id, tenant_id')
+      // Get user tenant first
+      const { data: userTenants } = await supabase
+        .from('user_tenants')
+        .select('tenant_id')
         .eq('user_id', user.id)
-        .single();
+        .limit(1);
 
-      if (!dipendenteData) throw new Error('Dipendente not found');
+      const userTenant = userTenants && userTenants.length > 0 ? userTenants[0] : null;
+      if (!userTenant) throw new Error('Tenant not found');
 
-      // Call RPC function
+      // Call RPC function with user.id (the RPC uses auth.uid() internally)
       const { error: rpcError } = await supabase.rpc('approva_nota_spesa', {
         p_nota_spesa_id: notaSpesa.id,
-        p_approvato_da: dipendenteData.id
+        p_approvato_da: user.id
       });
 
       if (rpcError) throw rpcError;
