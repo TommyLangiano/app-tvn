@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { MonthNavigator } from '@/components/ui/month-navigator';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
@@ -932,20 +933,24 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
       )}
 
       {/* Modals */}
-      {showInfoModal && selectedNotaSpesa && (
-        <InfoNotaSpesaModal
-          notaSpesa={selectedNotaSpesa}
-          onClose={() => {
-            setShowInfoModal(false);
-            setSelectedNotaSpesa(null);
-          }}
-          onUpdate={handleNotaSpesaUpdated}
-          onDelete={() => {
-            setShowInfoModal(false);
-            setShowDeleteModal(true);
-          }}
-        />
-      )}
+      <Sheet open={showInfoModal} onOpenChange={setShowInfoModal}>
+        <SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col [&>button]:hidden">
+          {selectedNotaSpesa && (
+            <InfoNotaSpesaModal
+              notaSpesa={selectedNotaSpesa}
+              onClose={() => {
+                setShowInfoModal(false);
+                setSelectedNotaSpesa(null);
+              }}
+              onUpdate={handleNotaSpesaUpdated}
+              onDelete={() => {
+                setShowInfoModal(false);
+                setShowDeleteModal(true);
+              }}
+            />
+          )}
+        </SheetContent>
+      </Sheet>
 
       {showDeleteModal && selectedNotaSpesa && (
         <DeleteNotaSpesaModal
