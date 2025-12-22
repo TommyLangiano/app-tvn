@@ -205,10 +205,6 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
           nome,
           cognome,
           email
-        ),
-        approvatore:dipendenti!note_spesa_approvato_da_fkey (
-          nome,
-          cognome
         )
       `)
       .eq('tenant_id', userTenant.tenant_id)
@@ -255,10 +251,6 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
           nome,
           cognome,
           email
-        ),
-        approvatore:dipendenti!note_spesa_approvato_da_fkey (
-          nome,
-          cognome
         )
       `)
       .eq('tenant_id', userTenant.tenant_id)
@@ -297,10 +289,6 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
           nome,
           cognome,
           email
-        ),
-        approvatore:dipendenti!note_spesa_approvato_da_fkey (
-          nome,
-          cognome
         )
       `)
       .eq('tenant_id', userTenant.tenant_id)

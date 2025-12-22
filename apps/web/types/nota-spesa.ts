@@ -48,10 +48,6 @@ export interface NotaSpesa {
     cognome: string;
     email: string;
   };
-  approvatore?: {
-    nome: string;
-    cognome: string;
-  };
 }
 
 export interface NotaSpesaFormData {
