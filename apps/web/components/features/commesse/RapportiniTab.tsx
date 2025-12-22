@@ -68,7 +68,7 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<TabType>('approvate');
+  const [activeRapportiniTab, setActiveRapportiniTab] = useState<TabType>('approvate');
 
   // DataTable sorting states
   const [sortField, setSortField] = useState<string>('data_rapportino');
@@ -328,9 +328,9 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
 
   // Filtri e ordinamento
   const rapportiniFiltrati = useMemo(() => {
-    let filtered = activeTab === 'da_approvare'
+    let filtered = activeRapportiniTab === 'da_approvare'
       ? [...rapportiniDaApprovare]
-      : activeTab === 'rifiutate'
+      : activeRapportiniTab === 'rifiutate'
       ? [...rapportiniRifiutati]
       : [...rapportini.filter(r => !r.stato || r.stato === 'approvato')];
 
@@ -384,7 +384,7 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
     });
 
     return filtered;
-  }, [rapportini, rapportiniDaApprovare, rapportiniRifiutati, activeTab, searchTerm, filtroUtente, sortField, sortDirection]);
+  }, [rapportini, rapportiniDaApprovare, rapportiniRifiutati, activeRapportiniTab, searchTerm, filtroUtente, sortField, sortDirection]);
 
   // Tab counts
   const tabCounts = useMemo(() => {
@@ -517,14 +517,14 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
   return (
     <div className="space-y-4">
       {/* Header: Tabs e Nuovo Rapportino - Only for 'approvate' tab */}
-      {activeTab === 'approvate' && (
+      {activeRapportiniTab === 'approvate' && (
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         {/* Tabs - Inline style come Fatture */}
         <div className="inline-flex rounded-md border border-border bg-background p-1">
           <button
-            onClick={() => setActiveTab('approvate')}
+            onClick={() => setActiveRapportiniTab('approvate')}
             className={`inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-              activeTab === 'approvate'
+              activeRapportiniTab === 'approvate'
                 ? 'bg-primary text-primary-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
@@ -532,7 +532,7 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
             <ClipboardCheck className="h-4 w-4" />
             Approvate
             <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
-              activeTab === 'approvate'
+              activeRapportiniTab === 'approvate'
                 ? 'bg-primary-foreground/20 text-primary-foreground'
                 : 'bg-green-100 text-green-700'
             }`}>
@@ -540,9 +540,9 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
             </span>
           </button>
           <button
-            onClick={() => setActiveTab('da_approvare')}
+            onClick={() => setActiveRapportiniTab('da_approvare')}
             className={`inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-              activeTab === 'da_approvare'
+              activeRapportiniTab === 'da_approvare'
                 ? 'bg-primary text-primary-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
@@ -550,7 +550,7 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
             <ClipboardList className="h-4 w-4" />
             Da Approvare
             <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
-              activeTab === 'da_approvare'
+              activeRapportiniTab === 'da_approvare'
                 ? 'bg-primary-foreground/20 text-primary-foreground'
                 : 'bg-green-100 text-green-700'
             }`}>
@@ -558,9 +558,9 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
             </span>
           </button>
           <button
-            onClick={() => setActiveTab('rifiutate')}
+            onClick={() => setActiveRapportiniTab('rifiutate')}
             className={`inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-              activeTab === 'rifiutate'
+              activeRapportiniTab === 'rifiutate'
                 ? 'bg-primary text-primary-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
@@ -568,7 +568,7 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
             <ClipboardX className="h-4 w-4" />
             Rifiutate
             <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
-              activeTab === 'rifiutate'
+              activeRapportiniTab === 'rifiutate'
                 ? 'bg-primary-foreground/20 text-primary-foreground'
                 : 'bg-green-100 text-green-700'
             }`}>
@@ -591,14 +591,14 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
       )}
 
       {/* Header per altri tab (da_approvare, rifiutate) */}
-      {activeTab !== 'approvate' && (
+      {activeRapportiniTab !== 'approvate' && (
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           {/* Tabs - Inline style come Fatture */}
           <div className="inline-flex rounded-md border border-border bg-background p-1">
             <button
-              onClick={() => setActiveTab('approvate')}
+              onClick={() => setActiveRapportiniTab('approvate')}
               className={`inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-                activeTab === 'approvate'
+                activeRapportiniTab === 'approvate'
                   ? 'bg-primary text-primary-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
@@ -606,7 +606,7 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
               <ClipboardCheck className="h-4 w-4" />
               Approvate
               <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
-                activeTab === 'approvate'
+                activeRapportiniTab === 'approvate'
                   ? 'bg-primary-foreground/20 text-primary-foreground'
                   : 'bg-green-100 text-green-700'
               }`}>
@@ -614,9 +614,9 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
               </span>
             </button>
             <button
-              onClick={() => setActiveTab('da_approvare')}
+              onClick={() => setActiveRapportiniTab('da_approvare')}
               className={`inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-                activeTab === 'da_approvare'
+                activeRapportiniTab === 'da_approvare'
                   ? 'bg-primary text-primary-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
@@ -624,7 +624,7 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
               <ClipboardList className="h-4 w-4" />
               Da Approvare
               <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
-                activeTab === 'da_approvare'
+                activeRapportiniTab === 'da_approvare'
                   ? 'bg-primary-foreground/20 text-primary-foreground'
                   : 'bg-green-100 text-green-700'
               }`}>
@@ -632,9 +632,9 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
               </span>
             </button>
             <button
-              onClick={() => setActiveTab('rifiutate')}
+              onClick={() => setActiveRapportiniTab('rifiutate')}
               className={`inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-                activeTab === 'rifiutate'
+                activeRapportiniTab === 'rifiutate'
                   ? 'bg-primary text-primary-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
@@ -642,7 +642,7 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
               <ClipboardX className="h-4 w-4" />
               Rifiutate
               <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
-                activeTab === 'rifiutate'
+                activeRapportiniTab === 'rifiutate'
                   ? 'bg-primary-foreground/20 text-primary-foreground'
                   : 'bg-green-100 text-green-700'
               }`}>
@@ -712,7 +712,7 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
       </div>
 
       {/* Month Navigator + Esporta e View Toggle - Sotto i Filtri */}
-      {activeTab === 'approvate' && (
+      {activeRapportiniTab === 'approvate' && (
         <div className="flex items-center justify-between gap-3">
           <div className="flex-1" />
           <MonthNavigator
@@ -752,7 +752,7 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
       )}
 
       {/* DataTable - Solo se viewMode è 'list' */}
-      {viewMode === 'list' && activeTab === 'approvate' && (
+      {viewMode === 'list' && activeRapportiniTab === 'approvate' && (
         <div className="!mt-0">
           <DataTable<Rapportino>
             columns={columns}
@@ -777,7 +777,7 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
       )}
 
       {/* Grid View - Solo se viewMode è 'grid' */}
-      {viewMode === 'grid' && activeTab === 'approvate' && (
+      {viewMode === 'grid' && activeRapportiniTab === 'approvate' && (
         <div className="rounded-xl border-2 border-border bg-card overflow-hidden">
           <div
             className="overflow-x-auto"
@@ -1016,7 +1016,7 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
       )}
 
       {/* DataTable per tab non-approvate */}
-      {activeTab !== 'approvate' && (
+      {activeRapportiniTab !== 'approvate' && (
         <div className="!mt-0">
           <DataTable<Rapportino>
             columns={columns}
