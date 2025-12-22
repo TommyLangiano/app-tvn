@@ -33,7 +33,7 @@ interface FileWithPreview {
 
 export function NuovaNotaSpesaModal({ onClose, onSuccess, commessaId }: NuovaNotaSpesaModalProps) {
   const [formData, setFormData] = useState(initialFormData);
-  const [selectedFiles, setSelectedFiles] = useState<FileWithPreview[]>([]);
+  const [selectedFile, setSelectedFile] = useState<FileWithPreview | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [loading, setLoading] = useState(false);
   const [categorie, setCategorie] = useState<CategoriaNotaSpesa[]>([]);
@@ -130,7 +130,7 @@ export function NuovaNotaSpesaModal({ onClose, onSuccess, commessaId }: NuovaNot
 
   const handleReset = () => {
     setFormData(initialFormData);
-    setSelectedFiles([]);
+    setSelectedFile(null);
   };
 
   const handleDrag = (e: React.DragEvent) => {
@@ -149,45 +149,42 @@ export function NuovaNotaSpesaModal({ onClose, onSuccess, commessaId }: NuovaNot
     setDragActive(false);
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleFiles(Array.from(e.dataTransfer.files));
+      handleFiles(Array.from(e.dataTransfer.files).slice(0, 1));
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      handleFiles(Array.from(e.target.files));
+      handleFiles(Array.from(e.target.files).slice(0, 1));
     }
   };
 
   const handleFiles = (files: File[]) => {
-    // Max 5 files
-    if (selectedFiles.length + files.length > 5) {
-      toast.error('Puoi caricare massimo 5 allegati');
+    if (files.length === 0) return;
+
+    const file = files[0];
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error(`${file.name} è troppo grande. Massimo 10MB per file`);
       return;
     }
 
-    const validFiles: FileWithPreview[] = [];
-
-    for (const file of files) {
-      // Validate file size (max 10MB)
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error(`${file.name} è troppo grande. Massimo 10MB per file`);
-        continue;
-      }
-
-      // Create preview URL
-      const preview = URL.createObjectURL(file);
-      validFiles.push({ file, preview });
+    // Clean up previous file if exists
+    if (selectedFile) {
+      URL.revokeObjectURL(selectedFile.preview);
     }
 
-    setSelectedFiles([...selectedFiles, ...validFiles]);
+    // Create preview URL
+    const preview = URL.createObjectURL(file);
+    setSelectedFile({ file, preview });
   };
 
-  const removeFile = (index: number) => {
-    const newFiles = [...selectedFiles];
-    URL.revokeObjectURL(newFiles[index].preview);
-    newFiles.splice(index, 1);
-    setSelectedFiles(newFiles);
+  const removeFile = () => {
+    if (selectedFile) {
+      URL.revokeObjectURL(selectedFile.preview);
+      setSelectedFile(null);
+    }
   };
 
   const formatCurrencyInput = (value: string): string => {
@@ -233,8 +230,8 @@ export function NuovaNotaSpesaModal({ onClose, onSuccess, commessaId }: NuovaNot
 
     // Verifica categoria richiede allegato
     const categoriaSelezionata = categorie.find(c => c.id === formData.categoria);
-    if (categoriaSelezionata?.richiede_allegato && selectedFiles.length === 0) {
-      toast.error(`La categoria "${categoriaSelezionata.nome}" richiede almeno un allegato`);
+    if (categoriaSelezionata?.richiede_allegato && !selectedFile) {
+      toast.error(`La categoria "${categoriaSelezionata.nome}" richiede un allegato`);
       return;
     }
 
@@ -262,25 +259,25 @@ export function NuovaNotaSpesaModal({ onClose, onSuccess, commessaId }: NuovaNot
       // Use selected dipendente_id
       const dipendenteId = selectedDipendenteId;
 
-      // Upload allegati
+      // Upload allegato
       const allegati = [];
-      for (const { file } of selectedFiles) {
-        const filePath = `${userTenants.tenant_id}/note-spesa/${commessaId}/${Date.now()}_${file.name}`;
+      if (selectedFile) {
+        const filePath = `${userTenants.tenant_id}/note-spesa/${commessaId}/${Date.now()}_${selectedFile.file.name}`;
 
         const { error: uploadError } = await supabase.storage
           .from('app-storage')
-          .upload(filePath, file);
+          .upload(filePath, selectedFile.file);
 
         if (uploadError) {
           console.error('Upload error:', uploadError);
-          throw new Error(`Errore upload ${file.name}`);
+          throw new Error(`Errore upload ${selectedFile.file.name}`);
         }
 
         allegati.push({
-          nome_file: file.name,
+          nome_file: selectedFile.file.name,
           file_path: filePath,
-          file_size: file.size,
-          mime_type: file.type,
+          file_size: selectedFile.file.size,
+          mime_type: selectedFile.file.type,
         });
       }
 
@@ -329,9 +326,11 @@ export function NuovaNotaSpesaModal({ onClose, onSuccess, commessaId }: NuovaNot
   // Cleanup preview URLs on unmount
   useEffect(() => {
     return () => {
-      selectedFiles.forEach(({ preview }) => URL.revokeObjectURL(preview));
+      if (selectedFile) {
+        URL.revokeObjectURL(selectedFile.preview);
+      }
     };
-  }, [selectedFiles]);
+  }, [selectedFile]);
 
   return (
     <ModalWrapper onClose={onClose}>
@@ -492,80 +491,68 @@ export function NuovaNotaSpesaModal({ onClose, onSuccess, commessaId }: NuovaNot
             </div>
           </div>
 
-          {/* Allegati */}
+          {/* Allegato */}
           <div>
             <Label className="text-foreground font-medium text-sm mb-2 block">
-              Allegati {categorie.find(c => c.id === formData.categoria)?.richiede_allegato && (
+              Allegato {categorie.find(c => c.id === formData.categoria)?.richiede_allegato && (
                 <span className="text-destructive">*</span>
               )}
             </Label>
 
             {/* Upload Zone */}
-            <div
-              className={cn(
-                'relative border-2 border-dashed rounded-lg p-6 transition-colors cursor-pointer',
-                dragActive
-                  ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950'
-                  : 'border-border hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950'
-              )}
-              onDragEnter={handleDrag}
-              onDragLeave={handleDrag}
-              onDragOver={handleDrag}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                className="hidden"
-                onChange={handleFileChange}
-                accept=".pdf,.jpg,.jpeg,.png"
-                multiple
-              />
-              <div className="text-center">
-                <Upload className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-                <p className="text-sm text-foreground mb-1">
-                  Trascina i file qui o <span className="text-primary font-medium">clicca per selezionare</span>
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  PDF, JPG, PNG (max 10MB per file, massimo 5 file)
-                </p>
+            {!selectedFile ? (
+              <div
+                className={cn(
+                  'relative border-2 border-dashed rounded-lg p-6 transition-colors cursor-pointer',
+                  dragActive
+                    ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950'
+                    : 'border-border hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950'
+                )}
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={handleFileChange}
+                  accept=".pdf,.jpg,.jpeg,.png"
+                />
+                <div className="text-center">
+                  <Upload className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-sm text-foreground mb-1">
+                    Trascina il file qui o <span className="text-primary font-medium">clicca per selezionare</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    PDF, JPG, PNG (max 10MB)
+                  </p>
+                </div>
               </div>
-            </div>
-
-            {/* File Preview */}
-            {selectedFiles.length > 0 && (
-              <div className="mt-4 space-y-2">
-                {selectedFiles.map((fileWithPreview, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
-                  >
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <FileText className="h-5 w-5 text-primary flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">
-                          {fileWithPreview.file.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {(fileWithPreview.file.size / 1024 / 1024).toFixed(2)} MB
-                        </p>
-                      </div>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removeFile(index);
-                      }}
-                      className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive flex-shrink-0"
-                    >
-                      <Trash className="h-4 w-4" />
-                    </Button>
+            ) : (
+              <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <FileText className="h-5 w-5 text-primary flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {selectedFile.file.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {(selectedFile.file.size / 1024 / 1024).toFixed(2)} MB
+                    </p>
                   </div>
-                ))}
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={removeFile}
+                  className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive flex-shrink-0"
+                >
+                  <Trash className="h-4 w-4" />
+                </Button>
               </div>
             )}
           </div>

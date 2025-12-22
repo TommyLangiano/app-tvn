@@ -32,9 +32,11 @@ export function EditNotaSpesaModal({ notaSpesa, onClose, onSuccess }: EditNotaSp
     importo: notaSpesa.importo.toString(),
     descrizione: notaSpesa.descrizione || '',
   });
-  const [existingAllegati, setExistingAllegati] = useState<AllegatoNotaSpesa[]>(notaSpesa.allegati || []);
-  const [allegatiToRemove, setAllegatiToRemove] = useState<string[]>([]);
-  const [newFiles, setNewFiles] = useState<FileWithPreview[]>([]);
+  const [existingAllegato, setExistingAllegato] = useState<AllegatoNotaSpesa | null>(
+    notaSpesa.allegati && notaSpesa.allegati.length > 0 ? notaSpesa.allegati[0] : null
+  );
+  const [deleteExistingAllegato, setDeleteExistingAllegato] = useState(false);
+  const [newFile, setNewFile] = useState<FileWithPreview | null>(null);
   const [allegatiUrls, setAllegatiUrls] = useState<Map<string, string>>(new Map());
   const [dragActive, setDragActive] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -76,14 +78,12 @@ export function EditNotaSpesaModal({ notaSpesa, onClose, onSuccess }: EditNotaSp
   };
 
   const loadAllegatiUrls = async () => {
-    if (!notaSpesa.allegati || notaSpesa.allegati.length === 0) return;
+    if (!existingAllegato) return;
 
     const urls = new Map<string, string>();
-    for (const allegato of notaSpesa.allegati) {
-      const url = await getSignedUrl(allegato.file_path);
-      if (url) {
-        urls.set(allegato.file_path, url);
-      }
+    const url = await getSignedUrl(existingAllegato.file_path);
+    if (url) {
+      urls.set(existingAllegato.file_path, url);
     }
     setAllegatiUrls(urls);
   };
@@ -104,51 +104,49 @@ export function EditNotaSpesaModal({ notaSpesa, onClose, onSuccess }: EditNotaSp
     setDragActive(false);
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleFiles(Array.from(e.dataTransfer.files));
+      handleFiles(Array.from(e.dataTransfer.files).slice(0, 1));
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      handleFiles(Array.from(e.target.files));
+      handleFiles(Array.from(e.target.files).slice(0, 1));
     }
   };
 
   const handleFiles = (files: File[]) => {
-    const totalAllegati = existingAllegati.length - allegatiToRemove.length + newFiles.length + files.length;
-    if (totalAllegati > 5) {
-      toast.error('Puoi avere massimo 5 allegati');
+    if (files.length === 0) return;
+
+    const file = files[0];
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error(`${file.name} è troppo grande. Massimo 10MB per file`);
       return;
     }
 
-    const validFiles: FileWithPreview[] = [];
-
-    for (const file of files) {
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error(`${file.name} è troppo grande. Massimo 10MB per file`);
-        continue;
-      }
-
-      const preview = URL.createObjectURL(file);
-      validFiles.push({ file, preview });
+    // Clean up previous new file if exists
+    if (newFile) {
+      URL.revokeObjectURL(newFile.preview);
     }
 
-    setNewFiles([...newFiles, ...validFiles]);
+    const preview = URL.createObjectURL(file);
+    setNewFile({ file, preview });
+    setDeleteExistingAllegato(false);
   };
 
-  const removeExistingAllegato = (filePath: string) => {
-    setAllegatiToRemove([...allegatiToRemove, filePath]);
+  const removeExistingAllegato = () => {
+    setDeleteExistingAllegato(true);
   };
 
-  const restoreExistingAllegato = (filePath: string) => {
-    setAllegatiToRemove(allegatiToRemove.filter(path => path !== filePath));
+  const restoreExistingAllegato = () => {
+    setDeleteExistingAllegato(false);
   };
 
-  const removeNewFile = (index: number) => {
-    const newFilesCopy = [...newFiles];
-    URL.revokeObjectURL(newFilesCopy[index].preview);
-    newFilesCopy.splice(index, 1);
-    setNewFiles(newFilesCopy);
+  const removeNewFile = () => {
+    if (newFile) {
+      URL.revokeObjectURL(newFile.preview);
+      setNewFile(null);
+    }
   };
 
   const formatCurrencyInput = (value: string): string => {
@@ -182,10 +180,10 @@ export function EditNotaSpesaModal({ notaSpesa, onClose, onSuccess }: EditNotaSp
       return;
     }
 
-    const totalAllegati = existingAllegati.length - allegatiToRemove.length + newFiles.length;
+    const hasAllegato = (existingAllegato && !deleteExistingAllegato) || newFile;
     const categoriaSelezionata = categorie.find(c => c.id === formData.categoria);
-    if (categoriaSelezionata?.richiede_allegato && totalAllegati === 0) {
-      toast.error(`La categoria "${categoriaSelezionata.nome}" richiede almeno un allegato`);
+    if (categoriaSelezionata?.richiede_allegato && !hasAllegato) {
+      toast.error(`La categoria "${categoriaSelezionata.nome}" richiede un allegato`);
       return;
     }
 
@@ -209,40 +207,47 @@ export function EditNotaSpesaModal({ notaSpesa, onClose, onSuccess }: EditNotaSp
 
       if (!userTenants) throw new Error('No tenant found');
 
-      // Remove allegati marked for deletion
-      for (const filePath of allegatiToRemove) {
-        await supabase.storage
-          .from('app-storage')
-          .remove([filePath]);
-      }
+      // Gestione allegato
+      let finalAllegato = null;
 
-      // Upload new files
-      const newAllegati = [];
-      for (const { file } of newFiles) {
-        const filePath = `${userTenants.tenant_id}/note-spesa/${notaSpesa.commessa_id}/${Date.now()}_${file.name}`;
+      // Se c'è un nuovo file, caricalo
+      if (newFile) {
+        const filePath = `${userTenants.tenant_id}/note-spesa/${notaSpesa.commessa_id}/${Date.now()}_${newFile.file.name}`;
 
         const { error: uploadError } = await supabase.storage
           .from('app-storage')
-          .upload(filePath, file);
+          .upload(filePath, newFile.file);
 
         if (uploadError) {
           console.error('Upload error:', uploadError);
-          throw new Error(`Errore upload ${file.name}`);
+          throw new Error(`Errore upload ${newFile.file.name}`);
         }
 
-        newAllegati.push({
-          nome_file: file.name,
+        finalAllegato = {
+          nome_file: newFile.file.name,
           file_path: filePath,
-          file_size: file.size,
-          mime_type: file.type,
-        });
+          file_size: newFile.file.size,
+          mime_type: newFile.file.type,
+        };
+
+        // Elimina il vecchio allegato se esiste
+        if (existingAllegato) {
+          await supabase.storage
+            .from('app-storage')
+            .remove([existingAllegato.file_path]);
+        }
+      } else if (deleteExistingAllegato && existingAllegato) {
+        // Elimina l'allegato esistente
+        await supabase.storage
+          .from('app-storage')
+          .remove([existingAllegato.file_path]);
+        finalAllegato = null;
+      } else if (existingAllegato) {
+        // Mantieni l'allegato esistente
+        finalAllegato = existingAllegato;
       }
 
-      // Merge allegati
-      const remainingAllegati = existingAllegati.filter(
-        a => !allegatiToRemove.includes(a.file_path)
-      );
-      const finalAllegati = [...remainingAllegati, ...newAllegati];
+      const finalAllegati = finalAllegato ? [finalAllegato] : [];
 
       // Update nota spesa
       const { error: updateError } = await supabase
@@ -281,9 +286,11 @@ export function EditNotaSpesaModal({ notaSpesa, onClose, onSuccess }: EditNotaSp
 
   useEffect(() => {
     return () => {
-      newFiles.forEach(({ preview }) => URL.revokeObjectURL(preview));
+      if (newFile) {
+        URL.revokeObjectURL(newFile.preview);
+      }
     };
-  }, [newFiles]);
+  }, [newFile]);
 
   return (
     <ModalWrapper onClose={onClose}>
@@ -404,140 +411,140 @@ export function EditNotaSpesaModal({ notaSpesa, onClose, onSuccess }: EditNotaSp
             </div>
           </div>
 
-          {/* Allegati */}
+          {/* Allegato */}
           <div>
             <Label className="text-foreground font-medium text-sm mb-2 block">
-              Allegati {categorie.find(c => c.id === formData.categoria)?.richiede_allegato && (
+              Allegato {categorie.find(c => c.id === formData.categoria)?.richiede_allegato && (
                 <span className="text-destructive">*</span>
               )}
             </Label>
 
-            {/* Existing Allegati */}
-            {existingAllegati.length > 0 && (
-              <div className="mb-4 space-y-2">
-                <p className="text-sm text-muted-foreground">Allegati esistenti:</p>
-                {existingAllegati.map((allegato, index) => {
-                  const isMarkedForRemoval = allegatiToRemove.includes(allegato.file_path);
-                  return (
-                    <div
-                      key={index}
-                      className={cn(
-                        "flex items-center justify-between p-3 rounded-lg",
-                        isMarkedForRemoval ? 'bg-red-50 opacity-50' : 'bg-muted/30'
-                      )}
-                    >
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <FileText className="h-5 w-5 text-primary flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className={cn(
-                            "text-sm font-medium truncate",
-                            isMarkedForRemoval && 'line-through text-muted-foreground'
-                          )}>
-                            {allegato.nome_file}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {(allegato.file_size / 1024 / 1024).toFixed(2)} MB
-                          </p>
-                        </div>
-                      </div>
-                      {isMarkedForRemoval ? (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => restoreExistingAllegato(allegato.file_path)}
-                          className="h-8 gap-1 text-primary hover:text-primary flex-shrink-0"
-                        >
-                          <XCircle className="h-4 w-4" />
-                          Ripristina
-                        </Button>
-                      ) : (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeExistingAllegato(allegato.file_path)}
-                          className="h-8 gap-1 hover:bg-destructive/10 hover:text-destructive flex-shrink-0"
-                        >
-                          <Trash className="h-4 w-4" />
-                          Rimuovi
-                        </Button>
-                      )}
+            {/* Existing Allegato */}
+            {existingAllegato && !newFile && (
+              <div className="mb-4">
+                <p className="text-sm text-muted-foreground mb-2">Allegato corrente:</p>
+                <div
+                  className={cn(
+                    "flex items-center justify-between p-3 rounded-lg",
+                    deleteExistingAllegato ? 'bg-red-50 opacity-50' : 'bg-muted/30'
+                  )}
+                >
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <FileText className="h-5 w-5 text-primary flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className={cn(
+                        "text-sm font-medium truncate",
+                        deleteExistingAllegato && 'line-through text-muted-foreground'
+                      )}>
+                        {existingAllegato.nome_file}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {(existingAllegato.file_size / 1024 / 1024).toFixed(2)} MB
+                      </p>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Upload Zone */}
-            <div
-              className={cn(
-                'relative border-2 border-dashed rounded-lg p-6 transition-colors cursor-pointer',
-                dragActive
-                  ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950'
-                  : 'border-border hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950'
-              )}
-              onDragEnter={handleDrag}
-              onDragLeave={handleDrag}
-              onDragOver={handleDrag}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                className="hidden"
-                onChange={handleFileChange}
-                accept=".pdf,.jpg,.jpeg,.png"
-                multiple
-              />
-              <div className="text-center">
-                <Upload className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-                <p className="text-sm text-foreground mb-1">
-                  Aggiungi altri file o <span className="text-primary font-medium">clicca per selezionare</span>
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  PDF, JPG, PNG (max 10MB per file)
-                </p>
-              </div>
-            </div>
-
-            {/* New Files Preview */}
-            {newFiles.length > 0 && (
-              <div className="mt-4 space-y-2">
-                <p className="text-sm text-muted-foreground">Nuovi file da caricare:</p>
-                {newFiles.map((fileWithPreview, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-3 bg-green-50 rounded-lg"
-                  >
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <FileText className="h-5 w-5 text-green-600 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">
-                          {fileWithPreview.file.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {(fileWithPreview.file.size / 1024 / 1024).toFixed(2)} MB
-                        </p>
-                      </div>
-                    </div>
+                  </div>
+                  {deleteExistingAllegato ? (
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removeNewFile(index);
-                      }}
-                      className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive flex-shrink-0"
+                      onClick={restoreExistingAllegato}
+                      className="h-8 gap-1 text-primary hover:text-primary flex-shrink-0"
+                    >
+                      <XCircle className="h-4 w-4" />
+                      Ripristina
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={removeExistingAllegato}
+                      className="h-8 gap-1 hover:bg-destructive/10 hover:text-destructive flex-shrink-0"
                     >
                       <Trash className="h-4 w-4" />
+                      Rimuovi
                     </Button>
-                  </div>
-                ))}
+                  )}
+                </div>
               </div>
             )}
+
+            {/* New File Preview */}
+            {newFile ? (
+              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <FileText className="h-5 w-5 text-green-600 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {newFile.file.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {(newFile.file.size / 1024 / 1024).toFixed(2)} MB
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={removeNewFile}
+                  className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive flex-shrink-0"
+                >
+                  <Trash className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              !existingAllegato || deleteExistingAllegato ? (
+                <div
+                  className={cn(
+                    'relative border-2 border-dashed rounded-lg p-6 transition-colors cursor-pointer',
+                    dragActive
+                      ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950'
+                      : 'border-border hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950'
+                  )}
+                  onDragEnter={handleDrag}
+                  onDragLeave={handleDrag}
+                  onDragOver={handleDrag}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    className="hidden"
+                    onChange={handleFileChange}
+                    accept=".pdf,.jpg,.jpeg,.png"
+                  />
+                  <div className="text-center">
+                    <Upload className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-sm text-foreground mb-1">
+                      Trascina il file qui o <span className="text-primary font-medium">clicca per selezionare</span>
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      PDF, JPG, PNG (max 10MB)
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full border-2"
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Sostituisci allegato
+                </Button>
+              )
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              onChange={handleFileChange}
+              accept=".pdf,.jpg,.jpeg,.png"
+            />
           </div>
 
           {/* Footer Actions */}
