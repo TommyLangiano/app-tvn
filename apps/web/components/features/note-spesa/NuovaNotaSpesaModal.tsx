@@ -1,0 +1,513 @@
+'use client';
+
+import { useState, useRef, useEffect } from 'react';
+import { X, Upload, Calendar, Euro, RotateCcw, FileText, Trash, Tag } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ModalWrapper } from '@/components/common/ModalWrapper';
+import { createClient } from '@/lib/supabase/client';
+import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+import type { CategoriaNotaSpesa } from '@/types/nota-spesa';
+
+interface NuovaNotaSpesaModalProps {
+  onClose: () => void;
+  onSuccess: () => void;
+  commessaId: string;
+}
+
+const initialFormData = {
+  data_nota: new Date().toISOString().split('T')[0],
+  categoria: '',
+  importo: '',
+  descrizione: '',
+};
+
+interface FileWithPreview {
+  file: File;
+  preview: string;
+}
+
+export function NuovaNotaSpesaModal({ onClose, onSuccess, commessaId }: NuovaNotaSpesaModalProps) {
+  const [formData, setFormData] = useState(initialFormData);
+  const [selectedFiles, setSelectedFiles] = useState<FileWithPreview[]>([]);
+  const [dragActive, setDragActive] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [categorie, setCategorie] = useState<CategoriaNotaSpesa[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    loadCategorie();
+  }, []);
+
+  const loadCategorie = async () => {
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: userTenants } = await supabase
+        .from('user_tenants')
+        .select('tenant_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!userTenants) return;
+
+      const { data: categorieData } = await supabase
+        .from('categorie_note_spesa')
+        .select('*')
+        .eq('tenant_id', userTenants.tenant_id)
+        .eq('attiva', true)
+        .order('ordinamento');
+
+      if (categorieData) {
+        setCategorie(categorieData);
+      }
+    } catch (error) {
+      console.error('Error loading categorie:', error);
+    }
+  };
+
+  const handleReset = () => {
+    setFormData(initialFormData);
+    setSelectedFiles([]);
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true);
+    } else if (e.type === 'dragleave') {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFiles(Array.from(e.dataTransfer.files));
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      handleFiles(Array.from(e.target.files));
+    }
+  };
+
+  const handleFiles = (files: File[]) => {
+    // Max 5 files
+    if (selectedFiles.length + files.length > 5) {
+      toast.error('Puoi caricare massimo 5 allegati');
+      return;
+    }
+
+    const validFiles: FileWithPreview[] = [];
+
+    for (const file of files) {
+      // Validate file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(`${file.name} è troppo grande. Massimo 10MB per file`);
+        continue;
+      }
+
+      // Create preview URL
+      const preview = URL.createObjectURL(file);
+      validFiles.push({ file, preview });
+    }
+
+    setSelectedFiles([...selectedFiles, ...validFiles]);
+  };
+
+  const removeFile = (index: number) => {
+    const newFiles = [...selectedFiles];
+    URL.revokeObjectURL(newFiles[index].preview);
+    newFiles.splice(index, 1);
+    setSelectedFiles(newFiles);
+  };
+
+  const formatCurrencyInput = (value: string): string => {
+    // Remove all non-digit characters except comma and dot
+    let cleaned = value.replace(/[^\d,\.]/g, '');
+
+    // Replace comma with dot for decimal
+    cleaned = cleaned.replace(',', '.');
+
+    // Ensure only one decimal point
+    const parts = cleaned.split('.');
+    if (parts.length > 2) {
+      cleaned = parts[0] + '.' + parts.slice(1).join('');
+    }
+
+    return cleaned;
+  };
+
+  const handleImportoChange = (value: string) => {
+    const formatted = formatCurrencyInput(value);
+    setFormData({ ...formData, importo: formatted });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Validazione
+    if (!formData.categoria || !formData.importo || !formData.data_nota) {
+      toast.error('Compila tutti i campi obbligatori');
+      return;
+    }
+
+    const importoNum = parseFloat(formData.importo);
+    if (isNaN(importoNum) || importoNum <= 0) {
+      toast.error('Importo non valido');
+      return;
+    }
+
+    // Verifica categoria richiede allegato
+    const categoriaSelezionata = categorie.find(c => c.id === formData.categoria);
+    if (categoriaSelezionata?.richiede_allegato && selectedFiles.length === 0) {
+      toast.error(`La categoria "${categoriaSelezionata.nome}" richiede almeno un allegato`);
+      return;
+    }
+
+    // Verifica importo massimo categoria
+    if (categoriaSelezionata?.importo_massimo && importoNum > categoriaSelezionata.importo_massimo) {
+      toast.error(`L'importo massimo per la categoria "${categoriaSelezionata.nome}" è ${categoriaSelezionata.importo_massimo}€`);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const supabase = createClient();
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { data: userTenants } = await supabase
+        .from('user_tenants')
+        .select('tenant_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!userTenants) throw new Error('No tenant found');
+
+      // Get dipendente_id from user
+      const { data: dipendenteData } = await supabase
+        .from('dipendenti')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('tenant_id', userTenants.tenant_id)
+        .single();
+
+      if (!dipendenteData) throw new Error('Dipendente not found');
+
+      // Upload allegati
+      const allegati = [];
+      for (const { file } of selectedFiles) {
+        const filePath = `${userTenants.tenant_id}/note-spesa/${commessaId}/${Date.now()}_${file.name}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('note_spesa_allegati')
+          .upload(filePath, file);
+
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          throw new Error(`Errore upload ${file.name}`);
+        }
+
+        allegati.push({
+          nome_file: file.name,
+          file_path: filePath,
+          file_size: file.size,
+          mime_type: file.type,
+        });
+      }
+
+      // Insert nota spesa
+      const { data: notaSpesaData, error: insertError } = await supabase
+        .from('note_spesa')
+        .insert({
+          tenant_id: userTenants.tenant_id,
+          commessa_id: commessaId,
+          dipendente_id: dipendenteData.id,
+          data_nota: formData.data_nota,
+          importo: importoNum,
+          categoria: formData.categoria,
+          descrizione: formData.descrizione || null,
+          allegati: allegati,
+          stato: 'da_approvare',
+          created_by: user.id,
+        })
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+
+      // Create azione log
+      await supabase
+        .from('nota_spesa_azioni')
+        .insert({
+          nota_spesa_id: notaSpesaData.id,
+          azione: 'creata',
+          eseguita_da: user.id,
+          stato_nuovo: 'da_approvare',
+        });
+
+      toast.success('Nota spesa creata con successo');
+      onSuccess();
+      onClose();
+    } catch (error: any) {
+      console.error('Error creating nota spesa:', error);
+      toast.error(error?.message || 'Errore nella creazione della nota spesa');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Cleanup preview URLs on unmount
+  useEffect(() => {
+    return () => {
+      selectedFiles.forEach(({ preview }) => URL.revokeObjectURL(preview));
+    };
+  }, [selectedFiles]);
+
+  return (
+    <ModalWrapper onClose={onClose}>
+      <div className="max-w-3xl w-full mx-auto max-h-[90vh] overflow-y-auto rounded-xl border-2 border-border bg-card shadow-lg animate-in zoom-in-95 duration-200">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b-2 border-border sticky top-0 bg-card z-10">
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold">Nuova Nota Spesa</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Compila i dati della nota spesa
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleReset}
+              className="h-9 border-2 gap-1.5"
+              type="button"
+            >
+              <RotateCcw className="h-4 w-4" />
+              <span className="hidden sm:inline">Reset</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={onClose}
+              className="h-9 w-9 border-2"
+              type="button"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {/* Row: Data e Categoria */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Data Nota */}
+            <div>
+              <Label htmlFor="data_nota" className="text-foreground font-medium text-sm mb-2 block">
+                Data Nota <span className="text-destructive">*</span>
+              </Label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
+                <Input
+                  id="data_nota"
+                  type="date"
+                  value={formData.data_nota}
+                  onChange={(e) => setFormData({ ...formData, data_nota: e.target.value })}
+                  className="h-11 border-2 border-border bg-background pl-10"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Categoria */}
+            <div>
+              <Label htmlFor="categoria" className="text-foreground font-medium text-sm mb-2 block">
+                Categoria <span className="text-destructive">*</span>
+              </Label>
+              <div className="relative">
+                <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
+                <Select value={formData.categoria} onValueChange={(value) => setFormData({ ...formData, categoria: value })}>
+                  <SelectTrigger className="h-11 border-2 border-border bg-background pl-10">
+                    <SelectValue placeholder="Seleziona categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categorie.map(categoria => (
+                      <SelectItem key={categoria.id} value={categoria.id}>
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: categoria.colore }}
+                          />
+                          <span>{categoria.nome}</span>
+                          {categoria.importo_massimo && (
+                            <span className="text-xs text-muted-foreground">
+                              (max {categoria.importo_massimo}€)
+                            </span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          {/* Importo */}
+          <div>
+            <Label htmlFor="importo" className="text-foreground font-medium text-sm mb-2 block">
+              Importo <span className="text-destructive">*</span>
+            </Label>
+            <div className="relative">
+              <Euro className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
+              <Input
+                id="importo"
+                type="text"
+                placeholder="0.00"
+                value={formData.importo}
+                onChange={(e) => handleImportoChange(e.target.value)}
+                className="h-11 border-2 border-border bg-background pl-10"
+                required
+              />
+            </div>
+            {formData.importo && !isNaN(parseFloat(formData.importo)) && (
+              <p className="text-sm text-muted-foreground mt-1">
+                Importo: {new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(parseFloat(formData.importo))}
+              </p>
+            )}
+          </div>
+
+          {/* Descrizione */}
+          <div>
+            <Label htmlFor="descrizione" className="text-foreground font-medium text-sm mb-2 block">
+              Descrizione (opzionale)
+            </Label>
+            <div className="relative">
+              <FileText className="absolute left-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
+              <Textarea
+                id="descrizione"
+                placeholder="Eventuali dettagli sulla spesa..."
+                value={formData.descrizione}
+                onChange={(e) => setFormData({ ...formData, descrizione: e.target.value })}
+                className="border-2 border-border bg-background pl-10 resize-none min-h-[100px]"
+              />
+            </div>
+          </div>
+
+          {/* Allegati */}
+          <div>
+            <Label className="text-foreground font-medium text-sm mb-2 block">
+              Allegati {categorie.find(c => c.id === formData.categoria)?.richiede_allegato && (
+                <span className="text-destructive">*</span>
+              )}
+            </Label>
+
+            {/* Upload Zone */}
+            <div
+              className={cn(
+                'relative border-2 border-dashed rounded-lg p-6 transition-colors cursor-pointer',
+                dragActive
+                  ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950'
+                  : 'border-border hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950'
+              )}
+              onDragEnter={handleDrag}
+              onDragLeave={handleDrag}
+              onDragOver={handleDrag}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                onChange={handleFileChange}
+                accept=".pdf,.jpg,.jpeg,.png"
+                multiple
+              />
+              <div className="text-center">
+                <Upload className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                <p className="text-sm text-foreground mb-1">
+                  Trascina i file qui o <span className="text-primary font-medium">clicca per selezionare</span>
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  PDF, JPG, PNG (max 10MB per file, massimo 5 file)
+                </p>
+              </div>
+            </div>
+
+            {/* File Preview */}
+            {selectedFiles.length > 0 && (
+              <div className="mt-4 space-y-2">
+                {selectedFiles.map((fileWithPreview, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <FileText className="h-5 w-5 text-primary flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">
+                          {fileWithPreview.file.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {(fileWithPreview.file.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeFile(index);
+                      }}
+                      className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive flex-shrink-0"
+                    >
+                      <Trash className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Footer Actions */}
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-6">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={loading}
+              className="border-2 h-11 px-6 font-semibold"
+            >
+              Annulla
+            </Button>
+            <Button
+              type="submit"
+              disabled={loading}
+              className="h-11 px-6 font-semibold"
+            >
+              {loading ? 'Creazione in corso...' : 'Crea Nota Spesa'}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </ModalWrapper>
+  );
+}

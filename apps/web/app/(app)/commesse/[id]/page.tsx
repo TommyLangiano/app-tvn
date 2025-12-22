@@ -31,6 +31,7 @@ import { DeleteMovimentoModal } from '@/components/features/commesse/DeleteMovim
 import { BulkDeleteMovimentiModal } from '@/components/features/commesse/BulkDeleteMovimentiModal';
 import { RapportiniTab } from '@/components/features/commesse/RapportiniTab';
 import { MovimentiTab } from '@/components/features/commesse/MovimentiTab';
+import { NoteSpeseTab } from '@/components/features/commesse/NoteSpeseTab';
 import { getSignedUrl } from '@/lib/utils/storage';
 import { formatCurrency } from '@/lib/utils/currency';
 
@@ -1157,11 +1158,11 @@ export default function CommessaDetailPage() {
       )}
 
       {/* TAB: Note Spesa */}
-      {activeTab === 'note-spesa' && (
-        <div className="rounded-xl border-2 border-dashed border-border bg-card p-12 text-center">
-          <Receipt className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-          <p className="text-muted-foreground">Funzionalità note spesa in arrivo</p>
-        </div>
+      {activeTab === 'note-spesa' && commessa && (
+        <NoteSpeseTab
+          commessaId={commessa.id}
+          commessaNome={commessa.nome_commessa}
+        />
       )}
 
       {/* TAB: Registro Presenze */}
