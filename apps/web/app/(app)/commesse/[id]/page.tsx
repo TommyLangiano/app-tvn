@@ -660,7 +660,10 @@ export default function CommessaDetailPage() {
 
         const { error: insertError } = await supabase
           .from('commesse_team')
-          .insert(newMembers);
+          .upsert(newMembers, {
+            onConflict: 'commessa_id,dipendente_id',
+            ignoreDuplicates: true
+          });
 
         if (insertError) throw insertError;
       }
