@@ -771,7 +771,6 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
             onSort={handleSort}
             selectedRows={selectedRapportini}
             onSelectionChange={setSelectedRapportini}
-            enableSelection={true}
           />
         </div>
       )}
@@ -1035,7 +1034,6 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
             onSort={handleSort}
             selectedRows={selectedRapportini}
             onSelectionChange={setSelectedRapportini}
-            enableSelection={true}
           />
         </div>
       )}
