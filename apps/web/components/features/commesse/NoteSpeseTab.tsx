@@ -20,7 +20,7 @@ import { formatCurrency } from '@/lib/utils/currency';
 import { NuovaNotaSpesaModal } from '@/components/features/note-spesa/NuovaNotaSpesaModal';
 import { InfoNotaSpesaModal } from '@/components/features/note-spesa/InfoNotaSpesaModal';
 import { DeleteNotaSpesaModal } from '@/components/features/note-spesa/DeleteNotaSpesaModal';
-import { ApprovazioneNotaSpesaModal } from '@/components/features/note-spesa/ApprovazioneNotaSpesaModal';
+import { ConfermaNotaSpesaModal } from '@/components/features/note-spesa/ConfermaNotaSpesaModal';
 
 type User = {
   id: string;
@@ -78,7 +78,7 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showNuovaModal, setShowNuovaModal] = useState(false);
-  const [showApprovazioneModal, setShowApprovazioneModal] = useState(false);
+  const [modalTipo, setModalTipo] = useState<'approva' | 'rifiuta' | null>(null);
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -616,14 +616,26 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
     loadNoteSpeseRifiutate();
   };
 
-  const handleApprova = async (notaSpesa: NotaSpesa) => {
+  const handleApprova = (notaSpesa: NotaSpesa) => {
+    setSelectedNotaSpesa(notaSpesa);
+    setModalTipo('approva');
+  };
+
+  const handleRifiuta = (notaSpesa: NotaSpesa) => {
+    setSelectedNotaSpesa(notaSpesa);
+    setModalTipo('rifiuta');
+  };
+
+  const handleConfirmAzione = async (motivo?: string) => {
+    if (!selectedNotaSpesa || !modalTipo) return;
+
     try {
       const supabase = createClient();
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      // Get user tenant first
+      // Get user tenant
       const { data: userTenants } = await supabase
         .from('user_tenants')
         .select('tenant_id')
@@ -633,15 +645,30 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
       const userTenant = userTenants && userTenants.length > 0 ? userTenants[0] : null;
       if (!userTenant) throw new Error('Tenant not found');
 
-      // Call RPC function with user.id (the RPC uses auth.uid() internally)
-      const { error: rpcError } = await supabase.rpc('approva_nota_spesa', {
-        p_nota_spesa_id: notaSpesa.id,
-        p_approvato_da: user.id
-      });
+      if (modalTipo === 'approva') {
+        // Call RPC function for approval
+        const { error: rpcError } = await supabase.rpc('approva_nota_spesa', {
+          p_nota_spesa_id: selectedNotaSpesa.id,
+          p_approvato_da: user.id
+        });
 
-      if (rpcError) throw rpcError;
+        if (rpcError) throw rpcError;
 
-      toast.success('Nota spesa approvata con successo');
+        toast.success('Nota spesa approvata con successo');
+      } else if (modalTipo === 'rifiuta') {
+        if (!motivo) throw new Error('Motivo rifiuto obbligatorio');
+
+        // Call RPC function for rejection
+        const { error: rpcError } = await supabase.rpc('rifiuta_nota_spesa', {
+          p_nota_spesa_id: selectedNotaSpesa.id,
+          p_rifiutato_da: user.id,
+          p_motivo: motivo
+        });
+
+        if (rpcError) throw rpcError;
+
+        toast.success('Nota spesa rifiutata');
+      }
 
       // Reload all lists
       await Promise.all([
@@ -649,15 +676,15 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
         loadNoteSpeseDaApprovare(),
         loadNoteSpeseRifiutate()
       ]);
-    } catch (error: any) {
-      console.error('Error approving nota spesa:', error);
-      toast.error(error?.message || 'Errore nell\'approvazione della nota spesa');
-    }
-  };
 
-  const handleRifiuta = (notaSpesa: NotaSpesa) => {
-    setSelectedNotaSpesa(notaSpesa);
-    setShowApprovazioneModal(true);
+      // Close modal
+      setModalTipo(null);
+      setSelectedNotaSpesa(null);
+    } catch (error: any) {
+      console.error('Error processing nota spesa:', error);
+      toast.error(error?.message || 'Errore nell\'elaborazione della nota spesa');
+      throw error; // Re-throw to let modal handle it
+    }
   };
 
   // Loading state
@@ -939,18 +966,15 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
         />
       )}
 
-      {showApprovazioneModal && selectedNotaSpesa && (
-        <ApprovazioneNotaSpesaModal
+      {modalTipo && selectedNotaSpesa && (
+        <ConfermaNotaSpesaModal
           notaSpesa={selectedNotaSpesa}
+          tipo={modalTipo}
           onClose={() => {
-            setShowApprovazioneModal(false);
+            setModalTipo(null);
             setSelectedNotaSpesa(null);
           }}
-          onSuccess={() => {
-            setShowApprovazioneModal(false);
-            setSelectedNotaSpesa(null);
-            handleNotaSpesaUpdated();
-          }}
+          onConfirm={handleConfirmAzione}
         />
       )}
     </div>
