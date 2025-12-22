@@ -492,38 +492,22 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
       sortable: false,
       width: 'w-36',
       render: (notaSpesa) => (
-        <Select
-          value={notaSpesa.stato}
-          onValueChange={(value: 'bozza' | 'da_approvare' | 'approvato' | 'rifiutato') =>
-            handleUpdateStato(notaSpesa, value)
-          }
+        <span
+          className={`inline-flex items-center px-3 py-1 rounded-sm text-xs font-medium ${
+            notaSpesa.stato === 'approvato'
+              ? 'bg-green-100 text-green-700'
+              : notaSpesa.stato === 'da_approvare'
+              ? 'bg-yellow-100 text-yellow-700'
+              : notaSpesa.stato === 'rifiutato'
+              ? 'bg-red-100 text-red-700'
+              : 'bg-gray-100 text-gray-700'
+          }`}
         >
-          <SelectTrigger
-            className={`inline-flex items-center px-3 py-1 rounded-sm text-xs font-medium border-0 h-7 w-auto ${
-              notaSpesa.stato === 'approvato'
-                ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                : notaSpesa.stato === 'da_approvare'
-                ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
-                : notaSpesa.stato === 'rifiutato'
-                ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <SelectValue>
-              {notaSpesa.stato === 'approvato' ? 'Approvata' :
-               notaSpesa.stato === 'da_approvare' ? 'Da Approvare' :
-               notaSpesa.stato === 'rifiutato' ? 'Rifiutata' :
-               'Bozza'}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent onClick={(e) => e.stopPropagation()}>
-            <SelectItem value="bozza">Bozza</SelectItem>
-            <SelectItem value="da_approvare">Da Approvare</SelectItem>
-            <SelectItem value="approvato">Approvata</SelectItem>
-            <SelectItem value="rifiutato">Rifiutata</SelectItem>
-          </SelectContent>
-        </Select>
+          {notaSpesa.stato === 'approvato' ? 'Approvata' :
+           notaSpesa.stato === 'da_approvare' ? 'Da Approvare' :
+           notaSpesa.stato === 'rifiutato' ? 'Rifiutata' :
+           'Bozza'}
+        </span>
       ),
     },
     {
@@ -613,59 +597,6 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
     }
   };
 
-  const handleUpdateStato = async (
-    notaSpesa: NotaSpesa,
-    value: 'bozza' | 'da_approvare' | 'approvato' | 'rifiutato'
-  ) => {
-    try {
-      const supabase = createClient();
-
-      // Optimistic UI update
-      const updateList = (list: NotaSpesa[]) => {
-        const index = list.findIndex(n => n.id === notaSpesa.id);
-        if (index !== -1) {
-          const updated = [...list];
-          updated[index] = { ...updated[index], stato: value };
-          return updated;
-        }
-        return list;
-      };
-
-      // Update appropriate state
-      if (activeTab === 'da_approvare') {
-        setNoteSpeseDaApprovare(prev => updateList(prev));
-      } else if (activeTab === 'approvate') {
-        setNoteSpese(prev => updateList(prev));
-      } else if (activeTab === 'rifiutate') {
-        setNoteSpeseRifiutate(prev => updateList(prev));
-      }
-
-      // Update in database
-      const { error } = await supabase
-        .from('note_spesa')
-        .update({ stato: value })
-        .eq('id', notaSpesa.id);
-
-      if (error) throw error;
-
-      toast.success('Stato aggiornato');
-
-      // Reload all lists to ensure consistency across tabs
-      await Promise.all([
-        loadNoteSpese(),
-        loadNoteSpeseDaApprovare(),
-        loadNoteSpeseRifiutate()
-      ]);
-    } catch (error) {
-      toast.error('Errore nell\'aggiornamento dello stato');
-      // Reload on error
-      await Promise.all([
-        loadNoteSpese(),
-        loadNoteSpeseDaApprovare(),
-        loadNoteSpeseRifiutate()
-      ]);
-    }
-  };
 
   const handleNotaSpesaCreated = () => {
     loadNoteSpese();
