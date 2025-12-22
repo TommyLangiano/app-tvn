@@ -18,7 +18,7 @@ export interface NotaSpesa {
   // Dati nota spesa
   data_nota: string;
   importo: number;
-  categoria: string;
+  categoria: string; // UUID riferimento a categorie_note_spesa.id
   descrizione?: string;
 
   // Allegati
