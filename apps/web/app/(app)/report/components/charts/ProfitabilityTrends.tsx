@@ -14,6 +14,7 @@ import {
   Area,
   ComposedChart,
 } from 'recharts';
+import { formatCurrency } from '@/lib/utils/currency';
 
 interface ProfitabilityTrendsProps {
   data: Array<{
@@ -69,15 +70,6 @@ export function ProfitabilityTrends({ data, loading }: ProfitabilityTrendsProps)
   // Best and worst months
   const bestMonth = [...data].sort((a, b) => b.margine - a.margine)[0];
   const worstMonth = [...data].sort((a, b) => a.margine - b.margine)[0];
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('it-IT', {
-      style: 'currency',
-      currency: 'EUR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {

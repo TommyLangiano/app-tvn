@@ -79,6 +79,9 @@ export function NuovoRapportinoModal({ onClose, onSuccess, users, commesse, pref
   const [openDipendentiPopover, setOpenDipendentiPopover] = useState(false);
   const [modalitaCalcolo, setModalitaCalcolo] = useState<'ore_totali' | 'orari'>(initialModalitaCalcolo || 'ore_totali');
   const [customPausa, setCustomPausa] = useState('');
+  const [commesseTeam, setCommesseTeam] = useState<Map<string, Set<string>>>(new Map()); // commessa_id -> Set of dipendente_ids
+  const [userToDipendenteMap, setUserToDipendenteMap] = useState<Map<string, string>>(new Map()); // user.id -> dipendente.id
+  const [loadingTeam, setLoadingTeam] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -86,7 +89,91 @@ export function NuovoRapportinoModal({ onClose, onSuccess, users, commesse, pref
     if (!initialModalitaCalcolo) {
       loadModalitaCalcolo();
     }
+    // Carica i team delle commesse
+    loadCommesseTeam();
   }, []);
+
+  // Quando cambia la commessa, rimuovi i dipendenti che non sono nel team
+  useEffect(() => {
+    if (!formData.commessa_id || loadingTeam) return;
+
+    const teamSet = commesseTeam.get(formData.commessa_id);
+    if (!teamSet) return;
+
+    const validDipendenti = selectedDipendenti.filter(userId => {
+      const dipendenteId = getDipendenteIdFromUserId(userId);
+      return dipendenteId && teamSet.has(dipendenteId);
+    });
+
+    if (validDipendenti.length !== selectedDipendenti.length) {
+      setSelectedDipendenti(validDipendenti);
+      if (validDipendenti.length < selectedDipendenti.length) {
+        toast.info('Alcuni dipendenti sono stati rimossi perché non fanno parte del team di questa commessa');
+      }
+    }
+  }, [formData.commessa_id, loadingTeam]);
+
+  const loadCommesseTeam = async () => {
+    try {
+      setLoadingTeam(true);
+      const supabase = createClient();
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: userTenants } = await supabase
+        .from('user_tenants')
+        .select('tenant_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!userTenants) return;
+
+      // Carica i dipendenti per costruire la mappa user_id -> dipendente_id
+      const { data: dipendentiData, error: dipError } = await supabase
+        .from('dipendenti')
+        .select('id, user_id')
+        .eq('tenant_id', userTenants.tenant_id);
+
+      if (dipError) throw dipError;
+
+      // Costruisci la mappa: userId -> dipendenteId
+      const userDipMap = new Map<string, string>();
+      dipendentiData?.forEach((dip) => {
+        if (dip.user_id) {
+          // Se ha user_id, mappa user_id -> dipendente.id
+          userDipMap.set(dip.user_id, dip.id);
+        }
+        // Aggiungi anche dipendente.id -> dipendente.id per i dipendenti senza account
+        userDipMap.set(dip.id, dip.id);
+      });
+      setUserToDipendenteMap(userDipMap);
+
+      // Carica tutti i team delle commesse
+      const { data: teamData, error } = await supabase
+        .from('commesse_team')
+        .select('commessa_id, dipendente_id')
+        .eq('tenant_id', userTenants.tenant_id);
+
+      if (error) throw error;
+
+      // Costruisci la mappa: commessa_id -> Set di dipendente_ids
+      const teamMap = new Map<string, Set<string>>();
+      teamData?.forEach((row) => {
+        if (!teamMap.has(row.commessa_id)) {
+          teamMap.set(row.commessa_id, new Set());
+        }
+        teamMap.get(row.commessa_id)!.add(row.dipendente_id);
+      });
+
+      setCommesseTeam(teamMap);
+    } catch (error) {
+      console.error('Error loading commesse team:', error);
+      toast.error('Errore nel caricamento dei team');
+    } finally {
+      setLoadingTeam(false);
+    }
+  };
 
   const loadModalitaCalcolo = async () => {
     try {
@@ -181,6 +268,28 @@ export function NuovoRapportinoModal({ onClose, onSuccess, users, commesse, pref
     // Validazione base
     if (selectedDipendenti.length === 0 || !formData.commessa_id || !formData.data_rapportino) {
       toast.error('Compila tutti i campi obbligatori');
+      return;
+    }
+
+    // Validazione team: verifica che tutti i dipendenti selezionati siano nel team della commessa
+    const teamSet = commesseTeam.get(formData.commessa_id);
+    if (!teamSet || teamSet.size === 0) {
+      toast.error('La commessa selezionata non ha un team configurato');
+      return;
+    }
+
+    const invalidDipendenti: string[] = [];
+    for (const userId of selectedDipendenti) {
+      const user = users.find(u => u.id === userId);
+      const dipendenteId = getDipendenteIdFromUserId(userId);
+
+      if (!dipendenteId || !teamSet.has(dipendenteId)) {
+        invalidDipendenti.push(getUserDisplayName(user!));
+      }
+    }
+
+    if (invalidDipendenti.length > 0) {
+      toast.error(`I seguenti dipendenti non fanno parte del team di questa commessa: ${invalidDipendenti.join(', ')}`);
       return;
     }
 
@@ -359,6 +468,52 @@ export function NuovoRapportinoModal({ onClose, onSuccess, users, commesse, pref
     return user.user_metadata?.full_name || user.email?.split('@')[0] || user.email;
   };
 
+  // Ottiene il dipendente_id da un userId (user.id dalla lista users)
+  const getDipendenteIdFromUserId = (userId: string): string | null => {
+    return userToDipendenteMap.get(userId) || null;
+  };
+
+  // Filtra i dipendenti disponibili in base alla commessa selezionata
+  const getAvailableDipendenti = () => {
+    if (!formData.commessa_id) {
+      return users; // Se non c'è commessa selezionata, mostra tutti
+    }
+
+    const teamSet = commesseTeam.get(formData.commessa_id);
+    if (!teamSet || teamSet.size === 0) {
+      return []; // Se la commessa non ha team, nessun dipendente disponibile
+    }
+
+    return users.filter(user => {
+      const dipendenteId = getDipendenteIdFromUserId(user.id);
+      return dipendenteId && teamSet.has(dipendenteId);
+    });
+  };
+
+  // Filtra le commesse disponibili in base ai dipendenti selezionati
+  const getAvailableCommesse = () => {
+    if (selectedDipendenti.length === 0) {
+      return commesse; // Se non ci sono dipendenti selezionati, mostra tutte
+    }
+
+    // Trova le commesse comuni a tutti i dipendenti selezionati
+    const availableCommesseIds = new Set<string>();
+
+    commesseTeam.forEach((teamSet, commessaId) => {
+      // Verifica se tutti i dipendenti selezionati sono nel team di questa commessa
+      const allDipendentiInTeam = selectedDipendenti.every(userId => {
+        const dipendenteId = getDipendenteIdFromUserId(userId);
+        return dipendenteId && teamSet.has(dipendenteId);
+      });
+
+      if (allDipendentiInTeam) {
+        availableCommesseIds.add(commessaId);
+      }
+    });
+
+    return commesse.filter(c => availableCommesseIds.has(c.id));
+  };
+
   // Calculate effective hours (ore lavorate - pausa)
   const calculateEffectiveHours = () => {
     let oreNum = 0;
@@ -484,9 +639,13 @@ export function NuovoRapportinoModal({ onClose, onSuccess, users, commesse, pref
                   <Command>
                     <CommandInput placeholder="Cerca dipendente..." />
                     <CommandList>
-                      <CommandEmpty>Nessun dipendente trovato.</CommandEmpty>
+                      <CommandEmpty>
+                        {formData.commessa_id
+                          ? 'Nessun dipendente disponibile nel team di questa commessa.'
+                          : 'Nessun dipendente trovato.'}
+                      </CommandEmpty>
                       <CommandGroup>
-                        {users
+                        {getAvailableDipendenti()
                           .filter(user => !selectedDipendenti.includes(user.id))
                           .map((user) => (
                             <CommandItem
@@ -707,9 +866,13 @@ export function NuovoRapportinoModal({ onClose, onSuccess, users, commesse, pref
                     <Command>
                       <CommandInput placeholder="Cerca commessa..." />
                       <CommandList>
-                        <CommandEmpty>Nessuna commessa trovata.</CommandEmpty>
+                        <CommandEmpty>
+                          {selectedDipendenti.length > 0
+                            ? 'Nessuna commessa disponibile per i dipendenti selezionati.'
+                            : 'Nessuna commessa trovata.'}
+                        </CommandEmpty>
                         <CommandGroup>
-                          {commesse.map((commessa) => (
+                          {getAvailableCommesse().map((commessa) => (
                             <CommandItem
                               key={commessa.id}
                               value={commessa.nome_commessa}

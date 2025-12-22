@@ -3,6 +3,7 @@
 import { ArrowLeft } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useUser } from '@/contexts/UserContext';
+import { useState, useEffect } from 'react';
 
 // Mappa dei percorsi ai nomi delle sezioni
 const sectionNames: Record<string, string> = {
@@ -38,6 +39,26 @@ export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user } = useUser();
+  const [commessaName, setCommessaName] = useState('');
+  const [commessaCode, setCommessaCode] = useState('');
+
+  // Listen for commessa data updates
+  useEffect(() => {
+    const handleCommessaLoaded = () => {
+      setCommessaName(sessionStorage.getItem('current-commessa-name') || '');
+      setCommessaCode(sessionStorage.getItem('current-commessa-code') || '');
+    };
+
+    // Initial load
+    handleCommessaLoaded();
+
+    // Listen for updates
+    window.addEventListener('commessa-loaded', handleCommessaLoaded);
+
+    return () => {
+      window.removeEventListener('commessa-loaded', handleCommessaLoaded);
+    };
+  }, [pathname]);
 
   // Check if we should show back button
   const shouldShowBackButton = () => {
@@ -68,7 +89,18 @@ export function Navbar() {
     }
 
     if (pathname.match(/^\/commesse\/[^/]+$/)) {
-      return 'Dettaglio Commessa';
+      // Don't show title until commessa data is loaded
+      if (!commessaName) {
+        return null; // Hide navbar title
+      }
+      let title = 'Dettaglio Commessa';
+      if (commessaName) {
+        title += ` - ${commessaName}`;
+      }
+      if (commessaCode) {
+        title += ` ${commessaCode}`;
+      }
+      return title;
     }
 
     // Fornitori patterns
@@ -225,7 +257,7 @@ export function Navbar() {
           )}
 
           {/* Section Name */}
-          <h1 className="text-4xl font-bold text-foreground">
+          <h1 className="text-4xl font-bold text-foreground" data-page-title>
             {pathname === '/dashboard' && user?.firstName
               ? `Bentornato, ${user.firstName}`
               : sectionName}

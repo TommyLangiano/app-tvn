@@ -417,7 +417,7 @@ export function InfoRapportinoModal({ rapportino, users, commesse, onClose, onUp
                   placeholder="Inserisci note..."
                 />
               ) : (
-                <div className="p-4 bg-muted/30 rounded-lg">
+                <div className="bg-gray-50 p-4 rounded-lg">
                   <p className="text-sm whitespace-pre-wrap">{rapportino.note || 'Nessuna nota'}</p>
                 </div>
               )}
@@ -465,15 +465,14 @@ export function InfoRapportinoModal({ rapportino, users, commesse, onClose, onUp
               ) : (
                 <div>
                   {allegatoUrl ? (
-                    <a
-                      href={allegatoUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline"
+                    <Button
+                      onClick={() => window.open(allegatoUrl, '_blank')}
+                      variant="outline"
+                      className="gap-2"
                     >
                       <FileText className="h-4 w-4" />
-                      Visualizza Documento →
-                    </a>
+                      Visualizza Documento
+                    </Button>
                   ) : (
                     <p className="text-sm text-muted-foreground">Nessun allegato</p>
                   )}

@@ -35,7 +35,7 @@ export function TabsFilter<T extends string = string>({
 }: TabsFilterProps<T>) {
   return (
     <div className={cn("flex items-center justify-between border-b border-border", className)}>
-      <div className="flex gap-1">
+      <div className="flex gap-6">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.value;

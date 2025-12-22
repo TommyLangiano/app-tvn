@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, FileText, Trash2, ChevronLeft, ChevronRight, Plus, User, Clock, Grid3x3, List, X, Download, MoreVertical, Pencil, ClipboardList, ClipboardCheck, ClipboardX } from 'lucide-react';
+import { Search, FileText, Trash2, Plus, User, Clock, Grid3x3, List, X, Download, MoreVertical, Pencil, ClipboardList, ClipboardCheck, ClipboardX, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -12,16 +12,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import type { Rapportino } from '@/types/rapportino';
 import { DataTable, DataTableColumn, DataTableBulkAction } from '@/components/ui/data-table';
 import { TabsFilter } from '@/components/ui/tabs-filter';
+import { MonthNavigator } from '@/components/ui/month-navigator';
 import { InfoRapportinoModal } from '@/components/features/registro-presenze/InfoRapportinoModal';
 import { DeleteRapportinoModal } from '@/components/features/registro-presenze/DeleteRapportinoModal';
 import { NuovoRapportinoModal } from '@/components/features/registro-presenze/NuovoRapportinoModal';
@@ -70,8 +66,6 @@ export default function RapportiniPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filtroCommessa, setFiltroCommessa] = useState<string>('');
   const [filtroUtente, setFiltroUtente] = useState<string>('');
-  const [filtroDataInizio, setFiltroDataInizio] = useState<string>('');
-  const [filtroDataFine, setFiltroDataFine] = useState<string>('');
 
   // View mode
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
@@ -100,12 +94,7 @@ export default function RapportiniPage() {
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
-
-  // Popover state
-  const [showMonthPicker, setShowMonthPicker] = useState(false);
-  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
-  const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [itemsPerPage, setItemsPerPage] = useState(30);
 
   // Filtri toggle
   const [showFilters, setShowFilters] = useState(false);
@@ -113,13 +102,28 @@ export default function RapportiniPage() {
   // Navbar actions container
   const [navbarActionsContainer, setNavbarActionsContainer] = useState<HTMLElement | null>(null);
 
-  // Generate years (current year ± 5 years)
-  const years = Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i);
+  // Cache tenant ID to avoid repeated queries
+  const [tenantId, setTenantId] = useState<string | null>(null);
 
   useEffect(() => {
-    loadInitialData();
-    loadRapportiniDaApprovare(); // Carica tutti i rapportini da approvare (non filtrati per mese)
-    loadRapportiniRifiutati(); // Carica tutti i rapportini rifiutati (non filtrati per mese)
+    const initializeData = async () => {
+      try {
+        setLoading(true);
+        const tenant = await loadInitialData();
+        if (tenant) {
+          setTenantId(tenant);
+          // Load all rapportini in parallel
+          await Promise.all([
+            loadRapportini(tenant),
+            loadRapportiniDaApprovare(tenant),
+            loadRapportiniRifiutati(tenant)
+          ]);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    initializeData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -133,11 +137,11 @@ export default function RapportiniPage() {
     setNavbarActionsContainer(container);
   }, []);
 
-  const loadInitialData = async () => {
+  const loadInitialData = async (): Promise<string | null> => {
     const supabase = createClient();
 
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) return null;
 
     const { data: userTenants } = await supabase
       .from('user_tenants')
@@ -153,44 +157,32 @@ export default function RapportiniPage() {
       .limit(1);
 
     const userTenant = userTenants && userTenants.length > 0 ? userTenants[0] : null;
-    if (!userTenant) return;
+    if (!userTenant) return null;
 
-    // Load ragione sociale and modalita calcolo from tenant
-    const { data: tenantData } = await supabase
-      .from('tenants')
-      .select('modalita_calcolo_rapportini')
-      .eq('id', userTenant.tenant_id)
-      .single();
+    const tenant = userTenant.tenant_id;
 
-    if (tenantData) {
-      setModalitaCalcoloRapportini(tenantData.modalita_calcolo_rapportini || 'ore_totali');
+    // OPTIMIZATION: Load all initial data in parallel
+    const [tenantData, tenantProfile, dipendentiData, commesseData] = await Promise.all([
+      supabase.from('tenants').select('modalita_calcolo_rapportini').eq('id', tenant).single(),
+      supabase.from('tenant_profiles').select('ragione_sociale').eq('tenant_id', tenant).single(),
+      supabase.from('dipendenti').select('id, nome, cognome, email, user_id').eq('tenant_id', tenant).order('cognome'),
+      supabase.from('commesse').select('id, nome_commessa').eq('tenant_id', tenant).order('nome_commessa')
+    ]);
+
+    if (tenantData.data) {
+      setModalitaCalcoloRapportini(tenantData.data.modalita_calcolo_rapportini || 'ore_totali');
     }
 
-    const { data: tenantProfile } = await supabase
-      .from('tenant_profiles')
-      .select('ragione_sociale')
-      .eq('tenant_id', userTenant.tenant_id)
-      .single();
-
-    if (tenantProfile && tenantProfile.ragione_sociale) {
-      setRagioneSociale(tenantProfile.ragione_sociale);
+    if (tenantProfile.data?.ragione_sociale) {
+      setRagioneSociale(tenantProfile.data.ragione_sociale);
     }
 
-    // Load ALL dipendenti (anche quelli senza account)
-    const { data: dipendentiData } = await supabase
-      .from('dipendenti')
-      .select('id, nome, cognome, email, user_id')
-      .eq('tenant_id', userTenant.tenant_id)
-      .order('cognome');
-
-    if (dipendentiData) {
-      // Transform to match User type
-      // Usa l'id del dipendente se non ha user_id
-      const dipendentiUsers: User[] = dipendentiData.map(dip => ({
+    if (dipendentiData.data) {
+      const dipendentiUsers: User[] = dipendentiData.data.map(dip => ({
         id: dip.user_id || dip.id,
         email: dip.email || '',
         role: 'dipendente',
-        dipendente_id: !dip.user_id ? dip.id : undefined, // Salva dipendente_id solo se non ha user_id
+        dipendente_id: !dip.user_id ? dip.id : undefined,
         user_metadata: {
           full_name: `${dip.nome} ${dip.cognome}`
         }
@@ -198,33 +190,32 @@ export default function RapportiniPage() {
       setUsers(dipendentiUsers);
     }
 
-    // Load commesse
-    const { data: commesseData } = await supabase
-      .from('commesse')
-      .select('id, nome_commessa')
-      .eq('tenant_id', userTenant.tenant_id)
-      .order('nome_commessa');
-
-    if (commesseData) {
-      setCommesse(commesseData);
+    if (commesseData.data) {
+      setCommesse(commesseData.data);
     }
+
+    return tenant;
   };
 
-  const loadRapportini = async () => {
+  const loadRapportini = useCallback(async (tenant?: string) => {
     try {
-      setLoading(true);
       const supabase = createClient();
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      // OPTIMIZATION: Use cached tenant ID if available
+      let tenantToUse = tenant || tenantId;
+      if (!tenantToUse) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
 
-      const { data: userTenants } = await supabase
-        .from('user_tenants')
-        .select('tenant_id')
-        .eq('user_id', user.id)
-        .single();
+        const { data: userTenants } = await supabase
+          .from('user_tenants')
+          .select('tenant_id')
+          .eq('user_id', user.id)
+          .single();
 
-      if (!userTenants) return;
+        if (!userTenants) return;
+        tenantToUse = userTenants.tenant_id;
+      }
 
       // Get first and last day of current month
       const firstDay = new Date(currentYear, currentMonth, 1);
@@ -237,7 +228,7 @@ export default function RapportiniPage() {
           commesse:commessa_id(titolo, slug),
           dipendenti:dipendente_id(id, nome, cognome, email)
         `)
-        .eq('tenant_id', userTenants.tenant_id)
+        .eq('tenant_id', tenantToUse)
         .gte('data_rapportino', firstDay.toISOString().split('T')[0])
         .lte('data_rapportino', lastDay.toISOString().split('T')[0])
         .order('data_rapportino', { ascending: false });
@@ -259,25 +250,28 @@ export default function RapportiniPage() {
       setRapportini(rapportiniWithUserInfo);
     } catch {
       toast.error('Errore nel caricamento dei rapportini');
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [tenantId, currentMonth, currentYear]);
 
-  const loadRapportiniDaApprovare = async () => {
+  const loadRapportiniDaApprovare = useCallback(async (tenant?: string) => {
     try {
       const supabase = createClient();
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      // OPTIMIZATION: Use cached tenant ID if available
+      let tenantToUse = tenant || tenantId;
+      if (!tenantToUse) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
 
-      const { data: userTenants } = await supabase
-        .from('user_tenants')
-        .select('tenant_id')
-        .eq('user_id', user.id)
-        .single();
+        const { data: userTenants } = await supabase
+          .from('user_tenants')
+          .select('tenant_id')
+          .eq('user_id', user.id)
+          .single();
 
-      if (!userTenants) return;
+        if (!userTenants) return;
+        tenantToUse = userTenants.tenant_id;
+      }
 
       const { data, error } = await supabase
         .from('rapportini')
@@ -286,7 +280,7 @@ export default function RapportiniPage() {
           commesse:commessa_id(titolo, slug),
           dipendenti:dipendente_id(id, nome, cognome, email)
         `)
-        .eq('tenant_id', userTenants.tenant_id)
+        .eq('tenant_id', tenantToUse)
         .eq('stato', 'da_approvare')
         .order('data_rapportino', { ascending: false });
 
@@ -308,22 +302,27 @@ export default function RapportiniPage() {
     } catch {
       toast.error('Errore nel caricamento dei rapportini da approvare');
     }
-  };
+  }, [tenantId]);
 
-  const loadRapportiniRifiutati = async () => {
+  const loadRapportiniRifiutati = useCallback(async (tenant?: string) => {
     try {
       const supabase = createClient();
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      // OPTIMIZATION: Use cached tenant ID if available
+      let tenantToUse = tenant || tenantId;
+      if (!tenantToUse) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
 
-      const { data: userTenants } = await supabase
-        .from('user_tenants')
-        .select('tenant_id')
-        .eq('user_id', user.id)
-        .single();
+        const { data: userTenants } = await supabase
+          .from('user_tenants')
+          .select('tenant_id')
+          .eq('user_id', user.id)
+          .single();
 
-      if (!userTenants) return;
+        if (!userTenants) return;
+        tenantToUse = userTenants.tenant_id;
+      }
 
       const { data, error } = await supabase
         .from('rapportini')
@@ -332,7 +331,7 @@ export default function RapportiniPage() {
           commesse:commessa_id(titolo, slug),
           dipendenti:dipendente_id(id, nome, cognome, email)
         `)
-        .eq('tenant_id', userTenants.tenant_id)
+        .eq('tenant_id', tenantToUse)
         .eq('stato', 'rifiutato')
         .order('data_rapportino', { ascending: false });
 
@@ -354,27 +353,19 @@ export default function RapportiniPage() {
     } catch {
       toast.error('Errore nel caricamento dei rapportini rifiutati');
     }
-  };
+  }, [tenantId]);
 
-  const previousMonth = () => {
-    setCurrentDate(new Date(currentYear, currentMonth - 1, 1));
-  };
+  const handleMonthChange = useCallback((month: number, year: number) => {
+    setCurrentDate(new Date(year, month, 1));
+  }, []);
 
-  const nextMonth = () => {
-    setCurrentDate(new Date(currentYear, currentMonth + 1, 1));
-  };
-
-  const applyMonthYearSelection = () => {
-    setCurrentDate(new Date(selectedYear, selectedMonth, 1));
-    setShowMonthPicker(false);
-  };
-
-  const getUserDisplayName = (rapportino: Rapportino) => {
+  // OPTIMIZATION: Memoize getUserDisplayName
+  const getUserDisplayName = useCallback((rapportino: Rapportino) => {
     return rapportino.user_name || rapportino.user_email?.split('@')[0] || 'Utente';
-  };
+  }, []);
 
-  // Column definitions for DataTable
-  const columns: DataTableColumn<Rapportino>[] = [
+  // OPTIMIZATION: Memoize column definitions to prevent DataTable re-renders
+  const columns: DataTableColumn<Rapportino>[] = useMemo(() => [
     {
       key: 'user_name',
       label: 'Operaio',
@@ -433,23 +424,25 @@ export default function RapportiniPage() {
         </div>
       ),
     },
-  ];
+  ], [getUserDisplayName]);
 
-  // Handler per click sulla riga
-  const handleRowClick = (rapportino: Rapportino) => {
+  // OPTIMIZATION: Memoize event handlers
+  const handleRowClick = useCallback((rapportino: Rapportino) => {
     setSelectedRapportino(rapportino);
     setShowInfoModal(true);
-  };
+  }, []);
 
-  // Handle sorting for DataTable
-  const handleSort = (field: string) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDirection('asc');
-    }
-  };
+  const handleSort = useCallback((field: string) => {
+    setSortField(prev => {
+      if (prev === field) {
+        setSortDirection(dir => dir === 'asc' ? 'desc' : 'asc');
+        return prev;
+      } else {
+        setSortDirection('asc');
+        return field;
+      }
+    });
+  }, []);
 
   // Filtri e ordinamento
   const rapportiniFiltrati = useMemo(() => {
@@ -480,15 +473,6 @@ export default function RapportiniPage() {
       filtered = filtered.filter(r => r.user_id === filtroUtente);
     }
 
-    // Filtro Data Inizio
-    if (filtroDataInizio) {
-      filtered = filtered.filter(r => new Date(r.data_rapportino) >= new Date(filtroDataInizio));
-    }
-
-    // Filtro Data Fine
-    if (filtroDataFine) {
-      filtered = filtered.filter(r => new Date(r.data_rapportino) <= new Date(filtroDataFine));
-    }
 
     // Ordinamento
     filtered.sort((a, b) => {
@@ -525,7 +509,7 @@ export default function RapportiniPage() {
     });
 
     return filtered;
-  }, [rapportini, rapportiniDaApprovare, rapportiniRifiutati, activeTab, searchTerm, filtroCommessa, filtroUtente, filtroDataInizio, filtroDataFine, sortField, sortDirection]);
+  }, [rapportini, rapportiniDaApprovare, rapportiniRifiutati, activeTab, searchTerm, filtroCommessa, filtroUtente, sortField, sortDirection, getUserDisplayName]);
 
   // Tab counts
   const tabCounts = useMemo(() => {
@@ -545,27 +529,26 @@ export default function RapportiniPage() {
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filtroCommessa, filtroUtente, filtroDataInizio, filtroDataFine, itemsPerPage]);
+  }, [searchTerm, filtroCommessa, filtroUtente, itemsPerPage]);
 
-  // Count active filters
-  const activeFiltersCount = [
+  // OPTIMIZATION: Memoize active filters count
+  const activeFiltersCount = useMemo(() => [
     filtroCommessa && filtroCommessa !== 'all' ? filtroCommessa : null,
-    filtroUtente && filtroUtente !== 'all' ? filtroUtente : null,
-    filtroDataInizio,
-    filtroDataFine
-  ].filter(Boolean).length;
+    filtroUtente && filtroUtente !== 'all' ? filtroUtente : null
+  ].filter(Boolean).length, [filtroCommessa, filtroUtente]);
 
-  // Clear all filters
-  const clearAllFilters = () => {
+  // OPTIMIZATION: Memoize clearAllFilters
+  const clearAllFilters = useCallback(() => {
     setSearchTerm('');
     setFiltroCommessa('');
     setFiltroUtente('');
-    setFiltroDataInizio('');
-    setFiltroDataFine('');
-  };
+  }, []);
 
-  // Calcola totale ore
-  const totaleOre = rapportiniFiltrati.reduce((sum, r) => sum + r.ore_lavorate, 0);
+  // OPTIMIZATION: Memoize totale ore calculation
+  const totaleOre = useMemo(() =>
+    rapportiniFiltrati.reduce((sum, r) => sum + r.ore_lavorate, 0),
+    [rapportiniFiltrati]
+  );
 
   const handleAllegatoClick = async (path: string | null, e: React.MouseEvent) => {
     e.preventDefault();
@@ -583,7 +566,8 @@ export default function RapportiniPage() {
     }
   };
 
-  const handleBulkDelete = async () => {
+  // OPTIMIZATION: Memoize bulk delete handler
+  const handleBulkDelete = useCallback(async () => {
     if (selectedRapportini.size === 0) return;
 
     try {
@@ -597,11 +581,19 @@ export default function RapportiniPage() {
 
       toast.success(`${selectedRapportini.size} rapportini eliminati`);
       setSelectedRapportini(new Set());
-      loadRapportini();
+
+      // OPTIMIZATION: Reload all rapportini in parallel
+      if (tenantId) {
+        await Promise.all([
+          loadRapportini(tenantId),
+          loadRapportiniDaApprovare(tenantId),
+          loadRapportiniRifiutati(tenantId)
+        ]);
+      }
     } catch {
       toast.error('Errore nell&apos;eliminazione');
     }
-  };
+  }, [selectedRapportini, tenantId, loadRapportini, loadRapportiniDaApprovare, loadRapportiniRifiutati]);
 
   const handleExport = async (format: 'excel' | 'pdf' | 'csv', selectedUserIds: string[], layout: 'list' | 'grid', periodo: { month: number; year: number } | { dataInizio: string; dataFine: string }) => {
     // Load rapportini for selected period
@@ -1422,6 +1414,18 @@ export default function RapportiniPage() {
     toast.success('Stampa avviata');
   };
 
+  // Loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <div className="text-center space-y-4">
+          <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
+          <p className="text-muted-foreground">Caricamento rapportini...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Portal: Bottone nella Navbar */}
@@ -1465,156 +1469,28 @@ export default function RapportiniPage() {
         onTabChange={setActiveTab}
       />
 
-      {/* Header: Month Navigator and Buttons - Only for 'approvate' tab */}
-      {activeTab === 'approvate' && (
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-        {/* Month Navigator */}
-        <div className="flex items-center rounded-sm border-2 border-border bg-card overflow-hidden">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={previousMonth}
-            className="h-10 w-10 p-0 rounded-none border-0"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
 
-          <div className="w-px h-6 bg-border" />
-
-          <Popover open={showMonthPicker} onOpenChange={setShowMonthPicker}>
-            <PopoverTrigger asChild>
-              <button
-                className="h-10 px-6 font-bold text-2xl min-w-[280px] hover:text-primary transition-colors"
-                onClick={() => {
-                  setSelectedMonth(currentMonth);
-                  setSelectedYear(currentYear);
-                }}
-              >
-                {MESI[currentMonth]} {currentYear}
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-4" align="center">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Anno</label>
-                  <Select
-                    value={String(selectedYear)}
-                    onValueChange={(value) => setSelectedYear(Number(value))}
-                  >
-                    <SelectTrigger className="w-full border-2 border-border bg-card">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {years.map(year => (
-                        <SelectItem key={year} value={String(year)}>
-                          {year}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Mese</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {MESI.map((mese, index) => (
-                      <Button
-                        key={index}
-                        variant={selectedMonth === index ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setSelectedMonth(index)}
-                        className="text-xs"
-                      >
-                        {mese.substring(0, 3)}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
-                <hr className="border-border" />
-
-                <div className="flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowMonthPicker(false)}
-                  >
-                    Annulla
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={applyMonthYearSelection}
-                  >
-                    Applica
-                  </Button>
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
-
-          <div className="w-px h-6 bg-border" />
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={nextMonth}
-            className="h-10 w-10 p-0 rounded-none border-0"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </Button>
-        </div>
-
-        <div className="flex-1" />
-
-        {/* Export Button */}
-        <Button
-          onClick={() => setShowExportModal(true)}
-          variant="outline"
-          className="gap-2 h-10 rounded-sm border-2"
-        >
-          <Download className="h-4 w-4" />
-          Esporta
-        </Button>
-
-        {/* View Toggle - Cards or Table */}
-        <Button
-          variant={viewMode === 'grid' ? 'default' : 'outline'}
-          size="icon"
-          onClick={() => setViewMode('grid')}
-          className="h-10 w-10 rounded-sm border-2"
-        >
-          <Grid3x3 className="h-4 w-4" />
-        </Button>
-        <Button
-          variant={viewMode === 'list' ? 'default' : 'outline'}
-          size="icon"
-          onClick={() => setViewMode('list')}
-          className="h-10 w-10 rounded-sm border-2"
-        >
-          <List className="h-4 w-4" />
-        </Button>
-      </div>
-      )}
-
-      {/* Search Bar and Filters - For all tabs (no date filters for Da Approvare and Rifiutate) */}
+      {/* Search Bar and Filters */}
       {(activeTab === 'approvate' || activeTab === 'da_approvare' || activeTab === 'rifiutate') && (
-      <div className="space-y-3">
-        {/* Filters - All on one row */}
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Search Bar */}
-          <div className="relative w-[250px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <div className="space-y-0">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
+          {/* Search Bar - stile Fatture */}
+          <div className="relative w-full lg:w-[400px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground" />
             <Input
-              placeholder="Cerca..."
+              placeholder="Cerca per dipendente, commessa, note"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-11 border-2 border-border rounded-sm bg-white"
+              className="pl-10 h-11 border-2 border-border rounded-sm bg-background text-foreground placeholder:text-muted-foreground w-full"
             />
           </div>
 
+          {/* Spazio flessibile per spingere i filtri a destra */}
+          <div className="flex-1"></div>
+
           {/* Filtro Dipendente */}
           <Select value={filtroUtente || undefined} onValueChange={(value) => setFiltroUtente(value)}>
-            <SelectTrigger className="h-11 w-[200px] border-2 border-border rounded-sm bg-white">
+            <SelectTrigger className="h-11 w-full lg:w-[200px] border-2 border-border rounded-sm bg-white">
               <SelectValue placeholder="Tutti i dipendenti" />
             </SelectTrigger>
             <SelectContent>
@@ -1629,7 +1505,7 @@ export default function RapportiniPage() {
 
           {/* Filtro Commessa */}
           <Select value={filtroCommessa || undefined} onValueChange={(value) => setFiltroCommessa(value)}>
-            <SelectTrigger className="h-11 w-[200px] border-2 border-border rounded-sm bg-white">
+            <SelectTrigger className="h-11 w-full lg:w-[200px] border-2 border-border rounded-sm bg-white">
               <SelectValue placeholder="Tutte le commesse" />
             </SelectTrigger>
             <SelectContent>
@@ -1641,32 +1517,6 @@ export default function RapportiniPage() {
               ))}
             </SelectContent>
           </Select>
-
-          {/* Filtro Data Inizio - Only for 'approvate' tab */}
-          {activeTab === 'approvate' && (
-          <div className="relative w-[180px]">
-            <Input
-              type="date"
-              value={filtroDataInizio}
-              onChange={(e) => setFiltroDataInizio(e.target.value)}
-              placeholder="Data inizio"
-              className="h-11 border-2 border-border rounded-sm bg-white"
-            />
-          </div>
-          )}
-
-          {/* Filtro Data Fine - Only for 'approvate' tab */}
-          {activeTab === 'approvate' && (
-          <div className="relative w-[180px]">
-            <Input
-              type="date"
-              value={filtroDataFine}
-              onChange={(e) => setFiltroDataFine(e.target.value)}
-              placeholder="Data fine"
-              className="h-11 border-2 border-border rounded-sm bg-white"
-            />
-          </div>
-          )}
         </div>
 
         {/* Clear Filters Button */}
@@ -1685,6 +1535,49 @@ export default function RapportiniPage() {
       </div>
       )}
 
+      {/* Month Navigator + Export + View Toggle - Only for 'approvate' tab */}
+      {activeTab === 'approvate' && (
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex-1" />
+
+          <MonthNavigator
+            currentMonth={currentMonth}
+            currentYear={currentYear}
+            onMonthChange={handleMonthChange}
+          />
+
+          <div className="flex items-center gap-3 flex-1 justify-end">
+            {/* Export Button */}
+            <Button
+              onClick={() => setShowExportModal(true)}
+              variant="outline"
+              className="gap-2 h-10 rounded-sm border-2"
+            >
+              <Download className="h-4 w-4" />
+              Esporta
+            </Button>
+
+            {/* View Toggle - Cards or Table */}
+            <Button
+              variant={viewMode === 'grid' ? 'default' : 'outline'}
+              size="icon"
+              onClick={() => setViewMode('grid')}
+              className="h-10 w-10 rounded-sm border-2"
+            >
+              <Grid3x3 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'outline'}
+              size="icon"
+              onClick={() => setViewMode('list')}
+              className="h-10 w-10 rounded-sm border-2"
+            >
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* List View - For all tabs (with different bulk actions) */}
       {viewMode === 'list' && (
         <DataTable<Rapportino>
@@ -1698,6 +1591,7 @@ export default function RapportiniPage() {
             setItemsPerPage(value);
             setCurrentPage(1);
           }}
+          pageSizeOptions={[10, 25, 30, 50, 100]}
           sortField={sortField}
           sortDirection={sortDirection}
           onSort={handleSort}

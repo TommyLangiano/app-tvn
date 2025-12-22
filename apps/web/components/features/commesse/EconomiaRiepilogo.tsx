@@ -3,6 +3,7 @@
 import { TrendingUp, TrendingDown, DollarSign, Plus, ArrowUpCircle, ArrowDownCircle, List, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { RiepilogoEconomico, FatturaAttiva, FatturaPassiva } from '@/types/fattura';
+import { formatCurrency } from '@/lib/utils/currency';
 
 interface EconomiaRiepilogoProps {
   riepilogo: RiepilogoEconomico | null;
@@ -36,13 +37,6 @@ export function EconomiaRiepilogo({
   onNuovoCosto,
   onVisualizzaTutto
 }: EconomiaRiepilogoProps) {
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('it-IT', {
-      style: 'currency',
-      currency: 'EUR',
-    }).format(amount);
-  };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('it-IT', {
       day: '2-digit',

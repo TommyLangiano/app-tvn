@@ -62,6 +62,9 @@ export function EditRapportinoModal({ rapportino, onClose, onSuccess, commesse }
   const [currentFilePath, setCurrentFilePath] = useState<string | null>(rapportino.allegato_url || null);
   const [allegatoUrl, setAllegatoUrl] = useState<string | null>(null);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+  const [commesseTeam, setCommesseTeam] = useState<Map<string, Set<string>>>(new Map()); // commessa_id -> Set of dipendente_ids
+  const [userToDipendenteMap, setUserToDipendenteMap] = useState<Map<string, string>>(new Map()); // user.id -> dipendente.id
+  const [loadingTeam, setLoadingTeam] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const initialAllegatoRef = useRef<string | null>(rapportino.allegato_url || null);
 
@@ -69,7 +72,71 @@ export function EditRapportinoModal({ rapportino, onClose, onSuccess, commesse }
     if (rapportino.allegato_url) {
       getSignedUrl(rapportino.allegato_url).then(setAllegatoUrl);
     }
+    // Carica i team delle commesse
+    loadCommesseTeam();
   }, [rapportino.allegato_url]);
+
+  const loadCommesseTeam = async () => {
+    try {
+      setLoadingTeam(true);
+      const supabase = createClient();
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: userTenants } = await supabase
+        .from('user_tenants')
+        .select('tenant_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!userTenants) return;
+
+      // Carica i dipendenti per costruire la mappa user_id -> dipendente_id
+      const { data: dipendentiData, error: dipError } = await supabase
+        .from('dipendenti')
+        .select('id, user_id')
+        .eq('tenant_id', userTenants.tenant_id);
+
+      if (dipError) throw dipError;
+
+      // Costruisci la mappa: userId -> dipendenteId
+      const userDipMap = new Map<string, string>();
+      dipendentiData?.forEach((dip) => {
+        if (dip.user_id) {
+          // Se ha user_id, mappa user_id -> dipendente.id
+          userDipMap.set(dip.user_id, dip.id);
+        }
+        // Aggiungi anche dipendente.id -> dipendente.id per i dipendenti senza account
+        userDipMap.set(dip.id, dip.id);
+      });
+      setUserToDipendenteMap(userDipMap);
+
+      // Carica tutti i team delle commesse
+      const { data: teamData, error } = await supabase
+        .from('commesse_team')
+        .select('commessa_id, dipendente_id')
+        .eq('tenant_id', userTenants.tenant_id);
+
+      if (error) throw error;
+
+      // Costruisci la mappa: commessa_id -> Set di dipendente_ids
+      const teamMap = new Map<string, Set<string>>();
+      teamData?.forEach((row) => {
+        if (!teamMap.has(row.commessa_id)) {
+          teamMap.set(row.commessa_id, new Set());
+        }
+        teamMap.get(row.commessa_id)!.add(row.dipendente_id);
+      });
+
+      setCommesseTeam(teamMap);
+    } catch (error) {
+      console.error('Error loading commesse team:', error);
+      toast.error('Errore nel caricamento dei team');
+    } finally {
+      setLoadingTeam(false);
+    }
+  };
 
   useEffect(() => {
     // Imposta il valore personalizzato se non è uno dei valori standard
@@ -158,6 +225,27 @@ export function EditRapportinoModal({ rapportino, onClose, onSuccess, commesse }
     // Validazione base
     if (!formData.commessa_id || !formData.data_rapportino) {
       toast.error('Compila tutti i campi obbligatori');
+      return;
+    }
+
+    // Validazione team: verifica che il dipendente sia nel team della commessa
+    const teamSet = commesseTeam.get(formData.commessa_id);
+    if (!teamSet || teamSet.size === 0) {
+      toast.error('La commessa selezionata non ha un team configurato');
+      return;
+    }
+
+    // Determina il dipendente_id dal rapportino
+    // rapportino può avere user_id o dipendente_id
+    const userId = rapportino.user_id || rapportino.dipendente_id;
+    if (!userId) {
+      toast.error('Errore: impossibile determinare il dipendente');
+      return;
+    }
+
+    const dipendenteId = userToDipendenteMap.get(userId);
+    if (!dipendenteId || !teamSet.has(dipendenteId)) {
+      toast.error('Il dipendente selezionato non fa parte del team di questa commessa');
       return;
     }
 
@@ -298,6 +386,31 @@ export function EditRapportinoModal({ rapportino, onClose, onSuccess, commesse }
     } finally {
       setLoading(false);
     }
+  };
+
+  // Filtra le commesse disponibili in base al dipendente del rapportino
+  const getAvailableCommesse = () => {
+    // Determina il dipendente_id
+    const userId = rapportino.user_id || rapportino.dipendente_id;
+    if (!userId) {
+      return commesse; // Se non c'è userId, mostra tutte (fallback)
+    }
+
+    const dipendenteId = userToDipendenteMap.get(userId);
+    if (!dipendenteId) {
+      return commesse; // Se non troviamo il dipendente_id, mostra tutte (fallback)
+    }
+
+    // Trova le commesse dove il dipendente è nel team
+    const availableCommesseIds = new Set<string>();
+
+    commesseTeam.forEach((teamSet, commessaId) => {
+      if (teamSet.has(dipendenteId)) {
+        availableCommesseIds.add(commessaId);
+      }
+    });
+
+    return commesse.filter(c => availableCommesseIds.has(c.id));
   };
 
   // Calculate effective hours (ore lavorate effettive = ore o range - pausa)
@@ -590,9 +703,9 @@ export function EditRapportinoModal({ rapportino, onClose, onSuccess, commesse }
                   <Command>
                     <CommandInput placeholder="Cerca commessa..." />
                     <CommandList>
-                      <CommandEmpty>Nessuna commessa trovata.</CommandEmpty>
+                      <CommandEmpty>Nessuna commessa disponibile per questo dipendente.</CommandEmpty>
                       <CommandGroup>
-                        {commesse.map((commessa) => (
+                        {getAvailableCommesse().map((commessa) => (
                           <CommandItem
                             key={commessa.id}
                             value={commessa.nome_commessa}

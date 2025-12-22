@@ -1,6 +1,7 @@
 'use client';
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
+import { formatCurrency } from '@/lib/utils/currency';
 
 interface MarginByProjectProps {
   data: Array<{
@@ -44,15 +45,6 @@ export function MarginByProject({ data, loading = false }: MarginByProjectProps)
 
   // Take top 10 projects
   const topProjects = data.slice(0, 10);
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('it-IT', {
-      style: 'currency',
-      currency: 'EUR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
 
   const getBarColor = (marginPercentage: number) => {
     if (marginPercentage < 0) return '#ef4444'; // red

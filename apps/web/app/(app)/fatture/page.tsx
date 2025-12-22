@@ -19,6 +19,7 @@ import { TabsFilter, TabItem } from '@/components/ui/tabs-filter';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { FatturaDetailSheet } from '@/components/features/fatture/FatturaDetailSheet';
 
 type TabType = 'all' | 'emesse' | 'ricevute';
 
@@ -1536,7 +1537,7 @@ export default function FatturePage() {
                               ...editedData,
                               stato_pagamento: value,
                               // Elimina data pagamento se si cambia a Non Pagato/Da Incassare
-                              data_pagamento: value === 'Non Pagato' ? null : editedData.data_pagamento
+                              data_pagamento: value === 'Pagato' ? editedData.data_pagamento : null
                             });
                           }}
                         >
@@ -1582,9 +1583,14 @@ export default function FatturePage() {
                             type="date"
                             value={editedData.data_pagamento || ''}
                             onChange={(e) => setEditedData({...editedData, data_pagamento: e.target.value})}
-                            className="h-11 border-2 border-border bg-white pr-10"
+                            disabled={editedData.stato_pagamento !== 'Pagato'}
+                            className={`h-11 border-2 border-border pr-10 ${
+                              editedData.stato_pagamento !== 'Pagato'
+                                ? 'bg-gray-100 cursor-not-allowed'
+                                : 'bg-white'
+                            }`}
                           />
-                          {editedData.data_pagamento && (
+                          {editedData.data_pagamento && editedData.stato_pagamento === 'Pagato' && (
                             <button
                               type="button"
                               onClick={() => setEditedData({...editedData, data_pagamento: null})}

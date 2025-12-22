@@ -26,6 +26,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
+import { formatCurrency } from '@/lib/utils/currency';
 
 type Dipendente = {
   id: string;
@@ -200,16 +201,6 @@ export default function DipendenteDetailPage() {
       month: '2-digit',
       year: 'numeric'
     });
-  };
-
-  const formatCurrency = (amount?: number) => {
-    if (!amount) return '—';
-    return new Intl.NumberFormat('it-IT', {
-      style: 'currency',
-      currency: 'EUR',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(amount);
   };
 
   const buildResidenza = () => {

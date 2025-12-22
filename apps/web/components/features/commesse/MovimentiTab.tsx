@@ -1,13 +1,17 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Receipt, ArrowUpCircle, ArrowDownCircle, FileText, ChevronRight } from 'lucide-react';
+import { Receipt, ArrowUpCircle, ArrowDownCircle, FileText, ChevronRight, Search, Trash2, X, Plus, TrendingUp, TrendingDown } from 'lucide-react';
 import { DataTable, DataTableColumn } from '@/components/ui/data-table';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import { getSignedUrl } from '@/lib/utils/storage';
+import { FatturaDetailSheet } from '@/components/features/fatture/FatturaDetailSheet';
+import { formatCurrency } from '@/lib/utils/currency';
 
 interface FatturaAttiva {
   id: string;
@@ -51,15 +55,31 @@ interface FatturaPassiva {
   allegato_url: string | null;
 }
 
+interface RiepilogoEconomico {
+  ricavi_imponibile: number;
+  ricavi_iva: number;
+  ricavi_totali: number;
+  costi_imponibile: number;
+  costi_iva: number;
+  costi_totali: number;
+  margine_lordo: number;
+  saldo_iva: number;
+}
+
 interface MovimentiTabProps {
   commessaId: string;
   fattureAttive: FatturaAttiva[];
   fatturePassive: FatturaPassiva[];
+  riepilogo?: RiepilogoEconomico | null;
   onReload?: () => void;
 }
 
-export function MovimentiTab({ commessaId, fattureAttive, fatturePassive, onReload }: MovimentiTabProps) {
+type TabType = 'all' | 'emesse' | 'ricevute';
+
+export function MovimentiTab({ commessaId, fattureAttive, fatturePassive, riepilogo, onReload }: MovimentiTabProps) {
+  const [activeTab, setActiveTab] = useState<TabType>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [statoFattura, setStatoFattura] = useState<string>('tutti');
   const [sortField, setSortField] = useState<string>('data_fattura');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [selectedFatture, setSelectedFatture] = useState<Set<string>>(new Set());
@@ -67,6 +87,8 @@ export function MovimentiTab({ commessaId, fattureAttive, fatturePassive, onRelo
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [selectedFatturaDetail, setSelectedFatturaDetail] = useState<FatturaAttiva | FatturaPassiva | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleUpdateStatoPagamento = async (
     fattura: FatturaAttiva | FatturaPassiva,
@@ -92,7 +114,11 @@ export function MovimentiTab({ commessaId, fattureAttive, fatturePassive, onRelo
       if (error) throw error;
 
       toast.success('Stato aggiornato con successo');
-      if (onReload) await onReload();
+
+      // Ricarica SOLO i dati delle fatture senza resettare la UI
+      if (onReload) {
+        await onReload();
+      }
     } catch (error) {
       console.error('Error updating stato:', error);
       toast.error('Errore nell\'aggiornamento dello stato');
@@ -112,6 +138,50 @@ export function MovimentiTab({ commessaId, fattureAttive, fatturePassive, onRelo
     }
   };
 
+  const handleDeleteFattura = async () => {
+    if (!selectedFatturaDetail) return;
+
+    setIsDeleting(true);
+    try {
+      const supabase = createClient();
+      const isEmessa = 'cliente' in selectedFatturaDetail;
+      const tableName = isEmessa ? 'fatture_attive' : 'fatture_passive';
+
+      // Elimina il file allegato se esiste
+      if (selectedFatturaDetail.allegato_url) {
+        try {
+          await supabase.storage
+            .from('app-storage')
+            .remove([selectedFatturaDetail.allegato_url]);
+        } catch (error) {
+          console.error('Error deleting file:', error);
+        }
+      }
+
+      // Elimina la fattura dal database
+      const { error } = await supabase
+        .from(tableName)
+        .delete()
+        .eq('id', selectedFatturaDetail.id);
+
+      if (error) throw error;
+
+      toast.success('Fattura eliminata con successo');
+      setShowDeleteConfirm(false);
+      setSelectedFatturaDetail(null);
+
+      // Ricarica i dati
+      if (onReload) {
+        onReload();
+      }
+    } catch (error) {
+      console.error('Error deleting fattura:', error);
+      toast.error('Errore nell\'eliminazione della fattura');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('it-IT', {
       day: '2-digit',
@@ -127,6 +197,19 @@ export function MovimentiTab({ commessaId, fattureAttive, fatturePassive, onRelo
   const filteredFatture = useMemo(() => {
     let filtered = allFatture;
 
+    // Filter by tab (all/emesse/ricevute)
+    if (activeTab === 'emesse') {
+      filtered = filtered.filter(f => 'cliente' in f);
+    } else if (activeTab === 'ricevute') {
+      filtered = filtered.filter(f => 'fornitore' in f);
+    }
+
+    // Filter by stato
+    if (statoFattura !== 'tutti') {
+      filtered = filtered.filter(f => f.stato_pagamento === statoFattura);
+    }
+
+    // Filter by search
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter((f) => {
@@ -140,7 +223,7 @@ export function MovimentiTab({ commessaId, fattureAttive, fatturePassive, onRelo
     }
 
     return filtered;
-  }, [allFatture, searchQuery]);
+  }, [allFatture, activeTab, statoFattura, searchQuery]);
 
   const sortedFatture = useMemo(() => {
     const sorted = [...filteredFatture];
@@ -182,6 +265,11 @@ export function MovimentiTab({ commessaId, fattureAttive, fatturePassive, onRelo
     const startIndex = (currentPage - 1) * itemsPerPage;
     return sortedFatture.slice(startIndex, startIndex + itemsPerPage);
   }, [sortedFatture, currentPage, itemsPerPage]);
+
+  // Calcola il totale delle fatture filtrate
+  const totaleFattureVisualizzate = useMemo(() => {
+    return sortedFatture.reduce((sum, fattura) => sum + fattura.importo_totale, 0);
+  }, [sortedFatture]);
 
   const handleSort = (field: string) => {
     if (sortField === field) {
@@ -353,15 +441,343 @@ export function MovimentiTab({ commessaId, fattureAttive, fatturePassive, onRelo
 
   return (
     <div className="space-y-4">
+      {/* Search and Filters */}
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
+        {/* Toggle Buttons per tipo fattura */}
+        <div className="inline-flex rounded-md border border-border bg-background p-1">
+          <button
+            onClick={() => setActiveTab('all')}
+            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+              activeTab === 'all'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Receipt className="h-4 w-4" />
+            Tutte
+            <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
+              activeTab === 'all'
+                ? 'bg-primary-foreground/20 text-primary-foreground'
+                : 'bg-green-100 text-green-700'
+            }`}>
+              {allFatture.length}
+            </span>
+          </button>
+          <button
+            onClick={() => setActiveTab('emesse')}
+            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+              activeTab === 'emesse'
+                ? 'bg-green-100 text-green-700 shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <ArrowUpCircle className="h-4 w-4" />
+            Emesse
+            <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
+              activeTab === 'emesse'
+                ? 'bg-green-200 text-green-800'
+                : 'bg-green-100 text-green-700'
+            }`}>
+              {fattureAttive.length}
+            </span>
+          </button>
+          <button
+            onClick={() => setActiveTab('ricevute')}
+            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+              activeTab === 'ricevute'
+                ? 'bg-red-100 text-red-700 shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <ArrowDownCircle className="h-4 w-4" />
+            Ricevute
+            <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
+              activeTab === 'ricevute'
+                ? 'bg-red-200 text-red-800'
+                : 'bg-green-100 text-green-700'
+            }`}>
+              {fatturePassive.length}
+            </span>
+          </button>
+        </div>
+
+        <div className="hidden lg:block h-8 w-px bg-border"></div>
+        {/* Search field */}
+        <div className="relative w-full lg:w-[400px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground" />
+          <Input
+            placeholder="Cerca per numero fattura, cliente, fornitore..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 h-11 border-2 border-border rounded-sm bg-background text-foreground w-full"
+          />
+        </div>
+
+        <div className="flex-1"></div>
+
+        {/* Bulk delete button */}
+        {selectedFatture.size > 0 && (
+          <Button
+            variant="outline"
+            className="h-11 gap-2 bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
+            onClick={(e) => {
+              e.stopPropagation();
+              // TODO: Add bulk delete handler
+              toast.info('Funzionalità in sviluppo');
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+            Elimina ({selectedFatture.size})
+          </Button>
+        )}
+
+        {/* Stato filter */}
+        <Select value={statoFattura} onValueChange={setStatoFattura}>
+          <SelectTrigger className="h-11 w-full lg:w-[180px] border-2 border-border rounded-sm bg-white">
+            <SelectValue>
+              {statoFattura === 'tutti' ? 'Stato: Tutti' :
+               statoFattura === 'Pagato' ? 'Stato: Pagato' :
+               statoFattura === 'Non Pagato' ? 'Stato: Non Pagato' :
+               'Stato: Da Incassare'}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="tutti">Tutti</SelectItem>
+            <SelectItem value="Pagato">Pagato</SelectItem>
+            <SelectItem value="Non Pagato">Non Pagato</SelectItem>
+            <SelectItem value="Da Incassare">Da Incassare</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Dashboard Economico - Card dinamiche in base al tab */}
+      {riepilogo && (
+        <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${activeTab === 'all' ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
+          {/* TAB "TUTTE" - Mostra tutte e 4 le card */}
+          {activeTab === 'all' && (
+            <>
+              {/* Card Fatture Emesse */}
+              <div className="rounded-xl border-2 border-border bg-card p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="p-2 rounded-lg bg-green-100">
+                    <TrendingUp className="h-5 w-5 text-green-600" />
+                  </div>
+                  <span className="font-semibold text-base">Fatture Emesse</span>
+                </div>
+                <div className="space-y-3">
+                  <div className="text-3xl font-bold text-green-600">
+                    {formatCurrency(riepilogo.ricavi_totali)}
+                  </div>
+                  <div className="space-y-2 pt-2 border-t border-border">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Imponibile:</span>
+                      <span className="text-sm font-semibold">{formatCurrency(riepilogo.ricavi_imponibile)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">IVA:</span>
+                      <span className="text-sm font-semibold">{formatCurrency(riepilogo.ricavi_iva)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card Fatture Ricevute */}
+              <div className="rounded-xl border-2 border-border bg-card p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="p-2 rounded-lg bg-red-100">
+                    <TrendingDown className="h-5 w-5 text-red-600" />
+                  </div>
+                  <span className="font-semibold text-base">Fatture Ricevute</span>
+                </div>
+                <div className="space-y-3">
+                  <div className="text-3xl font-bold text-red-600">
+                    {formatCurrency(riepilogo.costi_totali)}
+                  </div>
+                  <div className="space-y-2 pt-2 border-t border-border">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Imponibile:</span>
+                      <span className="text-sm font-semibold">{formatCurrency(riepilogo.costi_imponibile)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">IVA:</span>
+                      <span className="text-sm font-semibold">{formatCurrency(riepilogo.costi_iva)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card Margine Lordo */}
+              <div className="rounded-xl border-2 border-border bg-card p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className={`p-2 rounded-lg ${riepilogo.margine_lordo >= 0 ? 'bg-emerald-100' : 'bg-red-100'}`}>
+                    <FileText className={`h-5 w-5 ${riepilogo.margine_lordo >= 0 ? 'text-emerald-600' : 'text-red-600'}`} />
+                  </div>
+                  <span className="font-semibold text-base">Margine Lordo</span>
+                </div>
+                <div className="space-y-2">
+                  <div className={`text-3xl font-bold ${riepilogo.margine_lordo >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                    {formatCurrency(riepilogo.margine_lordo)}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-2">
+                    Imponibile ricavi - Imponibile costi
+                  </div>
+                </div>
+              </div>
+
+              {/* Card Saldo IVA */}
+              <div className={`rounded-xl border-2 bg-card p-6 ${(riepilogo.saldo_iva || 0) > 0 ? 'border-red-300 bg-red-50/30' : 'border-green-300 bg-green-50/30'}`}>
+                <div className="flex items-center gap-2 mb-4">
+                  <div className={`p-2 rounded-lg ${(riepilogo.saldo_iva || 0) > 0 ? 'bg-red-100' : 'bg-green-100'}`}>
+                    <FileText className={`h-5 w-5 ${(riepilogo.saldo_iva || 0) > 0 ? 'text-red-600' : 'text-green-600'}`} />
+                  </div>
+                  <span className="font-semibold text-base">Saldo IVA</span>
+                </div>
+                <div className="space-y-2">
+                  <div className={`text-3xl font-bold ${(riepilogo.saldo_iva || 0) > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                    {formatCurrency(riepilogo.saldo_iva || 0)}
+                  </div>
+                  <div className={`text-sm font-medium ${(riepilogo.saldo_iva || 0) > 0 ? 'text-red-700' : 'text-green-700'}`}>
+                    {(riepilogo.saldo_iva || 0) > 0 ? 'IVA a credito' : 'IVA a debito'}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-2">
+                    IVA ricavi - IVA costi
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* TAB "EMESSE" - 3 card specifiche per fatture emesse */}
+          {activeTab === 'emesse' && (
+            <>
+              {/* Card Totale Fatturato */}
+              <div className="rounded-xl border-2 border-border bg-card p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="p-2 rounded-lg bg-green-100">
+                    <TrendingUp className="h-5 w-5 text-green-600" />
+                  </div>
+                  <span className="font-semibold text-base">Totale Fatturato</span>
+                </div>
+                <div className="space-y-2">
+                  <div className="text-3xl font-bold text-green-600">
+                    {formatCurrency(riepilogo.ricavi_totali)}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-2">
+                    Somma di tutte le fatture emesse
+                  </div>
+                </div>
+              </div>
+
+              {/* Card Imponibile */}
+              <div className="rounded-xl border-2 border-border bg-card p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="p-2 rounded-lg bg-gray-100">
+                    <FileText className="h-5 w-5 text-gray-600" />
+                  </div>
+                  <span className="font-semibold text-base">Imponibile</span>
+                </div>
+                <div className="space-y-2">
+                  <div className="text-3xl font-bold text-gray-700">
+                    {formatCurrency(riepilogo.ricavi_imponibile)}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-2">
+                    Totale imponibile fatture emesse
+                  </div>
+                </div>
+              </div>
+
+              {/* Card IVA a versare */}
+              <div className={`rounded-xl border-2 bg-card p-6 ${riepilogo.ricavi_iva > 0 ? 'border-red-300 bg-red-50/30' : 'border-green-300 bg-green-50/30'}`}>
+                <div className="flex items-center gap-2 mb-4">
+                  <div className={`p-2 rounded-lg ${riepilogo.ricavi_iva > 0 ? 'bg-red-100' : 'bg-green-100'}`}>
+                    <FileText className={`h-5 w-5 ${riepilogo.ricavi_iva > 0 ? 'text-red-600' : 'text-green-600'}`} />
+                  </div>
+                  <span className="font-semibold text-base">IVA a versare</span>
+                </div>
+                <div className="space-y-2">
+                  <div className={`text-3xl font-bold ${riepilogo.ricavi_iva > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                    {formatCurrency(riepilogo.ricavi_iva)}
+                  </div>
+                  <div className={`text-sm font-medium ${riepilogo.ricavi_iva > 0 ? 'text-red-700' : 'text-green-700'}`}>
+                    {riepilogo.ricavi_iva > 0 ? 'IVA a debito' : 'Nessuna IVA'}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-2">
+                    IVA sulle fatture emesse
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* TAB "RICEVUTE" - 3 card specifiche per fatture ricevute */}
+          {activeTab === 'ricevute' && (
+            <>
+              {/* Card Totale Costi */}
+              <div className="rounded-xl border-2 border-border bg-card p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="p-2 rounded-lg bg-red-100">
+                    <TrendingDown className="h-5 w-5 text-red-600" />
+                  </div>
+                  <span className="font-semibold text-base">Totale Costi</span>
+                </div>
+                <div className="space-y-2">
+                  <div className="text-3xl font-bold text-red-600">
+                    {formatCurrency(riepilogo.costi_totali)}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-2">
+                    Somma di tutte le fatture ricevute
+                  </div>
+                </div>
+              </div>
+
+              {/* Card Imponibile */}
+              <div className="rounded-xl border-2 border-border bg-card p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="p-2 rounded-lg bg-gray-100">
+                    <FileText className="h-5 w-5 text-gray-600" />
+                  </div>
+                  <span className="font-semibold text-base">Imponibile</span>
+                </div>
+                <div className="space-y-2">
+                  <div className="text-3xl font-bold text-gray-700">
+                    {formatCurrency(riepilogo.costi_imponibile)}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-2">
+                    Totale imponibile fatture ricevute
+                  </div>
+                </div>
+              </div>
+
+              {/* Card IVA detraibile */}
+              <div className={`rounded-xl border-2 bg-card p-6 ${riepilogo.costi_iva > 0 ? 'border-green-300 bg-green-50/30' : 'border-gray-300'}`}>
+                <div className="flex items-center gap-2 mb-4">
+                  <div className={`p-2 rounded-lg ${riepilogo.costi_iva > 0 ? 'bg-green-100' : 'bg-gray-100'}`}>
+                    <FileText className={`h-5 w-5 ${riepilogo.costi_iva > 0 ? 'text-green-600' : 'text-gray-600'}`} />
+                  </div>
+                  <span className="font-semibold text-base">IVA detraibile</span>
+                </div>
+                <div className="space-y-2">
+                  <div className={`text-3xl font-bold ${riepilogo.costi_iva > 0 ? 'text-green-600' : 'text-gray-700'}`}>
+                    {formatCurrency(riepilogo.costi_iva)}
+                  </div>
+                  <div className={`text-sm font-medium ${riepilogo.costi_iva > 0 ? 'text-green-700' : 'text-gray-600'}`}>
+                    {riepilogo.costi_iva > 0 ? 'IVA a credito' : 'Nessuna IVA'}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-2">
+                    IVA sulle fatture ricevute
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
       <DataTable<FatturaAttiva | FatturaPassiva>
-          data={paginatedFatture}
-          columns={columns}
-          keyField="id"
-          loading={false}
-        searchable={true}
-        searchPlaceholder="Cerca per numero fattura, cliente, fornitore..."
-        searchValue={searchQuery}
-        onSearchChange={setSearchQuery}
+        data={paginatedFatture}
+        columns={columns}
+        keyField="id"
+        loading={false}
         sortField={sortField}
         sortDirection={sortDirection as 'asc' | 'desc'}
         onSort={handleSort}
@@ -382,92 +798,83 @@ export function MovimentiTab({ commessaId, fattureAttive, fatturePassive, onRelo
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col [&>button]:hidden">
           {selectedFatturaDetail && (
-            <div className="flex-1 overflow-y-auto">
-              <div className="sticky top-0 z-10 bg-background border-b px-6 py-4">
-                <SheetTitle className="text-xl font-bold">
-                  Dettagli Fattura
-                </SheetTitle>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {selectedFatturaDetail.numero_fattura}
-                </p>
-              </div>
-
-              <div className="p-6 space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">
-                      {'cliente' in selectedFatturaDetail ? 'Cliente' : 'Fornitore'}
-                    </label>
-                    <p className="text-sm font-semibold mt-1">
-                      {'cliente' in selectedFatturaDetail
-                        ? selectedFatturaDetail.cliente
-                        : (selectedFatturaDetail as FatturaPassiva).fornitore}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Categoria</label>
-                    <p className="text-sm font-semibold mt-1">{selectedFatturaDetail.categoria}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Data Emissione</label>
-                    <p className="text-sm font-semibold mt-1">{formatDate(selectedFatturaDetail.data_fattura)}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Scadenza</label>
-                    <p className="text-sm font-semibold mt-1">
-                      {selectedFatturaDetail.scadenza_pagamento
-                        ? formatDate(selectedFatturaDetail.scadenza_pagamento)
-                        : '-'}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Importo Imponibile</label>
-                    <p className="text-sm font-semibold mt-1">
-                      {new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(
-                        selectedFatturaDetail.importo_imponibile
-                      )}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">IVA ({selectedFatturaDetail.aliquota_iva}%)</label>
-                    <p className="text-sm font-semibold mt-1">
-                      {new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(
-                        selectedFatturaDetail.importo_iva
-                      )}
-                    </p>
-                  </div>
-                  <div className="col-span-2">
-                    <label className="text-sm font-medium text-muted-foreground">Importo Totale</label>
-                    <p className="text-2xl font-bold mt-1">
-                      {new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(
-                        selectedFatturaDetail.importo_totale
-                      )}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Stato Pagamento</label>
-                    <p className="text-sm font-semibold mt-1">{selectedFatturaDetail.stato_pagamento}</p>
-                  </div>
-                  {selectedFatturaDetail.data_pagamento && (
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Data Pagamento</label>
-                      <p className="text-sm font-semibold mt-1">
-                        {formatDate(selectedFatturaDetail.data_pagamento)}
-                      </p>
-                    </div>
-                  )}
-                  {selectedFatturaDetail.note && (
-                    <div className="col-span-2">
-                      <label className="text-sm font-medium text-muted-foreground">Note</label>
-                      <p className="text-sm mt-1">{selectedFatturaDetail.note}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+            <FatturaDetailSheet
+              fattura={selectedFatturaDetail}
+              onClose={() => setIsSheetOpen(false)}
+              onOpenFile={handleOpenFile}
+              onDelete={() => setShowDeleteConfirm(true)}
+              onUpdate={() => {
+                if (onReload) {
+                  onReload();
+                }
+                setIsSheetOpen(false);
+              }}
+            />
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Modal di conferma eliminazione */}
+      {showDeleteConfirm && selectedFatturaDetail && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-full bg-red-100">
+                <Trash2 className="h-5 w-5 text-red-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Elimina Fattura
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Sei sicuro di voler eliminare la fattura{' '}
+                  <span className="font-semibold">{selectedFatturaDetail.numero_fattura}</span>?
+                  Questa azione non può essere annullata.
+                </p>
+                <div className="mt-3 text-sm text-gray-600">
+                  <p>
+                    <span className="font-medium">
+                      {'cliente' in selectedFatturaDetail ? 'Cliente:' : 'Fornitore:'}
+                    </span>{' '}
+                    {'cliente' in selectedFatturaDetail
+                      ? selectedFatturaDetail.cliente
+                      : (selectedFatturaDetail as FatturaPassiva).fornitore}
+                  </p>
+                  <p>
+                    <span className="font-medium">Data:</span>{' '}
+                    {new Date(selectedFatturaDetail.data_fattura).toLocaleDateString('it-IT')}
+                  </p>
+                  <p>
+                    <span className="font-medium">Importo:</span>{' '}
+                    {new Intl.NumberFormat('it-IT', {
+                      style: 'currency',
+                      currency: 'EUR'
+                    }).format(selectedFatturaDetail.importo_totale)}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-3 justify-end pt-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={isDeleting}
+              >
+                Annulla
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeleteFattura}
+                disabled={isDeleting}
+                className="gap-2"
+              >
+                <Trash2 className="h-4 w-4" />
+                {isDeleting ? 'Eliminazione...' : 'Elimina'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

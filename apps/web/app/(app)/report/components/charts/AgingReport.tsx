@@ -2,6 +2,7 @@
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
 import { Clock, AlertTriangle, DollarSign } from 'lucide-react';
+import { formatCurrency } from '@/lib/utils/currency';
 
 interface AgingReportProps {
   data: {
@@ -30,15 +31,6 @@ export function AgingReport({ data, loading = false }: AgingReportProps) {
       </div>
     );
   }
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('it-IT', {
-      style: 'currency',
-      currency: 'EUR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
 
   // Prepare data for charts
   const barData = [

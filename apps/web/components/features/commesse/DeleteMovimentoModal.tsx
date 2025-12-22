@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { ModalWrapper } from '@/components/common/ModalWrapper';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
+import { formatCurrency } from '@/lib/utils/currency';
 
 type Movimento = {
   id: string;
@@ -68,13 +69,6 @@ export function DeleteMovimentoModal({ movimento, onClose, onSuccess }: DeleteMo
     } finally {
       setLoading(false);
     }
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('it-IT', {
-      style: 'currency',
-      currency: 'EUR',
-    }).format(value);
   };
 
   const getCategoriaLabel = (categoria: string) => {

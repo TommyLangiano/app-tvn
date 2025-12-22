@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/dialog';
 import React from 'react';
 import { Check, Trash2, Upload, FileText, X } from 'lucide-react';
+import { formatCurrency } from '@/lib/utils/currency';
 import { CityCombobox } from '@/components/ui/city-combobox';
 
 interface Cliente {
@@ -138,16 +139,6 @@ export default function NuovaCommessaPage() {
     }
 
     return `${giorni} Giorni (${mesi} ${mesi === 1 ? 'mese' : 'mesi'} e ${giorniRimanenti} ${giorniRimanenti === 1 ? 'giorno' : 'giorni'})`;
-  };
-
-  const formatCurrency = (value: string): string => {
-    if (!value) return '';
-    const num = parseFloat(value);
-    if (isNaN(num)) return value;
-    return new Intl.NumberFormat('it-IT', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(num);
   };
 
   const formatCurrencyInput = (value: string): string => {
@@ -384,7 +375,8 @@ export default function NuovaCommessaPage() {
     return (
       (cliente.cognome && cliente.cognome.toLowerCase().includes(searchLower)) ||
       (cliente.nome && cliente.nome.toLowerCase().includes(searchLower)) ||
-      (cliente.email && cliente.email.toLowerCase().includes(searchLower))
+      (cliente.email && cliente.email.toLowerCase().includes(searchLower)) ||
+      (cliente.ragione_sociale && cliente.ragione_sociale.toLowerCase().includes(searchLower))
     );
   });
 
@@ -809,7 +801,9 @@ export default function NuovaCommessaPage() {
                     {filteredClienti.length > 0 ? (
                       filteredClienti.map((cliente) => (
                         <SelectItem key={cliente.id} value={cliente.id}>
-                          {cliente.cognome} {cliente.nome}
+                          {cliente.forma_giuridica === 'persona_giuridica'
+                            ? cliente.ragione_sociale
+                            : `${cliente.cognome} ${cliente.nome}`}
                         </SelectItem>
                       ))
                     ) : (

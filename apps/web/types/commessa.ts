@@ -17,6 +17,8 @@ export interface Commessa {
   cliente_nome_completo?: string; // Populated from clienti table join
   codice_commessa?: string;
   importo_commessa?: number;
+  budget_commessa?: number;
+  costo_materiali?: number;
   cig?: string; // Required for Pubblico
   cup?: string; // Required for Pubblico
   citta?: string;
@@ -40,6 +42,8 @@ export interface CommessaFormData {
   cliente_commessa: string;
   codice_commessa?: string;
   importo_commessa?: number;
+  budget_commessa?: number;
+  costo_materiali?: number;
   cig?: string; // Required for Pubblico
   cup?: string; // Required for Pubblico
   citta?: string;

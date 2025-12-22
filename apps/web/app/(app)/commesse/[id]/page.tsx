@@ -2,10 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { MapPin, Edit, Trash2, Plus, TrendingUp, TrendingDown, FileText, Users, FolderOpen, Info, Settings, Search, ArrowUpCircle, ArrowDownCircle, ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, X, MoreVertical } from 'lucide-react';
+import { MapPin, Edit, Edit2, Trash2, Plus, TrendingUp, TrendingDown, FileText, Users, FolderOpen, Info, Settings, Search, ArrowUpCircle, ArrowDownCircle, ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, X, MoreVertical, Receipt, Loader2, FileStack, BarChart3, LayoutDashboard, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { TabsFilter } from '@/components/ui/tabs-filter';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -13,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { CityCombobox } from '@/components/ui/city-combobox';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import type { Commessa } from '@/types/commessa';
@@ -20,19 +24,24 @@ import type { RiepilogoEconomico, FatturaAttiva, FatturaPassiva } from '@/types/
 import { FatturaAttivaForm } from '@/components/features/commesse/FatturaAttivaForm';
 import { CostoForm } from '@/components/features/commesse/CostoForm';
 import { DeleteCommessaModal } from '@/components/features/commesse/DeleteCommessaModal';
+import { EditCommessaModal } from '@/components/features/commesse/EditCommessaModal';
 import { InfoMovimentoModal } from '@/components/features/commesse/InfoMovimentoModal';
 import { EditMovimentoModal } from '@/components/features/commesse/EditMovimentoModal';
 import { DeleteMovimentoModal } from '@/components/features/commesse/DeleteMovimentoModal';
 import { BulkDeleteMovimentiModal } from '@/components/features/commesse/BulkDeleteMovimentiModal';
-import { RapportiniSection } from '@/components/features/registro-presenze/RapportiniSection';
+import { RapportiniTab } from '@/components/features/commesse/RapportiniTab';
 import { MovimentiTab } from '@/components/features/commesse/MovimentiTab';
 import { getSignedUrl } from '@/lib/utils/storage';
+import { formatCurrency } from '@/lib/utils/currency';
 
 export default function CommessaDetailPage() {
   const router = useRouter();
   const params = useParams();
   const slug = params.id as string;
 
+  type TabValue = 'panoramica' | 'movimenti' | 'note-spesa' | 'rapportini' | 'report' | 'documenti' | 'dettagli' | 'impostazioni';
+
+  const [activeTab, setActiveTab] = useState<TabValue>('panoramica');
   const [loading, setLoading] = useState(true);
   const [commessa, setCommessa] = useState<Commessa | null>(null);
   const [riepilogo, setRiepilogo] = useState<RiepilogoEconomico | null>(null);
@@ -42,6 +51,7 @@ export default function CommessaDetailPage() {
   const [showFatturaForm, setShowFatturaForm] = useState(false);
   const [showCostoForm, setShowCostoForm] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showEditModal, setShowEditCommessaModal] = useState(false);
   const [showDescrizioneModal, setShowDescrizioneModal] = useState(false);
 
   // Movimenti states
@@ -54,7 +64,7 @@ export default function CommessaDetailPage() {
   const [ordinamento, setOrdinamento] = useState<'data_desc' | 'data_asc' | 'importo_desc' | 'importo_asc' | 'cliente_asc' | 'cliente_desc' | 'stato_asc' | 'stato_desc'>('data_desc');
   const [selectedMovimento, setSelectedMovimento] = useState<Movimento | null>(null);
   const [showInfoModal, setShowInfoModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
+  const [showEditMovimentoModal, setShowEditMovimentoModal] = useState(false);
   const [showDeleteMovimentoModal, setShowDeleteMovimentoModal] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [selectedMovimenti, setSelectedMovimenti] = useState<Set<string>>(new Set());
@@ -63,10 +73,125 @@ export default function CommessaDetailPage() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [showFilters, setShowFilters] = useState(false);
 
+  // Impostazioni tab - Edit inline states
+  type SectionKey = 'informazioniGenerali' | 'cliente' | 'luogo' | 'pianificazione' | 'descrizione' | 'team';
+  const [editingSection, setEditingSection] = useState<SectionKey | null>(null);
+  const [sectionData, setSectionData] = useState<Record<SectionKey, Record<string, string | number | null>>>({
+    informazioniGenerali: {
+      codice_commessa: '',
+      nome_commessa: '',
+      tipologia_commessa: ''
+    },
+    cliente: {
+      tipologia_cliente: '',
+      cliente_commessa: '',
+      cig: '',
+      cup: ''
+    },
+    luogo: {
+      via: '',
+      numero_civico: '',
+      citta: '',
+      provincia: '',
+      cap: ''
+    },
+    pianificazione: {
+      data_inizio: '',
+      data_fine_prevista: '',
+      importo_commessa: '',
+      budget_commessa: '',
+      costo_materiali: ''
+    },
+    descrizione: {
+      descrizione: ''
+    },
+    team: {}
+  });
+  const [sectionErrors, setSectionErrors] = useState<Record<string, boolean>>({});
+  const [savingSection, setSavingSection] = useState(false);
+  const [clienti, setClienti] = useState<Array<{
+    id: string;
+    nome: string;
+    cognome: string;
+    email?: string;
+    forma_giuridica?: string;
+    ragione_sociale?: string;
+  }>>([]);
+  const [teamMembers, setTeamMembers] = useState<Array<{
+    id: string;
+    dipendente_id: string;
+    nome: string;
+    cognome: string;
+    email?: string;
+    ruolo?: string;
+  }>>([]);
+  const [allDipendenti, setAllDipendenti] = useState<Array<{
+    id: string;
+    nome: string;
+    cognome: string;
+    email?: string;
+    ruolo?: string;
+  }>>([]);
+  const [selectedTeamMembers, setSelectedTeamMembers] = useState<Set<string>>(new Set());
+  const [searchTeamQuery, setSearchTeamQuery] = useState('');
+
+  // Impostazioni tab - Approval settings
+  const [approvazionePresenze, setApprovazionePresenze] = useState({
+    abilitato: false,
+    approvatori: [] as string[] // dipendente_id array
+  });
+  const [approvazioneNoteSpesa, setApprovazioneNoteSpesa] = useState({
+    abilitato: false,
+    approvatori: [] as string[]
+  });
+  const [selectedApprovatoriPresenze, setSelectedApprovatoriPresenze] = useState<Set<string>>(new Set());
+  const [selectedApprovatoriNoteSpesa, setSelectedApprovatoriNoteSpesa] = useState<Set<string>>(new Set());
+  const [searchApprovatoriPresenzeQuery, setSearchApprovatoriPresenzeQuery] = useState('');
+  const [searchApprovatoriNoteSpesaQuery, setSearchApprovatoriNoteSpesaQuery] = useState('');
+  const [savingPresenze, setSavingPresenze] = useState(false);
+  const [savingNoteSpesa, setSavingNoteSpesa] = useState(false);
+  const [editingApprovazionePresenze, setEditingApprovazionePresenze] = useState(false);
+  const [editingApprovazioneNoteSpesa, setEditingApprovazioneNoteSpesa] = useState(false);
+
   useEffect(() => {
     loadCommessaData();
+    loadClientiForSettings();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
+
+  // Load team data after commessa is loaded
+  useEffect(() => {
+    if (commessa?.id) {
+      loadTeamData();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [commessa?.id]);
+
+  // Load approval settings after commessa and dipendenti are loaded
+  useEffect(() => {
+    if (commessa?.id && allDipendenti.length > 0) {
+      loadApprovalSettings();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [commessa?.id, allDipendenti.length]);
+
+  // Update page title in navbar
+  useEffect(() => {
+    if (commessa) {
+      // Store in sessionStorage for navbar to use
+      sessionStorage.setItem('current-commessa-name', commessa.nome_commessa || '');
+      sessionStorage.setItem('current-commessa-code', commessa.codice_commessa || '');
+
+      // Trigger custom event to notify navbar
+      window.dispatchEvent(new CustomEvent('commessa-loaded'));
+    }
+
+    return () => {
+      // Cleanup on unmount
+      sessionStorage.removeItem('current-commessa-name');
+      sessionStorage.removeItem('current-commessa-code');
+    };
+  }, [commessa]);
 
   const loadCommessaData = async () => {
     try {
@@ -144,10 +269,542 @@ export default function CommessaDetailPage() {
     }
   };
 
+  // Funzione per ricaricare SOLO le fatture senza resettare la UI
+  const refreshFattureData = async () => {
+    try {
+      if (!commessa?.id) return;
+
+      const supabase = createClient();
+
+      // Ricarica SOLO le fatture e il riepilogo, NON tutta la pagina
+      const [fattureAttiveRes, fatturePassiveRes, riepilogoRes] = await Promise.all([
+        supabase
+          .from('fatture_attive')
+          .select('*')
+          .eq('commessa_id', commessa.id)
+          .order('data_fattura', { ascending: false }),
+        supabase
+          .from('fatture_passive')
+          .select('*')
+          .eq('commessa_id', commessa.id)
+          .order('data_fattura', { ascending: false }),
+        supabase
+          .from('riepilogo_economico_commessa')
+          .select('*')
+          .eq('commessa_id', commessa.id)
+          .single()
+      ]);
+
+      if (fattureAttiveRes.data) setFatture(fattureAttiveRes.data);
+      if (fatturePassiveRes.data) setFatturePassive(fatturePassiveRes.data);
+      if (riepilogoRes.data) setRiepilogo(riepilogoRes.data);
+    } catch (error) {
+      console.error('Error refreshing fatture:', error);
+    }
+  };
+
   const handleFormSuccess = () => {
     setShowFatturaForm(false);
     setShowCostoForm(false);
     loadCommessaData();
+  };
+
+  // Load clienti for settings tab
+  const loadClientiForSettings = async () => {
+    try {
+      const supabase = createClient();
+
+      // Get current user's tenant_id
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: userTenants } = await supabase
+        .from('user_tenants')
+        .select('tenant_id')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (!userTenants || userTenants.length === 0) return;
+
+      const { data, error } = await supabase
+        .from('clienti')
+        .select('id, nome, cognome, email, forma_giuridica, ragione_sociale')
+        .eq('tenant_id', userTenants[0].tenant_id)
+        .order('cognome', { ascending: true });
+
+      if (error) throw error;
+      setClienti(data || []);
+    } catch (error) {
+      console.error('Error loading clienti:', error);
+    }
+  };
+
+  const loadTeamData = async () => {
+    try {
+      const supabase = createClient();
+      if (!commessa?.id) {
+        console.log('loadTeamData: commessa.id not available yet');
+        return;
+      }
+
+      // Get current user's tenant_id from user_tenants table
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('loadTeamData: No authenticated user');
+        return;
+      }
+
+      const { data: userTenants, error: tenantError } = await supabase
+        .from('user_tenants')
+        .select('tenant_id')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (tenantError) {
+        console.error('Error fetching tenant_id:', tenantError);
+        throw tenantError;
+      }
+
+      if (!userTenants || userTenants.length === 0) {
+        console.error('loadTeamData: No tenant found for user');
+        return;
+      }
+
+      const tenantId = userTenants[0].tenant_id;
+      console.log('loadTeamData: Loading for commessa_id:', commessa.id, 'tenant_id:', tenantId);
+
+      // Load team members
+      const { data: teamData, error: teamError } = await supabase
+        .from('commesse_team')
+        .select(`
+          id,
+          dipendente_id,
+          dipendenti (
+            id,
+            nome,
+            cognome,
+            email,
+            qualifica,
+            mansione
+          )
+        `)
+        .eq('commessa_id', commessa.id)
+        .eq('tenant_id', tenantId);
+
+      if (teamError) {
+        console.error('Error loading team members:', teamError);
+        throw teamError;
+      }
+
+      const members = (teamData || []).map((t: any) => ({
+        id: t.id,
+        dipendente_id: t.dipendente_id,
+        nome: t.dipendenti?.nome || '',
+        cognome: t.dipendenti?.cognome || '',
+        email: t.dipendenti?.email || '',
+        ruolo: t.dipendenti?.qualifica || t.dipendenti?.mansione || ''
+      }));
+
+      console.log('loadTeamData: Loaded team members:', members.length);
+      setTeamMembers(members);
+      setSelectedTeamMembers(new Set(members.map(m => m.dipendente_id)));
+
+      // Load all dipendenti for selection
+      const { data: allDip, error: dipError } = await supabase
+        .from('dipendenti')
+        .select('id, nome, cognome, email, qualifica, mansione')
+        .eq('tenant_id', tenantId)
+        .order('cognome', { ascending: true});
+
+      if (dipError) {
+        console.error('Error loading dipendenti:', dipError);
+        throw dipError;
+      }
+
+      // Map qualifica or mansione to ruolo for display (like in nuova commessa page)
+      const dipendentiWithRuolo = (allDip || []).map(d => ({
+        id: d.id,
+        nome: d.nome,
+        cognome: d.cognome,
+        email: d.email,
+        ruolo: d.ruolo || d.qualifica || d.mansione || ''
+      }));
+
+      console.log('loadTeamData: Loaded all dipendenti:', dipendentiWithRuolo.length);
+      setAllDipendenti(dipendentiWithRuolo);
+    } catch (error) {
+      console.error('Error loading team data:', error);
+      toast.error('Errore nel caricamento del team');
+    }
+  };
+
+  // Load approval settings
+  const loadApprovalSettings = async () => {
+    if (!commessa?.id) return;
+
+    try {
+      console.log('loadApprovalSettings: Loading for commessa_id:', commessa.id);
+      const supabase = createClient();
+
+      const { data, error } = await supabase
+        .from('commesse_impostazioni_approvazione')
+        .select('*')
+        .eq('commessa_id', commessa.id);
+
+      if (error) {
+        console.error('Error loading approval settings:', error);
+        throw error;
+      }
+
+      // Process loaded data
+      const presenzeConfig = data?.find(d => d.tipo_approvazione === 'presenze');
+      const noteSpesaConfig = data?.find(d => d.tipo_approvazione === 'note_spesa');
+
+      if (presenzeConfig) {
+        const approvatori = presenzeConfig.approvatori || [];
+        setApprovazionePresenze({
+          abilitato: presenzeConfig.abilitato || false,
+          approvatori: approvatori
+        });
+        setSelectedApprovatoriPresenze(new Set(approvatori));
+        // Se abilitato ma nessun approvatore, vai in edit mode
+        if (presenzeConfig.abilitato && approvatori.length === 0) {
+          setEditingApprovazionePresenze(true);
+        }
+      } else {
+        setApprovazionePresenze({ abilitato: false, approvatori: [] });
+        setSelectedApprovatoriPresenze(new Set());
+      }
+
+      if (noteSpesaConfig) {
+        const approvatori = noteSpesaConfig.approvatori || [];
+        setApprovazioneNoteSpesa({
+          abilitato: noteSpesaConfig.abilitato || false,
+          approvatori: approvatori
+        });
+        setSelectedApprovatoriNoteSpesa(new Set(approvatori));
+        // Se abilitato ma nessun approvatore, vai in edit mode
+        if (noteSpesaConfig.abilitato && approvatori.length === 0) {
+          setEditingApprovazioneNoteSpesa(true);
+        }
+      } else {
+        setApprovazioneNoteSpesa({ abilitato: false, approvatori: [] });
+        setSelectedApprovatoriNoteSpesa(new Set());
+      }
+
+      console.log('loadApprovalSettings: Loaded successfully');
+    } catch (error) {
+      console.error('Error loading approval settings:', error);
+      toast.error('Errore nel caricamento delle impostazioni di approvazione');
+    }
+  };
+
+  // Settings tab handlers
+  const initializeSectionData = (section: SectionKey) => {
+    if (!commessa) return;
+
+    const newData = { ...sectionData };
+
+    switch (section) {
+      case 'informazioniGenerali':
+        newData.informazioniGenerali = {
+          codice_commessa: commessa.codice_commessa || '',
+          nome_commessa: commessa.nome_commessa || '',
+          tipologia_commessa: commessa.tipologia_commessa || ''
+        };
+        break;
+      case 'cliente':
+        newData.cliente = {
+          tipologia_cliente: commessa.tipologia_cliente || '',
+          cliente_commessa: commessa.cliente_commessa || '',
+          cig: commessa.cig || '',
+          cup: commessa.cup || ''
+        };
+        break;
+      case 'luogo':
+        newData.luogo = {
+          via: commessa.via || '',
+          numero_civico: commessa.numero_civico || '',
+          citta: commessa.citta || '',
+          provincia: commessa.provincia || '',
+          cap: commessa.cap || ''
+        };
+        break;
+      case 'pianificazione':
+        newData.pianificazione = {
+          data_inizio: commessa.data_inizio || '',
+          data_fine_prevista: commessa.data_fine_prevista || '',
+          importo_commessa: commessa.importo_commessa?.toString() || '',
+          budget_commessa: commessa.budget_commessa?.toString() || '',
+          costo_materiali: commessa.costo_materiali?.toString() || ''
+        };
+        break;
+      case 'descrizione':
+        newData.descrizione = {
+          descrizione: commessa.descrizione || ''
+        };
+        break;
+    }
+
+    setSectionData(newData);
+  };
+
+  const handleEditSection = (section: SectionKey) => {
+    setEditingSection(section);
+    initializeSectionData(section);
+    setSectionErrors({});
+  };
+
+  const handleCancelSection = () => {
+    setEditingSection(null);
+    setSectionErrors({});
+  };
+
+  const updateSectionData = (section: SectionKey, field: string, value: string | number | null) => {
+    setSectionData(prev => ({
+      ...prev,
+      [section]: {
+        ...prev[section],
+        [field]: value
+      }
+    }));
+
+    // Clear error for this field
+    if (sectionErrors[field]) {
+      setSectionErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
+  };
+
+  const validateSection = (section: SectionKey): boolean => {
+    const errors: Record<string, boolean> = {};
+    const data = sectionData[section];
+
+    switch (section) {
+      case 'informazioniGenerali':
+        if (!data.codice_commessa) errors.codice_commessa = true;
+        if (!data.nome_commessa) errors.nome_commessa = true;
+        if (!data.tipologia_commessa) errors.tipologia_commessa = true;
+        break;
+      case 'cliente':
+        if (!data.tipologia_cliente) errors.tipologia_cliente = true;
+        if (!data.cliente_commessa) errors.cliente_commessa = true;
+        if (data.tipologia_cliente === 'Pubblico') {
+          if (!data.cig) errors.cig = true;
+          if (!data.cup) errors.cup = true;
+        }
+        break;
+      case 'pianificazione':
+        if (data.data_inizio && data.data_fine_prevista) {
+          const dataInizio = new Date(data.data_inizio as string);
+          const dataFine = new Date(data.data_fine_prevista as string);
+          if (dataFine < dataInizio) {
+            errors.data_fine_prevista = true;
+          }
+        }
+        break;
+    }
+
+    setSectionErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSaveTeam = async () => {
+    try {
+      const supabase = createClient();
+      if (!commessa) return;
+
+      // Get current user's tenant_id
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: userTenants } = await supabase
+        .from('user_tenants')
+        .select('tenant_id')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (!userTenants || userTenants.length === 0) return;
+
+      const tenantId = userTenants[0].tenant_id;
+
+      // Calculate which members to add and remove
+      const currentMemberIds = new Set(teamMembers.map(m => m.dipendente_id));
+      const toAdd = Array.from(selectedTeamMembers).filter(id => !currentMemberIds.has(id));
+      const toRemove = Array.from(currentMemberIds).filter(id => !selectedTeamMembers.has(id));
+
+      // Remove members
+      if (toRemove.length > 0) {
+        const { error: deleteError } = await supabase
+          .from('commesse_team')
+          .delete()
+          .eq('commessa_id', commessa.id)
+          .in('dipendente_id', toRemove);
+
+        if (deleteError) throw deleteError;
+      }
+
+      // Add new members
+      if (toAdd.length > 0) {
+        const newMembers = toAdd.map(dipendente_id => ({
+          commessa_id: commessa.id,
+          dipendente_id,
+          tenant_id: tenantId
+        }));
+
+        const { error: insertError } = await supabase
+          .from('commesse_team')
+          .insert(newMembers);
+
+        if (insertError) throw insertError;
+      }
+
+      toast.success('Team aggiornato con successo');
+      await loadTeamData();
+      setEditingSection(null);
+    } catch (error) {
+      console.error('Error updating team:', error);
+      toast.error('Errore durante l\'aggiornamento del team');
+    }
+  };
+
+  const handleSaveSection = async (section: SectionKey) => {
+    if (!validateSection(section)) {
+      toast.error('Controlla i campi obbligatori');
+      return;
+    }
+
+    if (!commessa) return;
+
+    setSavingSection(true);
+
+    try {
+      const supabase = createClient();
+      const data = sectionData[section];
+
+      let updateData: Record<string, unknown> = {};
+
+      switch (section) {
+        case 'informazioniGenerali':
+          updateData = {
+            codice_commessa: data.codice_commessa,
+            nome_commessa: data.nome_commessa,
+            tipologia_commessa: data.tipologia_commessa,
+          };
+          // Update slug if nome changed
+          if (data.nome_commessa !== commessa.nome_commessa) {
+            updateData.slug = generateSlug(data.nome_commessa as string);
+          }
+          break;
+        case 'cliente':
+          updateData = {
+            tipologia_cliente: data.tipologia_cliente,
+            cliente_commessa: data.cliente_commessa,
+            cig: data.tipologia_cliente === 'Pubblico' ? data.cig : null,
+            cup: data.tipologia_cliente === 'Pubblico' ? data.cup : null,
+          };
+          break;
+        case 'luogo':
+          updateData = {
+            via: data.via || null,
+            numero_civico: data.numero_civico || null,
+            citta: data.citta || null,
+            provincia: data.provincia || null,
+            cap: data.cap || null,
+          };
+          break;
+        case 'pianificazione':
+          updateData = {
+            data_inizio: data.data_inizio || null,
+            data_fine_prevista: data.data_fine_prevista || null,
+            importo_commessa: data.importo_commessa ? parseFloat(data.importo_commessa as string) : null,
+            budget_commessa: data.budget_commessa ? parseFloat(data.budget_commessa as string) : null,
+            costo_materiali: data.costo_materiali ? parseFloat(data.costo_materiali as string) : null,
+          };
+          break;
+        case 'descrizione':
+          updateData = {
+            descrizione: data.descrizione || null,
+          };
+          break;
+        case 'team':
+          // Handle team updates separately
+          await handleSaveTeam();
+          setSavingSection(false);
+          return;
+      }
+
+      const { error } = await supabase
+        .from('commesse')
+        .update(updateData)
+        .eq('id', commessa.id);
+
+      if (error) throw error;
+
+      toast.success('Sezione aggiornata con successo');
+      await loadCommessaData();
+      setEditingSection(null);
+      setSectionErrors({});
+    } catch (error) {
+      console.error('Error updating section:', error);
+      toast.error('Errore durante l\'aggiornamento');
+    } finally {
+      setSavingSection(false);
+    }
+  };
+
+  const generateSlug = (nome: string): string => {
+    return nome
+      .toLowerCase()
+      .trim()
+      .replace(/[àáâãäå]/g, 'a')
+      .replace(/[èéêë]/g, 'e')
+      .replace(/[ìíîï]/g, 'i')
+      .replace(/[òóôõö]/g, 'o')
+      .replace(/[ùúûü]/g, 'u')
+      .replace(/[ç]/g, 'c')
+      .replace(/[ñ]/g, 'n')
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+  };
+
+  const formatCurrencyInput = (value: string): string => {
+    if (!value) return '';
+    const parts = value.split('.');
+    const integerPart = parts[0];
+    const decimalPart = parts[1];
+    const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    if (decimalPart !== undefined) {
+      return `${formattedInteger},${decimalPart}`;
+    }
+    return formattedInteger;
+  };
+
+  const handleCurrencyChange = (section: SectionKey, field: string, value: string) => {
+    const rawValue = value.replace(/[^\d,]/g, '');
+    const commaCount = (rawValue.match(/,/g) || []).length;
+    if (commaCount > 1) return;
+
+    const parts = rawValue.split(',');
+    const integerPart = parts[0];
+    const decimalPart = parts[1];
+
+    if (decimalPart && decimalPart.length > 2) return;
+
+    const numericValue = rawValue.replace(',', '.');
+    const num = parseFloat(numericValue);
+    if (!isNaN(num) && num > 999999999.99) return;
+
+    const cleanValue = integerPart + (decimalPart !== undefined ? '.' + decimalPart : '');
+    updateSectionData(section, field, cleanValue);
   };
 
   const handleDeleteCommessa = async () => {
@@ -224,15 +881,6 @@ export default function CommessaDetailPage() {
     if (today < startDate) return { text: 'Da Iniziare', color: 'bg-yellow-100 text-yellow-700' };
     if (endDate && today > endDate) return { text: 'Completata', color: 'bg-red-100 text-red-700' };
     return { text: 'In Corso', color: 'bg-green-100 text-green-700' };
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('it-IT', {
-      style: 'currency',
-      currency: 'EUR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount);
   };
 
   const formatDate = (dateString?: string) => {
@@ -465,343 +1113,1453 @@ export default function CommessaDetailPage() {
   return (
     <div className="space-y-6">
       {/* Tabs Navigazione */}
-      <Tabs defaultValue="panoramica" className="space-y-6">
-        <TabsList className="w-full justify-between h-auto bg-transparent border-b border-border rounded-none p-0 gap-0">
-          <TabsTrigger
-            value="panoramica"
-            className="flex-1 gap-2 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=inactive]:text-muted-foreground rounded-none px-4 py-3 data-[state=active]:bg-transparent bg-transparent hover:text-foreground transition-colors"
-          >
-            <Info className="h-4 w-4" />
-            <span className="hidden sm:inline">Panoramica</span>
-            <span className="sm:hidden">Info</span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="movimenti"
-            className="flex-1 gap-2 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=inactive]:text-muted-foreground rounded-none px-4 py-3 data-[state=active]:bg-transparent bg-transparent hover:text-foreground transition-colors"
-          >
-            <FileText className="h-4 w-4" />
-            <span className="hidden sm:inline">Movimenti</span>
-            <span className="sm:hidden">Mov.</span>
-            {totalMovimenti > 0 && (
-              <span className="ml-1 px-1.5 py-0.5 rounded-full bg-primary/10 text-xs font-medium">
-                {totalMovimenti}
-              </span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger
-            value="rapportini"
-            className="flex-1 gap-2 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=inactive]:text-muted-foreground rounded-none px-4 py-3 data-[state=active]:bg-transparent bg-transparent hover:text-foreground transition-colors"
-          >
-            <Users className="h-4 w-4" />
-            <span className="hidden sm:inline">Rapportini</span>
-            <span className="sm:hidden">Rap.</span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="documenti"
-            className="flex-1 gap-2 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=inactive]:text-muted-foreground rounded-none px-4 py-3 data-[state=active]:bg-transparent bg-transparent hover:text-foreground transition-colors"
-          >
-            <FolderOpen className="h-4 w-4" />
-            <span className="hidden sm:inline">Documenti</span>
-            <span className="sm:hidden">Doc.</span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="impostazioni"
-            className="flex-1 gap-2 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=inactive]:text-muted-foreground rounded-none px-4 py-3 data-[state=active]:bg-transparent bg-transparent hover:text-foreground transition-colors"
-          >
-            <Settings className="h-4 w-4" />
-            <span className="hidden sm:inline">Impostazioni</span>
-            <span className="sm:hidden">Imp.</span>
-          </TabsTrigger>
-        </TabsList>
+      <TabsFilter<TabValue>
+        tabs={[
+          { value: 'panoramica', label: 'Panoramica', icon: LayoutDashboard },
+          {
+            value: 'movimenti',
+            label: 'Fatture',
+            icon: Receipt,
+            count: totalMovimenti,
+            badgeClassName: 'bg-green-100 text-green-700 hover:bg-green-100'
+          },
+          { value: 'note-spesa', label: 'Note Spesa', icon: FileText },
+          { value: 'rapportini', label: 'Registro Presenze', icon: Users },
+          { value: 'report', label: 'Report', icon: BarChart3 },
+          { value: 'documenti', label: 'Documenti', icon: FolderOpen },
+          { value: 'dettagli', label: 'Dettagli', icon: Info },
+          { value: 'impostazioni', label: 'Impostazioni', icon: Settings },
+        ]}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      />
 
-        {/* TAB: Panoramica - TUTTO QUI DENTRO */}
-        <TabsContent value="panoramica" className="space-y-6">
-          {/* Header Commessa con Mappa */}
-          <div className="rounded-xl border-2 border-border bg-card overflow-hidden">
-            <div className="flex">
-              {/* Mappa a sinistra */}
-              {mapUrl ? (
-                <div
-                  className="relative w-[300px] flex-shrink-0 bg-muted cursor-pointer transition-all group/map"
-                  onClick={openGoogleMapsLocation}
-                  title="Clicca per aprire la posizione in Google Maps"
+      {/* TAB: Panoramica */}
+      {activeTab === 'panoramica' && (
+        <div className="rounded-xl border-2 border-dashed border-border bg-card p-12 text-center">
+          <LayoutDashboard className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+          <p className="text-muted-foreground">Dashboard panoramica in arrivo</p>
+        </div>
+      )}
+
+      {/* TAB: Movimenti */}
+      {activeTab === 'movimenti' && (
+        <MovimentiTab
+          commessaId={commessa?.id || ''}
+          fattureAttive={fatture}
+          fatturePassive={fatturePassive}
+          riepilogo={riepilogo}
+          onReload={refreshFattureData}
+        />
+      )}
+
+      {/* TAB: Note Spesa */}
+      {activeTab === 'note-spesa' && (
+        <div className="rounded-xl border-2 border-dashed border-border bg-card p-12 text-center">
+          <Receipt className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+          <p className="text-muted-foreground">Funzionalità note spesa in arrivo</p>
+        </div>
+      )}
+
+      {/* TAB: Registro Presenze */}
+      {activeTab === 'rapportini' && commessa && (
+        <RapportiniTab
+          commessaId={commessa.id}
+          commessaNome={commessa.nome_commessa}
+        />
+      )}
+
+      {/* TAB: Report */}
+      {activeTab === 'report' && (
+        <div className="rounded-xl border-2 border-dashed border-border bg-card p-12 text-center">
+          <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+          <p className="text-muted-foreground">Grafiche e report della commessa in arrivo</p>
+        </div>
+      )}
+
+      {/* TAB: Documenti */}
+      {activeTab === 'documenti' && (
+        <div className="rounded-xl border-2 border-dashed border-border bg-card p-12 text-center">
+          <FolderOpen className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+          <p className="text-muted-foreground">Funzionalità documenti in arrivo</p>
+        </div>
+      )}
+
+      {/* TAB: Dettagli */}
+      {activeTab === 'dettagli' && commessa && (
+        <div className="space-y-6">
+          {/* 1. INFORMAZIONI GENERALI */}
+          <div className="space-y-6 p-6 rounded-xl bg-card shadow-sm">
+            {/* Header */}
+            <div className="border-b-2 border-border pb-3 border-l-4 border-l-primary pl-4 flex items-start justify-between">
+              <div>
+                <h3 className="text-lg font-semibold">Informazioni Generali</h3>
+                <p className="text-sm text-muted-foreground">Dati principali della commessa</p>
+              </div>
+              {editingSection !== 'informazioniGenerali' ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleEditSection('informazioniGenerali')}
+                  disabled={editingSection !== null}
+                  className="border-2"
                 >
-                  <img
-                    src={mapUrl}
-                    alt={`Mappa di ${buildAddress()}`}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
-                  <div className="absolute inset-0 bg-black/0 group-hover/map:bg-black/40 transition-colors flex items-center justify-center">
-                    <div className="opacity-0 group-hover/map:opacity-100 transition-opacity bg-white/90 rounded-lg px-3 py-2 text-xs font-medium text-gray-900">
-                      Apri in Maps
-                    </div>
-                  </div>
-                </div>
+                  <Edit className="h-4 w-4" />
+                </Button>
               ) : (
-                <div className="w-[300px] flex-shrink-0 bg-muted flex items-center justify-center">
-                  <MapPin className="h-12 w-12 text-muted-foreground/30" />
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={handleCancelSection} disabled={savingSection} className="border-2">
+                    Annulla
+                  </Button>
+                  <Button variant="default" size="sm" onClick={() => handleSaveSection('informazioniGenerali')} disabled={savingSection}>
+                    {savingSection ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                    Salva
+                  </Button>
                 </div>
               )}
+            </div>
 
-              {/* Info a destra */}
-              <div className="flex-1 p-6 space-y-4">
-                {/* Titolo, Badge e Azioni */}
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    {commessa.codice_commessa && (
-                      <div className="text-sm font-medium text-muted-foreground mb-1">
-                        {commessa.codice_commessa}
-                      </div>
-                    )}
-                    <h1 className="text-2xl font-bold leading-tight">
-                      {commessa.nome_commessa}
-                    </h1>
-                  </div>
+            {/* Content - VIEW MODE */}
+            {editingSection !== 'informazioniGenerali' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Codice Commessa</p>
+                  <p className="text-base font-semibold">{commessa.codice_commessa || '—'}</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Nome Commessa</p>
+                  <p className="text-base font-semibold">{commessa.nome_commessa || '—'}</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Tipologia Commessa</p>
+                  <p className="text-base font-semibold">{commessa.tipologia_commessa || '—'}</p>
+                </div>
+              </div>
+            )}
 
-                  {/* Status Badge + Actions */}
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <div className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${statusBadge.color}`}>
-                      {statusBadge.text}
+            {/* Content - EDIT MODE */}
+            {editingSection === 'informazioniGenerali' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-codice">Codice Commessa <span className="text-destructive">*</span></Label>
+                  <Input
+                    id="edit-codice"
+                    value={sectionData.informazioniGenerali.codice_commessa as string}
+                    onChange={(e) => updateSectionData('informazioniGenerali', 'codice_commessa', e.target.value)}
+                    className={`bg-white border border-input ${sectionErrors.codice_commessa ? '!border-red-500' : ''}`}
+                  />
+                  {sectionErrors.codice_commessa && (
+                    <p className="text-sm text-red-500 font-medium">Il codice commessa è obbligatorio</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-nome">Nome Commessa <span className="text-destructive">*</span></Label>
+                  <Input
+                    id="edit-nome"
+                    value={sectionData.informazioniGenerali.nome_commessa as string}
+                    onChange={(e) => updateSectionData('informazioniGenerali', 'nome_commessa', e.target.value)}
+                    className={`bg-white border border-input ${sectionErrors.nome_commessa ? '!border-red-500' : ''}`}
+                  />
+                  {sectionErrors.nome_commessa && (
+                    <p className="text-sm text-red-500 font-medium">Il nome commessa è obbligatorio</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-tipologia">Tipologia Commessa <span className="text-destructive">*</span></Label>
+                  <Select
+                    value={sectionData.informazioniGenerali.tipologia_commessa as string}
+                    onValueChange={(value) => updateSectionData('informazioniGenerali', 'tipologia_commessa', value)}
+                  >
+                    <SelectTrigger id="edit-tipologia" className={`bg-white border border-input h-11 ${sectionErrors.tipologia_commessa ? '!border-red-500' : ''}`}>
+                      <SelectValue placeholder="Seleziona una tipologia" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Appalto">Appalto</SelectItem>
+                      <SelectItem value="ATI">ATI</SelectItem>
+                      <SelectItem value="Sub Appalto">Sub Appalto</SelectItem>
+                      <SelectItem value="Sub Affidamento">Sub Affidamento</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {sectionErrors.tipologia_commessa && (
+                    <p className="text-sm text-red-500 font-medium">Seleziona una tipologia di commessa</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 2. CLIENTE */}
+          <div className="space-y-6 p-6 rounded-xl bg-card shadow-sm">
+            {/* Header */}
+            <div className="border-b-2 border-border pb-3 border-l-4 border-l-primary pl-4 flex items-start justify-between">
+              <div>
+                <h3 className="text-lg font-semibold">Cliente</h3>
+                <p className="text-sm text-muted-foreground">Informazioni del cliente</p>
+              </div>
+              {editingSection !== 'cliente' ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleEditSection('cliente')}
+                  disabled={editingSection !== null}
+                  className="border-2"
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+              ) : (
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={handleCancelSection} disabled={savingSection} className="border-2">
+                    Annulla
+                  </Button>
+                  <Button variant="default" size="sm" onClick={() => handleSaveSection('cliente')} disabled={savingSection}>
+                    {savingSection ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                    Salva
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Content - VIEW MODE */}
+            {editingSection !== 'cliente' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Tipologia Cliente</p>
+                  <p className="text-base font-semibold">{commessa.tipologia_cliente || '—'}</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Cliente Commessa</p>
+                  <p className="text-base font-semibold">
+                    {clienti.find(c => c.id === commessa.cliente_commessa)
+                      ? `${clienti.find(c => c.id === commessa.cliente_commessa)?.cognome} ${clienti.find(c => c.id === commessa.cliente_commessa)?.nome}`
+                      : commessa.cliente_commessa || '—'}
+                  </p>
+                </div>
+                {commessa.tipologia_cliente === 'Pubblico' && (
+                  <>
+                    <div className="space-y-2">
+                      <p className="text-sm text-muted-foreground">CIG</p>
+                      <p className="text-base font-semibold">{commessa.cig || '—'}</p>
                     </div>
+                    <div className="space-y-2">
+                      <p className="text-sm text-muted-foreground">CUP</p>
+                      <p className="text-base font-semibold">{commessa.cup || '—'}</p>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
 
-                    <button
-                      onClick={() => router.push(`/commesse/${slug}/modifica`)}
-                      className="h-9 w-9 flex items-center justify-center bg-surface border border-border rounded-lg hover:border-primary/20 hover:bg-primary/5 transition-all"
-                      title="Modifica commessa"
+            {/* Content - EDIT MODE */}
+            {editingSection === 'cliente' && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-tipologia-cliente">Tipologia Cliente <span className="text-destructive">*</span></Label>
+                    <Select
+                      value={sectionData.cliente.tipologia_cliente as string}
+                      onValueChange={(value) => updateSectionData('cliente', 'tipologia_cliente', value)}
                     >
-                      <Edit className="h-4 w-4" />
-                    </button>
-
-                    <button
-                      onClick={() => setShowDeleteModal(true)}
-                      className="h-9 w-9 flex items-center justify-center bg-surface border border-red-200 rounded-lg hover:border-red-300 hover:bg-red-50 transition-all text-red-600"
-                      title="Elimina commessa"
+                      <SelectTrigger id="edit-tipologia-cliente" className={`bg-white border border-input h-11 ${sectionErrors.tipologia_cliente ? '!border-red-500' : ''}`}>
+                        <SelectValue placeholder="Seleziona tipologia cliente" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Privato">Privato</SelectItem>
+                        <SelectItem value="Pubblico">Pubblico</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {sectionErrors.tipologia_cliente && (
+                      <p className="text-sm text-red-500 font-medium">Seleziona la tipologia di cliente</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-cliente-commessa">Cliente Commessa <span className="text-destructive">*</span></Label>
+                    <Select
+                      value={sectionData.cliente.cliente_commessa as string}
+                      onValueChange={(value) => updateSectionData('cliente', 'cliente_commessa', value)}
                     >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                      <SelectTrigger id="edit-cliente-commessa" className={`bg-white border border-input h-11 ${sectionErrors.cliente_commessa ? '!border-red-500' : ''}`}>
+                        <SelectValue placeholder="Seleziona un cliente">
+                          {sectionData.cliente.cliente_commessa
+                            ? (() => {
+                                const cliente = clienti.find(c => c.id === sectionData.cliente.cliente_commessa);
+                                if (!cliente) return 'Seleziona un cliente';
+                                return cliente.forma_giuridica === 'persona_giuridica'
+                                  ? cliente.ragione_sociale
+                                  : `${cliente.cognome} ${cliente.nome}`;
+                              })()
+                            : 'Seleziona un cliente'}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {clienti.length === 0 ? (
+                          <div className="px-2 py-6 text-center text-sm text-muted-foreground">
+                            Nessun cliente disponibile
+                          </div>
+                        ) : (
+                          clienti.map((cliente) => (
+                            <SelectItem key={cliente.id} value={cliente.id}>
+                              {cliente.forma_giuridica === 'persona_giuridica'
+                                ? cliente.ragione_sociale
+                                : `${cliente.cognome} ${cliente.nome}`}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                    {sectionErrors.cliente_commessa && (
+                      <p className="text-sm text-red-500 font-medium">Seleziona un cliente</p>
+                    )}
                   </div>
                 </div>
 
-                {/* Indirizzo */}
-                {hasAddress && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <MapPin className="h-4 w-4 flex-shrink-0" />
-                    <span>{buildAddress()}</span>
+                {sectionData.cliente.tipologia_cliente === 'Pubblico' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-cig">CIG <span className="text-destructive">*</span></Label>
+                      <Input
+                        id="edit-cig"
+                        value={sectionData.cliente.cig as string}
+                        onChange={(e) => updateSectionData('cliente', 'cig', e.target.value)}
+                        placeholder="Es. 1234567890"
+                        className={`bg-white border border-input ${sectionErrors.cig ? '!border-red-500' : ''}`}
+                      />
+                      {sectionErrors.cig && (
+                        <p className="text-sm text-red-500 font-medium">Il CIG è obbligatorio per clienti pubblici</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-cup">CUP <span className="text-destructive">*</span></Label>
+                      <Input
+                        id="edit-cup"
+                        value={sectionData.cliente.cup as string}
+                        onChange={(e) => updateSectionData('cliente', 'cup', e.target.value)}
+                        placeholder="Es. A12B34567890123"
+                        className={`bg-white border border-input ${sectionErrors.cup ? '!border-red-500' : ''}`}
+                      />
+                      {sectionErrors.cup && (
+                        <p className="text-sm text-red-500 font-medium">Il CUP è obbligatorio per clienti pubblici</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* 3. LUOGO */}
+          <div className="space-y-6 p-6 rounded-xl bg-card shadow-sm">
+            {/* Header */}
+            <div className="border-b-2 border-border pb-3 border-l-4 border-l-primary pl-4 flex items-start justify-between">
+              <div>
+                <h3 className="text-lg font-semibold">Luogo</h3>
+                <p className="text-sm text-muted-foreground">Località della commessa</p>
+              </div>
+              {editingSection !== 'luogo' ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleEditSection('luogo')}
+                  disabled={editingSection !== null}
+                  className="border-2"
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+              ) : (
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={handleCancelSection} disabled={savingSection} className="border-2">
+                    Annulla
+                  </Button>
+                  <Button variant="default" size="sm" onClick={() => handleSaveSection('luogo')} disabled={savingSection}>
+                    {savingSection ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                    Salva
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Content - VIEW MODE */}
+            {editingSection !== 'luogo' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Via</p>
+                  <p className="text-base font-semibold">{commessa.via || '—'}</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">N. Civico</p>
+                  <p className="text-base font-semibold">{commessa.numero_civico || '—'}</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Città</p>
+                  <p className="text-base font-semibold">{commessa.citta || '—'}</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Provincia</p>
+                  <p className="text-base font-semibold">{commessa.provincia || '—'}</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">CAP</p>
+                  <p className="text-base font-semibold">{commessa.cap || '—'}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Content - EDIT MODE */}
+            {editingSection === 'luogo' && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="edit-via">Via</Label>
+                    <Input
+                      id="edit-via"
+                      value={sectionData.luogo.via as string}
+                      onChange={(e) => updateSectionData('luogo', 'via', e.target.value)}
+                      placeholder="Es. Via Roma"
+                      className="bg-white border border-input"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-numero-civico">N. Civico</Label>
+                    <Input
+                      id="edit-numero-civico"
+                      value={sectionData.luogo.numero_civico as string}
+                      onChange={(e) => updateSectionData('luogo', 'numero_civico', e.target.value)}
+                      placeholder="Es. 123"
+                      className="bg-white border border-input"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-citta">Città</Label>
+                    <CityCombobox
+                      id="edit-citta"
+                      value={sectionData.luogo.citta as string}
+                      onSelect={(comune) => {
+                        if (comune) {
+                          updateSectionData('luogo', 'citta', comune.nome);
+                          updateSectionData('luogo', 'provincia', comune.sigla_provincia);
+                          updateSectionData('luogo', 'cap', comune.cap);
+                        } else {
+                          updateSectionData('luogo', 'citta', '');
+                          updateSectionData('luogo', 'provincia', '');
+                          updateSectionData('luogo', 'cap', '');
+                        }
+                      }}
+                      placeholder="Seleziona città..."
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-provincia">Provincia</Label>
+                    <Input
+                      id="edit-provincia"
+                      value={sectionData.luogo.provincia as string}
+                      readOnly
+                      disabled
+                      placeholder="Auto"
+                      className="uppercase bg-white border border-input opacity-100 cursor-not-allowed"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-cap">CAP</Label>
+                    <Input
+                      id="edit-cap"
+                      value={sectionData.luogo.cap as string}
+                      readOnly
+                      disabled
+                      placeholder="Auto"
+                      className="bg-white border border-input opacity-100 cursor-not-allowed"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 4. PIANIFICAZIONE */}
+          <div className="space-y-6 p-6 rounded-xl bg-card shadow-sm">
+            {/* Header */}
+            <div className="border-b-2 border-border pb-3 border-l-4 border-l-primary pl-4 flex items-start justify-between">
+              <div>
+                <h3 className="text-lg font-semibold">Pianificazione</h3>
+                <p className="text-sm text-muted-foreground">Date e importi della commessa</p>
+              </div>
+              {editingSection !== 'pianificazione' ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleEditSection('pianificazione')}
+                  disabled={editingSection !== null}
+                  className="border-2"
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+              ) : (
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={handleCancelSection} disabled={savingSection} className="border-2">
+                    Annulla
+                  </Button>
+                  <Button variant="default" size="sm" onClick={() => handleSaveSection('pianificazione')} disabled={savingSection}>
+                    {savingSection ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                    Salva
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Content - VIEW MODE */}
+            {editingSection !== 'pianificazione' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Data Inizio</p>
+                  <p className="text-base font-semibold">{formatDate(commessa.data_inizio)}</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Data Fine Prevista</p>
+                  <p className="text-base font-semibold">{formatDate(commessa.data_fine_prevista)}</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Importo Contratto</p>
+                  <p className="text-base font-semibold">{commessa.importo_commessa ? formatCurrency(commessa.importo_commessa) : '—'}</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Budget Commessa</p>
+                  <p className="text-base font-semibold">{commessa.budget_commessa ? formatCurrency(commessa.budget_commessa) : '—'}</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Costo Materiali</p>
+                  <p className="text-base font-semibold">{commessa.costo_materiali ? formatCurrency(commessa.costo_materiali) : '—'}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Content - EDIT MODE */}
+            {editingSection === 'pianificazione' && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-data-inizio">Data Inizio</Label>
+                    <Input
+                      id="edit-data-inizio"
+                      type="date"
+                      value={sectionData.pianificazione.data_inizio as string}
+                      onChange={(e) => updateSectionData('pianificazione', 'data_inizio', e.target.value)}
+                      className="bg-white border border-input"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-data-fine">Data Fine Prevista</Label>
+                    <Input
+                      id="edit-data-fine"
+                      type="date"
+                      value={sectionData.pianificazione.data_fine_prevista as string}
+                      onChange={(e) => updateSectionData('pianificazione', 'data_fine_prevista', e.target.value)}
+                      className={`bg-white border border-input ${sectionErrors.data_fine_prevista ? '!border-red-500' : ''}`}
+                    />
+                    {sectionErrors.data_fine_prevista && (
+                      <p className="text-sm text-red-500 font-medium">La data fine non può essere precedente alla data inizio</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-importo">Importo Contratto (€)</Label>
+                    <Input
+                      id="edit-importo"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0,00"
+                      value={formatCurrencyInput(sectionData.pianificazione.importo_commessa as string)}
+                      onChange={(e) => handleCurrencyChange('pianificazione', 'importo_commessa', e.target.value)}
+                      className="bg-white border border-input"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-budget">Budget Commessa (€)</Label>
+                    <Input
+                      id="edit-budget"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0,00"
+                      value={formatCurrencyInput(sectionData.pianificazione.budget_commessa as string)}
+                      onChange={(e) => handleCurrencyChange('pianificazione', 'budget_commessa', e.target.value)}
+                      className="bg-white border border-input"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-costo-materiali">Costo Materiali (€)</Label>
+                    <Input
+                      id="edit-costo-materiali"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0,00"
+                      value={formatCurrencyInput(sectionData.pianificazione.costo_materiali as string)}
+                      onChange={(e) => handleCurrencyChange('pianificazione', 'costo_materiali', e.target.value)}
+                      className="bg-white border border-input"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 5. DESCRIZIONE */}
+          <div className="space-y-6 p-6 rounded-xl bg-card shadow-sm">
+            {/* Header */}
+            <div className="border-b-2 border-border pb-3 border-l-4 border-l-primary pl-4 flex items-start justify-between">
+              <div>
+                <h3 className="text-lg font-semibold">Descrizione</h3>
+                <p className="text-sm text-muted-foreground">Note e dettagli aggiuntivi</p>
+              </div>
+              {editingSection !== 'descrizione' ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleEditSection('descrizione')}
+                  disabled={editingSection !== null}
+                  className="border-2"
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+              ) : (
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={handleCancelSection} disabled={savingSection} className="border-2">
+                    Annulla
+                  </Button>
+                  <Button variant="default" size="sm" onClick={() => handleSaveSection('descrizione')} disabled={savingSection}>
+                    {savingSection ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                    Salva
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Content - VIEW MODE */}
+            {editingSection !== 'descrizione' && (
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">Descrizione</p>
+                <p className="text-base leading-relaxed whitespace-pre-wrap break-words">{commessa.descrizione || '—'}</p>
+              </div>
+            )}
+
+            {/* Content - EDIT MODE */}
+            {editingSection === 'descrizione' && (
+              <div className="space-y-2">
+                <Label htmlFor="edit-descrizione">Descrizione</Label>
+                <Textarea
+                  id="edit-descrizione"
+                  value={sectionData.descrizione.descrizione as string}
+                  onChange={(e) => updateSectionData('descrizione', 'descrizione', e.target.value)}
+                  rows={6}
+                  placeholder="Inserisci una descrizione dettagliata della commessa..."
+                  className="bg-white border border-input"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* 6. TEAM */}
+          <div className="space-y-6 p-6 rounded-xl bg-card shadow-sm">
+            {/* Header */}
+            <div className="border-b-2 border-border pb-3 border-l-4 border-l-primary pl-4 flex items-start justify-between">
+              <div>
+                <h3 className="text-lg font-semibold">Team</h3>
+                <p className="text-sm text-muted-foreground">Membri del team assegnati alla commessa</p>
+              </div>
+              {editingSection !== 'team' ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setEditingSection('team');
+                    setSelectedTeamMembers(new Set(teamMembers.map(m => m.dipendente_id)));
+                  }}
+                  disabled={editingSection !== null}
+                  className="border-2"
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+              ) : (
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={handleCancelSection} disabled={savingSection} className="border-2">
+                    Annulla
+                  </Button>
+                  <Button variant="default" size="sm" onClick={() => handleSaveSection('team')} disabled={savingSection}>
+                    {savingSection ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                    Salva
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Content - VIEW MODE */}
+            {editingSection !== 'team' && (
+              <div className="space-y-3">
+                {teamMembers.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">Nessun membro nel team</p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {teamMembers.map((member) => (
+                      <div
+                        key={member.id}
+                        className="flex items-center gap-3 p-3 rounded-lg border bg-background"
+                      >
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">
+                          {member.nome.charAt(0)}{member.cognome.charAt(0)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{member.cognome} {member.nome}</p>
+                          <p className="text-sm text-muted-foreground truncate">{member.ruolo || 'Dipendente'}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Content - EDIT MODE */}
+            {editingSection === 'team' && (
+              <div className="space-y-6">
+                {/* SEZIONE 1: Team Attuale */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-base font-semibold">Team Attuale</h4>
+                    <span className="text-sm text-muted-foreground">
+                      {selectedTeamMembers.size} {selectedTeamMembers.size === 1 ? 'membro' : 'membri'}
+                    </span>
+                  </div>
+                  {selectedTeamMembers.size === 0 ? (
+                    <p className="text-muted-foreground text-center py-8 border-2 border-dashed rounded-lg">
+                      Nessun membro nel team
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {allDipendenti
+                        .filter(d => selectedTeamMembers.has(d.id))
+                        .map((dipendente) => (
+                          <div
+                            key={dipendente.id}
+                            className="flex items-center gap-3 p-3 rounded-lg border bg-primary/5 border-primary"
+                          >
+                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">
+                              {dipendente.nome.charAt(0)}{dipendente.cognome.charAt(0)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium truncate">{dipendente.cognome} {dipendente.nome}</p>
+                              <p className="text-sm text-muted-foreground truncate">{dipendente.ruolo || 'Dipendente'}</p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                const newSet = new Set(selectedTeamMembers);
+                                newSet.delete(dipendente.id);
+                                setSelectedTeamMembers(newSet);
+                              }}
+                              className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* SEZIONE 2: Aggiungi Membri */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-base font-semibold">Aggiungi Membri</h4>
+                    <span className="text-sm text-muted-foreground">
+                      {allDipendenti.filter(d => !selectedTeamMembers.has(d.id)).length} disponibili
+                    </span>
+                  </div>
+
+                  {/* Campo Ricerca */}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Cerca dipendente per nome, cognome..."
+                      value={searchTeamQuery}
+                      onChange={(e) => setSearchTeamQuery(e.target.value)}
+                      className="pl-9 bg-white border border-input"
+                    />
+                  </div>
+
+                  {/* Lista Dipendenti Disponibili */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-96 overflow-y-auto">
+                    {allDipendenti
+                      .filter(d => !selectedTeamMembers.has(d.id))
+                      .filter(d => {
+                        if (!searchTeamQuery) return true;
+                        const query = searchTeamQuery.toLowerCase();
+                        return (
+                          d.nome.toLowerCase().includes(query) ||
+                          d.cognome.toLowerCase().includes(query) ||
+                          (d.ruolo && d.ruolo.toLowerCase().includes(query))
+                        );
+                      })
+                      .map((dipendente) => (
+                        <div
+                          key={dipendente.id}
+                          onClick={() => {
+                            const newSet = new Set(selectedTeamMembers);
+                            newSet.add(dipendente.id);
+                            setSelectedTeamMembers(newSet);
+                          }}
+                          className="flex items-center gap-3 p-3 rounded-lg border bg-background hover:bg-green-50 hover:border-green-300 cursor-pointer transition-all"
+                        >
+                          <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-semibold">
+                            {dipendente.nome.charAt(0)}{dipendente.cognome.charAt(0)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate">{dipendente.cognome} {dipendente.nome}</p>
+                            <p className="text-sm text-muted-foreground truncate">{dipendente.ruolo || 'Dipendente'}</p>
+                          </div>
+                          <Plus className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                      ))}
+                  </div>
+
+                  {allDipendenti.filter(d => !selectedTeamMembers.has(d.id)).length === 0 && (
+                    <p className="text-muted-foreground text-center py-8 border-2 border-dashed rounded-lg">
+                      Tutti i dipendenti sono già nel team
+                    </p>
+                  )}
+
+                  {searchTeamQuery && allDipendenti.filter(d => !selectedTeamMembers.has(d.id)).filter(d => {
+                    const query = searchTeamQuery.toLowerCase();
+                    return (
+                      d.nome.toLowerCase().includes(query) ||
+                      d.cognome.toLowerCase().includes(query) ||
+                      (d.ruolo && d.ruolo.toLowerCase().includes(query))
+                    );
+                  }).length === 0 && (
+                    <p className="text-muted-foreground text-center py-8 border-2 border-dashed rounded-lg">
+                      Nessun dipendente trovato per "{searchTeamQuery}"
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 7. GESTIONE AVANZATA */}
+          <div className="space-y-6 p-6 rounded-xl bg-card shadow-sm">
+            {/* Header */}
+            <div className="border-b-2 border-border pb-3 border-l-4 border-l-slate-400 pl-4">
+              <h3 className="text-lg font-semibold">Gestione Avanzata</h3>
+              <p className="text-sm text-muted-foreground">Archiviazione o eliminazione della commessa</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Archivia */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <FolderOpen className="h-4 w-4 text-slate-600" />
+                  <h4 className="font-semibold">Archivia</h4>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Nascondi la commessa mantenendo tutti i dati. Completamente reversibile.
+                </p>
+                <Button variant="outline" size="sm" disabled className="w-full">
+                  Archivia (Prossimamente)
+                </Button>
+              </div>
+
+              {/* Elimina */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Trash2 className="h-4 w-4 text-red-600" />
+                  <h4 className="font-semibold">Elimina Definitivamente</h4>
+                  <span className="px-1.5 py-0.5 text-xs font-medium bg-red-50 text-red-700 rounded border border-red-200">
+                    Irreversibile
+                  </span>
+                </div>
+                <div className="text-sm text-muted-foreground space-y-1">
+                  <p className="font-medium">Elimina permanentemente:</p>
+                  <ul className="text-xs space-y-0.5 ml-3">
+                    <li>• Fatture, Rapportini, Documenti</li>
+                    <li>• Team e dati economici</li>
+                  </ul>
+                </div>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setShowDeleteModal(true)}
+                  className="w-full"
+                >
+                  <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                  Elimina
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: Impostazioni */}
+      {activeTab === 'impostazioni' && (
+        <div className="space-y-6">
+          {/* CARD 1: Approvazione Presenze */}
+          <div className="space-y-6 p-6 rounded-xl bg-card shadow-sm">
+            {/* Header */}
+            <div className="border-b-2 border-border pb-3 border-l-4 border-l-primary pl-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-lg font-semibold">Approvazione Presenze</h3>
+                    <Switch
+                      checked={approvazionePresenze.abilitato}
+                      onCheckedChange={(checked) => {
+                        setApprovazionePresenze({ ...approvazionePresenze, abilitato: checked });
+                        if (!checked) {
+                          setSelectedApprovatoriPresenze(new Set());
+                          setEditingApprovazionePresenze(false);
+                        } else {
+                          // Se abilito per la prima volta, vado in edit mode
+                          setEditingApprovazionePresenze(true);
+                        }
+                      }}
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Richiedi approvazione per i rapportini di questa commessa
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  {approvazionePresenze.abilitato && editingApprovazionePresenze && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          // Ripristina gli approvatori salvati
+                          setSelectedApprovatoriPresenze(new Set(approvazionePresenze.approvatori));
+                          setSearchApprovatoriPresenzeQuery('');
+                          setEditingApprovazionePresenze(false);
+                        }}
+                      >
+                        Annulla
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={async () => {
+                          setSavingPresenze(true);
+                          try {
+                            const supabase = createClient();
+                            const { data: { user } } = await supabase.auth.getUser();
+                            if (!user) throw new Error('No authenticated user');
+
+                            const { data: userTenants } = await supabase
+                              .from('user_tenants')
+                              .select('tenant_id')
+                              .eq('user_id', user.id)
+                              .order('created_at', { ascending: false })
+                              .limit(1);
+
+                            if (!userTenants || userTenants.length === 0) {
+                              throw new Error('No tenant found for user');
+                            }
+
+                            const tenantId = userTenants[0].tenant_id;
+
+                            const { error } = await supabase
+                              .from('commesse_impostazioni_approvazione')
+                              .upsert({
+                                commessa_id: commessa?.id,
+                                tenant_id: tenantId,
+                                tipo_approvazione: 'presenze',
+                                abilitato: approvazionePresenze.abilitato,
+                                approvatori: Array.from(selectedApprovatoriPresenze),
+                                created_by: user.id
+                              }, {
+                                onConflict: 'commessa_id,tipo_approvazione',
+                                ignoreDuplicates: false
+                              });
+
+                            if (error) throw error;
+
+                            setApprovazionePresenze({
+                              abilitato: approvazionePresenze.abilitato,
+                              approvatori: Array.from(selectedApprovatoriPresenze)
+                            });
+
+                            toast.success('Approvazione Presenze salvata');
+                            setEditingApprovazionePresenze(false);
+                          } catch (error) {
+                            console.error('Error saving:', error);
+                            toast.error('Errore durante il salvataggio');
+                          } finally {
+                            setSavingPresenze(false);
+                          }
+                        }}
+                        disabled={savingPresenze}
+                      >
+                        {savingPresenze ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Salvataggio...
+                          </>
+                        ) : (
+                          'Salva'
+                        )}
+                      </Button>
+                    </>
+                  )}
+                  {approvazionePresenze.abilitato && !editingApprovazionePresenze && selectedApprovatoriPresenze.size > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEditingApprovazionePresenze(true)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Content - Approvers */}
+            {approvazionePresenze.abilitato && (
+              <>
+                {/* VIEW MODE: Mostra solo approvatori */}
+                {!editingApprovazionePresenze && selectedApprovatoriPresenze.size > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="text-base font-semibold">
+                      Approvatori ({selectedApprovatoriPresenze.size})
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {allDipendenti
+                        .filter(d => selectedApprovatoriPresenze.has(d.id))
+                        .map((dipendente) => (
+                          <div
+                            key={dipendente.id}
+                            className="flex items-center gap-3 p-3 rounded-lg border bg-primary/5 border-primary"
+                          >
+                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">
+                              {dipendente.nome.charAt(0)}{dipendente.cognome.charAt(0)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium truncate">{dipendente.cognome} {dipendente.nome}</p>
+                              <p className="text-sm text-muted-foreground truncate">{dipendente.ruolo || 'Dipendente'}</p>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
                   </div>
                 )}
 
-                {/* Info griglia */}
-                <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm pt-3 border-t border-border">
-                  <div>
-                    <span className="text-muted-foreground">Cliente: </span>
-                    <span className="font-medium">{commessa.cliente_commessa}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Tipologia: </span>
-                    <span className="font-medium">{commessa.tipologia_commessa}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Tipo Cliente: </span>
-                    <span className="font-medium">{commessa.tipologia_cliente}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Periodo: </span>
-                    <span className="font-medium">
-                      {formatDate(commessa.data_inizio)} → {formatDate(commessa.data_fine_prevista)}
-                    </span>
-                  </div>
-                  {commessa.importo_commessa && (
-                    <div className="col-span-2">
-                      <span className="text-muted-foreground">Importo Contratto: </span>
-                      <span className="font-bold text-base">{formatCurrency(commessa.importo_commessa)}</span>
+                {/* EDIT MODE: Mostra tutto */}
+                {editingApprovazionePresenze && (
+                  <div className="space-y-6">
+                    {/* SEZIONE 1: Approvatori Selezionati */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-base font-semibold">Approvatori Selezionati</h4>
+                        <span className="text-sm text-muted-foreground">
+                          {selectedApprovatoriPresenze.size} {selectedApprovatoriPresenze.size === 1 ? 'approvatore' : 'approvatori'}
+                        </span>
+                      </div>
+                      {selectedApprovatoriPresenze.size === 0 ? (
+                        <p className="text-muted-foreground text-center py-8 border-2 border-dashed rounded-lg">
+                          Nessun approvatore selezionato
+                        </p>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {allDipendenti
+                            .filter(d => selectedApprovatoriPresenze.has(d.id))
+                            .map((dipendente) => (
+                              <div
+                                key={dipendente.id}
+                                className="flex items-center gap-3 p-3 rounded-lg border bg-primary/5 border-primary"
+                              >
+                                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">
+                                  {dipendente.nome.charAt(0)}{dipendente.cognome.charAt(0)}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium truncate">{dipendente.cognome} {dipendente.nome}</p>
+                                  <p className="text-sm text-muted-foreground truncate">{dipendente.ruolo || 'Dipendente'}</p>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    const newSet = new Set(selectedApprovatoriPresenze);
+                                    newSet.delete(dipendente.id);
+                                    setSelectedApprovatoriPresenze(newSet);
+                                  }}
+                                  className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))}
+                        </div>
+                      )}
                     </div>
-                  )}
-                  {commessa.descrizione && (
-                    <div className="col-span-2">
-                      <span className="text-muted-foreground">Descrizione: </span>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowDescrizioneModal(true);
+
+                    {/* SEZIONE 2: Aggiungi Approvatori */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-base font-semibold">Aggiungi Approvatori</h4>
+                        <span className="text-sm text-muted-foreground">
+                          {allDipendenti.filter(d => !selectedApprovatoriPresenze.has(d.id)).length} disponibili
+                        </span>
+                      </div>
+
+                      {/* Campo Ricerca */}
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Cerca dipendente per nome, cognome..."
+                          value={searchApprovatoriPresenzeQuery}
+                          onChange={(e) => setSearchApprovatoriPresenzeQuery(e.target.value)}
+                          className="pl-9 bg-white border border-input"
+                        />
+                      </div>
+
+                      {/* Lista Dipendenti Disponibili */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-96 overflow-y-auto">
+                        {allDipendenti
+                          .filter(d => !selectedApprovatoriPresenze.has(d.id))
+                          .filter(d => {
+                            if (!searchApprovatoriPresenzeQuery) return true;
+                            const query = searchApprovatoriPresenzeQuery.toLowerCase();
+                            return (
+                              d.nome.toLowerCase().includes(query) ||
+                              d.cognome.toLowerCase().includes(query) ||
+                              (d.ruolo && d.ruolo.toLowerCase().includes(query))
+                            );
+                          })
+                          .map((dipendente) => (
+                            <div
+                              key={dipendente.id}
+                              onClick={() => {
+                                const newSet = new Set(selectedApprovatoriPresenze);
+                                newSet.add(dipendente.id);
+                                setSelectedApprovatoriPresenze(newSet);
+                              }}
+                              className="flex items-center gap-3 p-3 rounded-lg border bg-background hover:bg-green-50 hover:border-green-300 cursor-pointer transition-all"
+                            >
+                              <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-semibold">
+                                {dipendente.nome.charAt(0)}{dipendente.cognome.charAt(0)}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium truncate">{dipendente.cognome} {dipendente.nome}</p>
+                                <p className="text-sm text-muted-foreground truncate">{dipendente.ruolo || 'Dipendente'}</p>
+                              </div>
+                              <Plus className="h-5 w-5 text-muted-foreground" />
+                            </div>
+                          ))}
+                      </div>
+
+                      {allDipendenti.filter(d => !selectedApprovatoriPresenze.has(d.id)).length === 0 && (
+                        <p className="text-muted-foreground text-center py-8 border-2 border-dashed rounded-lg">
+                          Tutti i dipendenti sono già stati aggiunti
+                        </p>
+                      )}
+
+                      {searchApprovatoriPresenzeQuery && allDipendenti.filter(d => !selectedApprovatoriPresenze.has(d.id)).filter(d => {
+                        const query = searchApprovatoriPresenzeQuery.toLowerCase();
+                        return (
+                          d.nome.toLowerCase().includes(query) ||
+                          d.cognome.toLowerCase().includes(query) ||
+                          (d.ruolo && d.ruolo.toLowerCase().includes(query))
+                        );
+                      }).length === 0 && (
+                        <p className="text-muted-foreground text-center py-8 border-2 border-dashed rounded-lg">
+                          Nessun dipendente trovato per "{searchApprovatoriPresenzeQuery}"
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* CARD 2: Approvazione Note Spesa */}
+          <div className="space-y-6 p-6 rounded-xl bg-card shadow-sm">
+            {/* Header */}
+            <div className="border-b-2 border-border pb-3 border-l-4 border-l-primary pl-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-lg font-semibold">Approvazione Note Spesa</h3>
+                    <Switch
+                      checked={approvazioneNoteSpesa.abilitato}
+                      onCheckedChange={(checked) => {
+                        setApprovazioneNoteSpesa({ ...approvazioneNoteSpesa, abilitato: checked });
+                        if (!checked) {
+                          setSelectedApprovatoriNoteSpesa(new Set());
+                          setEditingApprovazioneNoteSpesa(false);
+                        } else {
+                          // Se abilito per la prima volta, vado in edit mode
+                          setEditingApprovazioneNoteSpesa(true);
+                        }
+                      }}
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Richiedi approvazione per le note spesa di questa commessa
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  {approvazioneNoteSpesa.abilitato && editingApprovazioneNoteSpesa && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          // Ripristina gli approvatori salvati
+                          setSelectedApprovatoriNoteSpesa(new Set(approvazioneNoteSpesa.approvatori));
+                          setSearchApprovatoriNoteSpesaQuery('');
+                          setEditingApprovazioneNoteSpesa(false);
                         }}
-                        className="font-medium text-primary hover:underline cursor-pointer"
                       >
-                        Visualizza descrizione completa
-                      </button>
-                    </div>
+                        Annulla
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={async () => {
+                          setSavingNoteSpesa(true);
+                          try {
+                            const supabase = createClient();
+                            const { data: { user } } = await supabase.auth.getUser();
+                            if (!user) throw new Error('No authenticated user');
+
+                            const { data: userTenants } = await supabase
+                              .from('user_tenants')
+                              .select('tenant_id')
+                              .eq('user_id', user.id)
+                              .order('created_at', { ascending: false })
+                              .limit(1);
+
+                            if (!userTenants || userTenants.length === 0) {
+                              throw new Error('No tenant found for user');
+                            }
+
+                            const tenantId = userTenants[0].tenant_id;
+
+                            const { error } = await supabase
+                              .from('commesse_impostazioni_approvazione')
+                              .upsert({
+                                commessa_id: commessa?.id,
+                                tenant_id: tenantId,
+                                tipo_approvazione: 'note_spesa',
+                                abilitato: approvazioneNoteSpesa.abilitato,
+                                approvatori: Array.from(selectedApprovatoriNoteSpesa),
+                                created_by: user.id
+                              }, {
+                                onConflict: 'commessa_id,tipo_approvazione',
+                                ignoreDuplicates: false
+                              });
+
+                            if (error) throw error;
+
+                            setApprovazioneNoteSpesa({
+                              abilitato: approvazioneNoteSpesa.abilitato,
+                              approvatori: Array.from(selectedApprovatoriNoteSpesa)
+                            });
+
+                            toast.success('Approvazione Note Spesa salvata');
+                            setEditingApprovazioneNoteSpesa(false);
+                          } catch (error) {
+                            console.error('Error saving:', error);
+                            toast.error('Errore durante il salvataggio');
+                          } finally {
+                            setSavingNoteSpesa(false);
+                          }
+                        }}
+                        disabled={savingNoteSpesa}
+                      >
+                        {savingNoteSpesa ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Salvataggio...
+                          </>
+                        ) : (
+                          'Salva'
+                        )}
+                      </Button>
+                    </>
+                  )}
+                  {approvazioneNoteSpesa.abilitato && !editingApprovazioneNoteSpesa && selectedApprovatoriNoteSpesa.size > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEditingApprovazioneNoteSpesa(true)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
                   )}
                 </div>
               </div>
             </div>
+
+            {/* Content - Approvers */}
+            {approvazioneNoteSpesa.abilitato && (
+              <>
+                {/* VIEW MODE: Mostra solo approvatori */}
+                {!editingApprovazioneNoteSpesa && selectedApprovatoriNoteSpesa.size > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="text-base font-semibold">
+                      Approvatori ({selectedApprovatoriNoteSpesa.size})
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {allDipendenti
+                        .filter(d => selectedApprovatoriNoteSpesa.has(d.id))
+                        .map((dipendente) => (
+                          <div
+                            key={dipendente.id}
+                            className="flex items-center gap-3 p-3 rounded-lg border bg-primary/5 border-primary"
+                          >
+                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">
+                              {dipendente.nome.charAt(0)}{dipendente.cognome.charAt(0)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium truncate">{dipendente.cognome} {dipendente.nome}</p>
+                              <p className="text-sm text-muted-foreground truncate">{dipendente.ruolo || 'Dipendente'}</p>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* EDIT MODE: Mostra tutto */}
+                {editingApprovazioneNoteSpesa && (
+                  <div className="space-y-6">
+                    {/* SEZIONE 1: Approvatori Selezionati */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-base font-semibold">Approvatori Selezionati</h4>
+                        <span className="text-sm text-muted-foreground">
+                          {selectedApprovatoriNoteSpesa.size} {selectedApprovatoriNoteSpesa.size === 1 ? 'approvatore' : 'approvatori'}
+                        </span>
+                      </div>
+                      {selectedApprovatoriNoteSpesa.size === 0 ? (
+                        <p className="text-muted-foreground text-center py-8 border-2 border-dashed rounded-lg">
+                          Nessun approvatore selezionato
+                        </p>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {allDipendenti
+                            .filter(d => selectedApprovatoriNoteSpesa.has(d.id))
+                            .map((dipendente) => (
+                              <div
+                                key={dipendente.id}
+                                className="flex items-center gap-3 p-3 rounded-lg border bg-primary/5 border-primary"
+                              >
+                                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">
+                                  {dipendente.nome.charAt(0)}{dipendente.cognome.charAt(0)}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium truncate">{dipendente.cognome} {dipendente.nome}</p>
+                                  <p className="text-sm text-muted-foreground truncate">{dipendente.ruolo || 'Dipendente'}</p>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    const newSet = new Set(selectedApprovatoriNoteSpesa);
+                                    newSet.delete(dipendente.id);
+                                    setSelectedApprovatoriNoteSpesa(newSet);
+                                  }}
+                                  className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* SEZIONE 2: Aggiungi Approvatori */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-base font-semibold">Aggiungi Approvatori</h4>
+                        <span className="text-sm text-muted-foreground">
+                          {allDipendenti.filter(d => !selectedApprovatoriNoteSpesa.has(d.id)).length} disponibili
+                        </span>
+                      </div>
+
+                      {/* Campo Ricerca */}
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Cerca dipendente per nome, cognome..."
+                          value={searchApprovatoriNoteSpesaQuery}
+                          onChange={(e) => setSearchApprovatoriNoteSpesaQuery(e.target.value)}
+                          className="pl-9 bg-white border border-input"
+                        />
+                      </div>
+
+                      {/* Lista Dipendenti Disponibili */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-96 overflow-y-auto">
+                        {allDipendenti
+                          .filter(d => !selectedApprovatoriNoteSpesa.has(d.id))
+                          .filter(d => {
+                            if (!searchApprovatoriNoteSpesaQuery) return true;
+                            const query = searchApprovatoriNoteSpesaQuery.toLowerCase();
+                            return (
+                              d.nome.toLowerCase().includes(query) ||
+                              d.cognome.toLowerCase().includes(query) ||
+                              (d.ruolo && d.ruolo.toLowerCase().includes(query))
+                            );
+                          })
+                          .map((dipendente) => (
+                            <div
+                              key={dipendente.id}
+                              onClick={() => {
+                                const newSet = new Set(selectedApprovatoriNoteSpesa);
+                                newSet.add(dipendente.id);
+                                setSelectedApprovatoriNoteSpesa(newSet);
+                              }}
+                              className="flex items-center gap-3 p-3 rounded-lg border bg-background hover:bg-green-50 hover:border-green-300 cursor-pointer transition-all"
+                            >
+                              <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-semibold">
+                                {dipendente.nome.charAt(0)}{dipendente.cognome.charAt(0)}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium truncate">{dipendente.cognome} {dipendente.nome}</p>
+                                <p className="text-sm text-muted-foreground truncate">{dipendente.ruolo || 'Dipendente'}</p>
+                              </div>
+                              <Plus className="h-5 w-5 text-muted-foreground" />
+                            </div>
+                          ))}
+                      </div>
+
+                      {allDipendenti.filter(d => !selectedApprovatoriNoteSpesa.has(d.id)).length === 0 && (
+                        <p className="text-muted-foreground text-center py-8 border-2 border-dashed rounded-lg">
+                          Tutti i dipendenti sono già stati aggiunti
+                        </p>
+                      )}
+
+                      {searchApprovatoriNoteSpesaQuery && allDipendenti.filter(d => !selectedApprovatoriNoteSpesa.has(d.id)).filter(d => {
+                        const query = searchApprovatoriNoteSpesaQuery.toLowerCase();
+                        return (
+                          d.nome.toLowerCase().includes(query) ||
+                          d.cognome.toLowerCase().includes(query) ||
+                          (d.ruolo && d.ruolo.toLowerCase().includes(query))
+                        );
+                      }).length === 0 && (
+                        <p className="text-muted-foreground text-center py-8 border-2 border-dashed rounded-lg">
+                          Nessun dipendente trovato per "{searchApprovatoriNoteSpesaQuery}"
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
-
-          {/* Dashboard Economico - 4 Card */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Card Ricavi */}
-            <div className="rounded-xl border-2 border-border bg-card p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-lg bg-green-100">
-                    <TrendingUp className="h-5 w-5 text-green-600" />
-                  </div>
-                  <span className="font-semibold text-base">Ricavi</span>
-                </div>
-                <button
-                  onClick={() => setShowFatturaForm(true)}
-                  className="h-8 w-8 flex items-center justify-center bg-green-100 border border-green-300 rounded-lg hover:border-green-400 hover:bg-green-200 transition-all text-green-700"
-                  title="Aggiungi ricavo"
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Imponibile:</span>
-                  <span className="text-sm font-semibold">{formatCurrency(riepilogo?.ricavi_imponibile || 0)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">IVA:</span>
-                  <span className="text-sm font-semibold">{formatCurrency(riepilogo?.ricavi_iva || 0)}</span>
-                </div>
-                <div className="border-t border-border pt-2 mt-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Totale:</span>
-                    <span className="text-lg font-bold text-green-600">{formatCurrency(riepilogo?.ricavi_totali || 0)}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Card Costi */}
-            <div className="rounded-xl border-2 border-border bg-card p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-lg bg-red-100">
-                    <TrendingDown className="h-5 w-5 text-red-600" />
-                  </div>
-                  <span className="font-semibold text-base">Costi</span>
-                </div>
-                <button
-                  onClick={() => setShowCostoForm(true)}
-                  className="h-8 w-8 flex items-center justify-center bg-red-100 border border-red-300 rounded-lg hover:border-red-400 hover:bg-red-200 transition-all text-red-700"
-                  title="Aggiungi costo"
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Imponibile:</span>
-                  <span className="text-sm font-semibold">{formatCurrency(riepilogo?.costi_imponibile || 0)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">IVA:</span>
-                  <span className="text-sm font-semibold">{formatCurrency(riepilogo?.costi_iva || 0)}</span>
-                </div>
-                <div className="border-t border-border pt-2 mt-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Totale:</span>
-                    <span className="text-lg font-bold text-red-600">{formatCurrency(riepilogo?.costi_totali || 0)}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Card Margine Lordo */}
-            <div className="rounded-xl border-2 border-border bg-card p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <div className={`p-2 rounded-lg ${(riepilogo?.margine_lordo || 0) >= 0 ? 'bg-emerald-100' : 'bg-red-100'}`}>
-                  <FileText className={`h-5 w-5 ${(riepilogo?.margine_lordo || 0) >= 0 ? 'text-emerald-600' : 'text-red-600'}`} />
-                </div>
-                <span className="font-semibold text-base">Margine Lordo</span>
-              </div>
-              <div className="space-y-2">
-                <div className={`text-3xl font-bold ${(riepilogo?.margine_lordo || 0) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                  {formatCurrency(riepilogo?.margine_lordo || 0)}
-                </div>
-                <div className="text-xs text-muted-foreground mt-2">
-                  Imponibile ricavi - Imponibile costi
-                </div>
-              </div>
-            </div>
-
-            {/* Card Saldo IVA */}
-            <div className={`rounded-xl border-2 bg-card p-6 ${(riepilogo?.saldo_iva || 0) > 0 ? 'border-red-300 bg-red-50/30' : 'border-green-300 bg-green-50/30'}`}>
-              <div className="flex items-center gap-2 mb-4">
-                <div className={`p-2 rounded-lg ${(riepilogo?.saldo_iva || 0) > 0 ? 'bg-red-100' : 'bg-green-100'}`}>
-                  <FileText className={`h-5 w-5 ${(riepilogo?.saldo_iva || 0) > 0 ? 'text-red-600' : 'text-green-600'}`} />
-                </div>
-                <span className="font-semibold text-base">Saldo IVA</span>
-              </div>
-              <div className="space-y-2">
-                <div className={`text-3xl font-bold ${(riepilogo?.saldo_iva || 0) > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                  {formatCurrency(riepilogo?.saldo_iva || 0)}
-                </div>
-                <div className={`text-sm font-medium ${(riepilogo?.saldo_iva || 0) > 0 ? 'text-red-700' : 'text-green-700'}`}>
-                  {(riepilogo?.saldo_iva || 0) > 0 ? 'IVA a credito' : 'IVA a debito'}
-                </div>
-                <div className="text-xs text-muted-foreground mt-2">
-                  IVA ricavi - IVA costi
-                </div>
-              </div>
-            </div>
-          </div>
-        </TabsContent>
-
-
-        {/* TAB: Movimenti */}
-        <TabsContent value="movimenti" className="space-y-4">
-          <MovimentiTab
-            commessaId={commessa?.id || ''}
-            fattureAttive={fatture}
-            fatturePassive={fatturePassive}
-            onReload={loadCommessaData}
-          />
-        </TabsContent>
-
-        {/* TAB: Rapportini */}
-        <TabsContent value="rapportini" className="space-y-4">
-          <RapportiniSection commessaId={commessa?.id} hideMonthSelector={true} />
-        </TabsContent>
-
-        {/* TAB: Documenti */}
-        <TabsContent value="documenti" className="space-y-4">
-          <div className="rounded-xl border-2 border-dashed border-border bg-card p-12 text-center">
-            <FolderOpen className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-            <p className="text-muted-foreground">Funzionalità documenti in arrivo</p>
-          </div>
-        </TabsContent>
-
-        {/* TAB: Impostazioni */}
-        <TabsContent value="impostazioni" className="space-y-4">
-          <div className="rounded-xl border-2 border-border bg-card p-6">
-            <h3 className="text-lg font-semibold mb-6">Informazioni Aggiuntive</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Tipologia Cliente</p>
-                <p className="font-medium">{commessa.tipologia_cliente}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Tipologia Commessa</p>
-                <p className="font-medium">{commessa.tipologia_commessa}</p>
-              </div>
-              {commessa.tipologia_cliente === 'Pubblico' && (
-                <>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">CIG</p>
-                    <p className="font-medium font-mono">{commessa.cig || '—'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">CUP</p>
-                    <p className="font-medium font-mono">{commessa.cup || '—'}</p>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </TabsContent>
-      </Tabs>
+        </div>
+      )}
 
       {/* Modals */}
       {showFatturaForm && commessa && (
@@ -820,6 +2578,14 @@ export default function CommessaDetailPage() {
           commessaNome={commessa.nome_commessa}
           onSuccess={handleFormSuccess}
           onCancel={() => setShowCostoForm(false)}
+        />
+      )}
+
+      {showEditModal && commessa && (
+        <EditCommessaModal
+          commessa={commessa}
+          onClose={() => setShowEditCommessaModal(false)}
+          onSuccess={loadCommessaData}
         />
       )}
 
@@ -867,7 +2633,7 @@ export default function CommessaDetailPage() {
             setIsTransitioning(true);
             setShowInfoModal(false);
             setTimeout(() => {
-              setShowEditModal(true);
+              setShowEditMovimentoModal(true);
               setIsTransitioning(false);
             }, 200);
           }}
@@ -882,11 +2648,11 @@ export default function CommessaDetailPage() {
         />
       )}
 
-      {showEditModal && selectedMovimento && (
+      {showEditMovimentoModal && selectedMovimento && (
         <EditMovimentoModal
           movimento={selectedMovimento}
           onClose={() => {
-            setShowEditModal(false);
+            setShowEditMovimentoModal(false);
             setSelectedMovimento(null);
           }}
           onSuccess={() => {

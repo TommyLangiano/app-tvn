@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import type { AnalyticsData } from '@/lib/analytics';
 import type { DateRange } from '../FilterBar';
+import { formatCurrency } from '@/lib/utils/currency';
 
 export function exportToPDF(data: AnalyticsData, filters: { dateRange: DateRange }) {
   const doc = new jsPDF();
@@ -257,13 +258,4 @@ export function exportToPDF(data: AnalyticsData, filters: { dateRange: DateRange
   // Save
   const fileName = `Report_${format(new Date(), 'yyyyMMdd_HHmmss')}.pdf`;
   doc.save(fileName);
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('it-IT', {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
 }

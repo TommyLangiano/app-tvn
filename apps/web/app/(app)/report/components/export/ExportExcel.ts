@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import type { AnalyticsData } from '@/lib/analytics';
 import type { DateRange } from '../FilterBar';
+import { formatCurrency } from '@/lib/utils/currency';
 
 export function exportToExcel(data: AnalyticsData, filters: { dateRange: DateRange }) {
   const workbook = XLSX.utils.book_new();
@@ -200,13 +201,4 @@ export function exportToExcel(data: AnalyticsData, filters: { dateRange: DateRan
   // Save file
   const fileName = `Report_${format(new Date(), 'yyyyMMdd_HHmmss')}.xlsx`;
   XLSX.writeFile(workbook, fileName);
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('it-IT', {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
 }

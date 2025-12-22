@@ -2,6 +2,7 @@
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from 'recharts';
 import { TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react';
+import { formatCurrency } from '@/lib/utils/currency';
 
 interface CashFlowData {
   period: string;
@@ -50,15 +51,6 @@ export function CashFlowForecast({ data, loading = false }: CashFlowForecastProp
     { period: '+90gg', name: 'Uscite Previste', value: -data.uscitePrevistoMese3, type: 'expense', cumulative: saldoMese3 },
     { period: '+90gg', name: 'Saldo Finale', value: saldoMese3, type: 'end', cumulative: saldoMese3 },
   ];
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('it-IT', {
-      style: 'currency',
-      currency: 'EUR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
 
   const getBarColor = (type: string) => {
     switch (type) {

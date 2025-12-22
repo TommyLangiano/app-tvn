@@ -2,6 +2,7 @@
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
+import { formatCurrency } from '@/lib/utils/currency';
 
 interface BudgetVsActualProps {
   data: Array<{
@@ -47,15 +48,6 @@ export function BudgetVsActual({ data, loading = false }: BudgetVsActualProps) {
 
   // Take top 10 projects by budget
   const topProjects = data.slice(0, 10);
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('it-IT', {
-      style: 'currency',
-      currency: 'EUR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {

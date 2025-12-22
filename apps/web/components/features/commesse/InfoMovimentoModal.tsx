@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { X, Calendar, FileText, CreditCard, User, Hash, Tag, CheckCircle, Clock, Edit, Trash2 } from 'lucide-react';
 import { ModalWrapper } from '@/components/common/ModalWrapper';
 import { getSignedUrl } from '@/lib/utils/storage';
+import { formatCurrency } from '@/lib/utils/currency';
 
 type Movimento = {
   id: string;
@@ -41,13 +42,6 @@ export function InfoMovimentoModal({ movimento, onClose, onEdit, onDelete }: Inf
       getSignedUrl(movimento.allegato_url).then(setAllegatoUrl);
     }
   }, [movimento.allegato_url]);
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('it-IT', {
-      style: 'currency',
-      currency: 'EUR',
-    }).format(value);
-  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('it-IT');

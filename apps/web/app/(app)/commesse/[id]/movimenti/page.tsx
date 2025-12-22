@@ -20,6 +20,7 @@ import { EditMovimentoModal } from '@/components/features/commesse/EditMovimento
 import { DeleteMovimentoModal } from '@/components/features/commesse/DeleteMovimentoModal';
 import { BulkDeleteMovimentiModal } from '@/components/features/commesse/BulkDeleteMovimentiModal';
 import { getSignedUrl } from '@/lib/utils/storage';
+import { formatCurrency } from '@/lib/utils/currency';
 
 // Tipo unificato per i movimenti
 type Movimento = {
@@ -338,13 +339,6 @@ export default function MovimentiPage() {
   useEffect(() => {
     setCurrentPage(1);
   }, [tipoFiltro, categoriaFiltro, statoPagamentoFiltro, periodoFiltro, rangeImportoFiltro, searchTerm, ordinamento]);
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('it-IT', {
-      style: 'currency',
-      currency: 'EUR',
-    }).format(amount);
-  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('it-IT', {

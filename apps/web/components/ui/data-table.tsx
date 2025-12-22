@@ -433,17 +433,24 @@ export function DataTable<T extends Record<string, any>>({
           )}
 
           {/* Pagination */}
-          {showPagination && onPageChange && (
-            <div className="flex flex-col lg:flex-row items-center justify-between gap-4 pt-4">
-              {/* Page Size Selector */}
-              {onPageSizeChange && (
+          {totalItems && totalItems > 0 && onPageChange && onPageSizeChange && (
+            <div className="flex items-center justify-between px-4 py-4 border-t border-border">
+              {/* Left side - Info and Items per page */}
+              <div className="flex items-center gap-6">
+                <span className="text-sm text-muted-foreground">
+                  Mostrando {((currentPage - 1) * pageSize) + 1}-{Math.min(currentPage * pageSize, totalItems)} di {totalItems} elementi
+                </span>
+
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Righe per pagina:</span>
+                  <span className="text-sm text-muted-foreground">Elementi per pagina:</span>
                   <Select
                     value={pageSize.toString()}
-                    onValueChange={(value) => onPageSizeChange(Number(value))}
+                    onValueChange={(value) => {
+                      onPageSizeChange(Number(value));
+                      onPageChange(1);
+                    }}
                   >
-                    <SelectTrigger className="h-9 w-[70px]">
+                    <SelectTrigger className="w-20 h-9 rounded-lg border-2 border-border bg-background">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -455,57 +462,53 @@ export function DataTable<T extends Record<string, any>>({
                     </SelectContent>
                   </Select>
                 </div>
-              )}
-
-              {/* Page Info */}
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">
-                  Pagina {currentPage} di {totalPages} ({totalItems || data.length} totali)
-                </span>
               </div>
 
-              {/* Page Navigation */}
-              <div className="flex items-center gap-1">
+              {/* Right side - Page navigation */}
+              <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => onPageChange(currentPage - 1)}
+                  onClick={() => onPageChange(Math.max(1, currentPage - 1))}
                   disabled={currentPage === 1}
+                  className="h-9 w-9 p-0"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
 
-                {/* Page Numbers */}
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum;
-                  if (totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (currentPage <= 3) {
-                    pageNum = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i;
-                  } else {
-                    pageNum = currentPage - 2 + i;
-                  }
-
-                  return (
-                    <Button
-                      key={pageNum}
-                      variant={currentPage === pageNum ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => onPageChange(pageNum)}
-                      className="min-w-[36px]"
-                    >
-                      {pageNum}
-                    </Button>
-                  );
-                })}
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter(page => {
+                      if (page === 1 || page === totalPages) return true;
+                      if (page >= currentPage - 1 && page <= currentPage + 1) return true;
+                      return false;
+                    })
+                    .map((page, index, array) => {
+                      const showEllipsis = index > 0 && page - array[index - 1] > 1;
+                      return (
+                        <div key={page} className="flex items-center gap-1">
+                          {showEllipsis && (
+                            <span className="px-2 text-muted-foreground">...</span>
+                          )}
+                          <Button
+                            variant={currentPage === page ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => onPageChange(page)}
+                            className="h-9 w-9 p-0"
+                          >
+                            {page}
+                          </Button>
+                        </div>
+                      );
+                    })}
+                </div>
 
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => onPageChange(currentPage + 1)}
+                  onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
                   disabled={currentPage === totalPages}
+                  className="h-9 w-9 p-0"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Button>

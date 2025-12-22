@@ -2,19 +2,13 @@
 
 import { ArrowUpCircle, ArrowDownCircle, Calendar } from 'lucide-react';
 import type { Movimento } from '@/types/movimento';
+import { formatCurrency } from '@/lib/utils/currency';
 
 interface MovimentiListProps {
   movimenti: Movimento[];
 }
 
 export function MovimentiList({ movimenti }: MovimentiListProps) {
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('it-IT', {
-      style: 'currency',
-      currency: 'EUR',
-    }).format(amount);
-  };
-
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('it-IT');
   };
