@@ -38,7 +38,7 @@ export default function CommessePage() {
   const [statoFilter, setStatoFilter] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<'all' | 'in-corso' | 'da-iniziare' | 'completate'>('all');
   const [clienteFilter, setClienteFilter] = useState<string>('all');
-  const [clienti, setClienti] = useState<Array<{ id: string; nome: string; cognome: string }>>([]);
+  const [clienti, setClienti] = useState<Array<{ id: string; nome: string; cognome: string; forma_giuridica?: string; ragione_sociale?: string }>>([]);
   const [clienteSearch, setClienteSearch] = useState('');
   const [navbarActionsContainer, setNavbarActionsContainer] = useState<HTMLElement | null>(null);
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('table');
@@ -70,7 +70,7 @@ export default function CommessePage() {
 
       const { data, error } = await supabase
         .from('clienti')
-        .select('id, nome, cognome')
+        .select('id, nome, cognome, forma_giuridica, ragione_sociale')
         .eq('tenant_id', userTenants.tenant_id)
         .order('cognome', { ascending: true });
 
@@ -108,13 +108,16 @@ export default function CommessePage() {
 
       const { data: clientiData } = await supabase
         .from('clienti')
-        .select('id, nome, cognome')
+        .select('id, nome, cognome, forma_giuridica, ragione_sociale')
         .eq('tenant_id', userTenants.tenant_id);
 
       const clientiMap = new Map<string, string>();
       if (clientiData) {
         clientiData.forEach(c => {
-          clientiMap.set(c.id, `${c.cognome} ${c.nome}`.trim());
+          const displayName = c.forma_giuridica === 'persona_giuridica'
+            ? c.ragione_sociale
+            : `${c.cognome} ${c.nome}`.trim();
+          clientiMap.set(c.id, displayName || c.id);
         });
       }
 
@@ -511,8 +514,10 @@ export default function CommessePage() {
   const filteredClienti = useMemo(() => {
     if (!clienteSearch) return clienti;
     return clienti.filter(c => {
-      const fullName = `${c.cognome} ${c.nome}`.toLowerCase();
-      return fullName.includes(clienteSearch.toLowerCase());
+      const displayName = c.forma_giuridica === 'persona_giuridica'
+        ? (c.ragione_sociale || '').toLowerCase()
+        : `${c.cognome} ${c.nome}`.toLowerCase();
+      return displayName.includes(clienteSearch.toLowerCase());
     });
   }, [clienti, clienteSearch]);
 
@@ -658,7 +663,7 @@ export default function CommessePage() {
                     <SelectItem value="all">Tutti i clienti</SelectItem>
                     {filteredClienti.map(c => (
                       <SelectItem key={c.id} value={c.id}>
-                        {c.cognome} {c.nome}
+                        {c.forma_giuridica === 'persona_giuridica' ? c.ragione_sociale : `${c.cognome} ${c.nome}`}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -765,7 +770,7 @@ export default function CommessePage() {
                   <SelectItem value="all">Tutti i clienti</SelectItem>
                   {filteredClienti.map(c => (
                     <SelectItem key={c.id} value={c.id}>
-                      {c.cognome} {c.nome}
+                      {c.forma_giuridica === 'persona_giuridica' ? c.ragione_sociale : `${c.cognome} ${c.nome}`}
                     </SelectItem>
                   ))}
                 </SelectContent>
