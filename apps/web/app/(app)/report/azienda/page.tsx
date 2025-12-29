@@ -3,7 +3,10 @@
 export const dynamic = 'force-dynamic';
 
 import { useState, useEffect, useCallback } from 'react';
+import { format } from 'date-fns';
 import { RiepilogoEconomicoChart } from '../components/charts/RiepilogoEconomicoChart';
+import { PeriodFilter, type PeriodType } from './components/PeriodFilter';
+import { getDateRangeFromPeriod, type DateRange } from './utils/dateFilters';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 
@@ -46,6 +49,9 @@ const sumImporti = (items: any[] | null): number => {
 
 export default function ReportAziendaPage() {
   const [loading, setLoading] = useState(true);
+  const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>('oggi');
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [dateRange, setDateRange] = useState<DateRange>(() => getDateRangeFromPeriod('oggi'));
   const [riepilogoData, setRiepilogoData] = useState<RiepilogoEconomicoData>({
     fatturatoPrevisto: 0,
     fatturatoEmesso: 0,
@@ -55,8 +61,26 @@ export default function ReportAziendaPage() {
     saldoIva: 0,
   });
 
+  // Gestione cambio periodo
+  const handlePeriodChange = useCallback((period: PeriodType) => {
+    setSelectedPeriod(period);
+    const newRange = getDateRangeFromPeriod(period, selectedYear);
+    setDateRange(newRange);
+  }, [selectedYear]);
+
+  // Gestione cambio anno - filtra i dati per l'anno selezionato
+  const handleYearChange = useCallback((year: number) => {
+    setSelectedYear(year);
+    // Mostra sempre l'anno selezionato (1 gen - 31 dic)
+    const newRange = {
+      from: new Date(year, 0, 1), // 1 gennaio
+      to: new Date(year, 11, 31, 23, 59, 59), // 31 dicembre
+    };
+    setDateRange(newRange);
+  }, []);
+
   // Memoizza la funzione di caricamento per evitare ricreazioni
-  const loadRiepilogoEconomico = useCallback(async () => {
+  const loadRiepilogoEconomico = useCallback(async (range: DateRange) => {
     try {
       setLoading(true);
       const supabase = createClient();
@@ -89,7 +113,11 @@ export default function ReportAziendaPage() {
 
       const commessaIds = (commesse || []).map(c => c.id);
 
-      // Ottimizzazione: esegui tutte le query in parallelo
+      // Formatta le date per Supabase
+      const dateFrom = format(range.from, 'yyyy-MM-dd');
+      const dateTo = format(range.to, 'yyyy-MM-dd');
+
+      // Ottimizzazione: esegui tutte le query in parallelo con filtri di data
       const [
         { data: fattureAttive },
         { data: fatturePassive },
@@ -98,15 +126,21 @@ export default function ReportAziendaPage() {
         supabase
           .from('fatture_attive')
           .select('importo_imponibile, importo_iva')
-          .in('commessa_id', commessaIds),
+          .in('commessa_id', commessaIds)
+          .gte('data_fattura', dateFrom)
+          .lte('data_fattura', dateTo),
         supabase
           .from('fatture_passive')
           .select('importo_imponibile, importo_iva')
-          .in('commessa_id', commessaIds),
+          .in('commessa_id', commessaIds)
+          .gte('data_fattura', dateFrom)
+          .lte('data_fattura', dateTo),
         supabase
           .from('note_spesa')
           .select('importo')
           .in('commessa_id', commessaIds)
+          .gte('data_nota', dateFrom)
+          .lte('data_nota', dateTo)
       ]);
 
       // Calcola i totali usando helper ottimizzati
@@ -144,9 +178,10 @@ export default function ReportAziendaPage() {
     }
   }, []); // Nessuna dipendenza esterna, funzione stabile
 
+  // Effetto per ricaricare i dati quando cambia il dateRange
   useEffect(() => {
-    loadRiepilogoEconomico();
-  }, [loadRiepilogoEconomico]); // Dipendenza corretta
+    loadRiepilogoEconomico(dateRange);
+  }, [dateRange, loadRiepilogoEconomico]);
 
   return (
     <div className="space-y-6">
@@ -154,10 +189,15 @@ export default function ReportAziendaPage() {
       <div className="bg-white dark:bg-gray-800 rounded-lg p-6">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-foreground">Report Aziendale</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Panoramica generale della situazione economica aziendale
-          </p>
         </div>
+
+        {/* Filtri Periodo */}
+        <PeriodFilter
+          selectedPeriod={selectedPeriod}
+          selectedYear={selectedYear}
+          onPeriodChange={handlePeriodChange}
+          onYearChange={handleYearChange}
+        />
 
         {/* Riepilogo Economico Chart */}
         <RiepilogoEconomicoChart data={riepilogoData} loading={loading} />
