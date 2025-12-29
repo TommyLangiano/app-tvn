@@ -172,12 +172,6 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
       return;
     }
 
-    // Calculate date range for the selected month
-    const startDate = new Date(currentYear, currentMonth, 1);
-    const endDate = new Date(currentYear, currentMonth + 1, 0);
-    const startDateStr = startDate.toISOString().split('T')[0];
-    const endDateStr = endDate.toISOString().split('T')[0];
-
     const { data: noteSpeseData, error } = await supabase
       .from('note_spesa')
       .select(`
@@ -201,8 +195,6 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
       `)
       .eq('tenant_id', userTenant.tenant_id)
       .eq('commessa_id', commessaId)
-      .gte('data_nota', startDateStr)
-      .lte('data_nota', endDateStr)
       .eq('stato', 'approvato')
       .order('data_nota', { ascending: false });
 
