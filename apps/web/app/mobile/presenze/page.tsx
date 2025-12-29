@@ -12,7 +12,7 @@ interface Rapportino {
   data_rapportino: string;
   ore_lavorate: number;
   note: string | null;
-  stato: 'approvato' | 'richiesto' | 'rifiutato';
+  stato: 'approvato' | 'da_approvare' | 'rifiutato';
   commesse: {
     nome_commessa: string;
     cliente_commessa: string;
@@ -22,7 +22,7 @@ interface Rapportino {
 export default function MobilePresenzePage() {
   const [loading, setLoading] = useState(true);
   const [rapportini, setRapportini] = useState<Rapportino[]>([]);
-  const [filter, setFilter] = useState<'tutti' | 'approvato' | 'richiesto' | 'rifiutato'>('tutti');
+  const [filter, setFilter] = useState<'tutti' | 'approvato' | 'da_approvare' | 'rifiutato'>('tutti');
 
   useEffect(() => {
     loadRapportini();
@@ -80,7 +80,7 @@ export default function MobilePresenzePage() {
     switch (stato) {
       case 'approvato':
         return <CheckCircle className="w-5 h-5 text-green-600" />;
-      case 'richiesto':
+      case 'da_approvare':
         return <AlertCircle className="w-5 h-5 text-amber-600" />;
       case 'rifiutato':
         return <XCircle className="w-5 h-5 text-red-600" />;
@@ -92,13 +92,13 @@ export default function MobilePresenzePage() {
   const getStatoBadge = (stato: string) => {
     const styles = {
       approvato: 'bg-green-100 text-green-700 border-green-200',
-      richiesto: 'bg-amber-100 text-amber-700 border-amber-200',
+      da_approvare: 'bg-amber-100 text-amber-700 border-amber-200',
       rifiutato: 'bg-red-100 text-red-700 border-red-200',
     };
 
     const labels = {
       approvato: 'Approvato',
-      richiesto: 'In attesa',
+      da_approvare: 'Da approvare',
       rifiutato: 'Rifiutato',
     };
 
@@ -125,7 +125,7 @@ export default function MobilePresenzePage() {
   const stats = {
     totale: rapportini.length,
     approvati: rapportini.filter(r => r.stato === 'approvato').length,
-    richiesti: rapportini.filter(r => r.stato === 'richiesto').length,
+    daApprovare: rapportini.filter(r => r.stato === 'da_approvare').length,
     rifiutati: rapportini.filter(r => r.stato === 'rifiutato').length,
   };
 
@@ -163,10 +163,10 @@ export default function MobilePresenzePage() {
           <p className="text-xs text-green-700">Approvati</p>
           <p className="text-2xl font-bold text-green-900">{stats.approvati}</p>
         </Card>
-        {stats.richiesti > 0 && (
+        {stats.daApprovare > 0 && (
           <Card className="p-3 border-2 border-amber-200 bg-amber-50/50">
-            <p className="text-xs text-amber-700">In attesa</p>
-            <p className="text-2xl font-bold text-amber-900">{stats.richiesti}</p>
+            <p className="text-xs text-amber-700">Da approvare</p>
+            <p className="text-2xl font-bold text-amber-900">{stats.daApprovare}</p>
           </Card>
         )}
         {stats.rifiutati > 0 && (
@@ -199,16 +199,16 @@ export default function MobilePresenzePage() {
         >
           Approvati ({stats.approvati})
         </button>
-        {stats.richiesti > 0 && (
+        {stats.daApprovare > 0 && (
           <button
-            onClick={() => setFilter('richiesto')}
+            onClick={() => setFilter('da_approvare')}
             className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-              filter === 'richiesto'
+              filter === 'da_approvare'
                 ? 'bg-amber-600 text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
-            In attesa ({stats.richiesti})
+            Da approvare ({stats.daApprovare})
           </button>
         )}
         {stats.rifiutati > 0 && (

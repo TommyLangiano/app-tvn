@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FileText, Edit, Trash2, Save, XCircle, Upload, Trash } from 'lucide-react';
+import { FileText, Edit, Trash2, Save, XCircle, Upload, Trash, Check, X } from 'lucide-react';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -197,6 +197,58 @@ export function InfoRapportinoModal({ rapportino, users, commesse, onClose, onUp
     }
   };
 
+  const handleApprove = async () => {
+    try {
+      setIsSaving(true);
+      const supabase = createClient();
+
+      const { error } = await supabase
+        .from('rapportini')
+        .update({
+          stato: 'approvato',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', rapportino.id);
+
+      if (error) throw error;
+
+      toast.success('Rapportino approvato');
+      onUpdate();
+      onClose();
+    } catch (error) {
+      console.error('Errore nell\'approvazione:', error);
+      toast.error('Errore nell\'approvazione del rapportino');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleReject = async () => {
+    try {
+      setIsSaving(true);
+      const supabase = createClient();
+
+      const { error } = await supabase
+        .from('rapportini')
+        .update({
+          stato: 'rifiutato',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', rapportino.id);
+
+      if (error) throw error;
+
+      toast.success('Rapportino rifiutato');
+      onUpdate();
+      onClose();
+    } catch (error) {
+      console.error('Errore nel rifiuto:', error);
+      toast.error('Errore nel rifiuto del rapportino');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <Sheet open={true} onOpenChange={(open) => !open && onClose()}>
       <SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col">
@@ -213,29 +265,59 @@ export function InfoRapportinoModal({ rapportino, users, commesse, onClose, onUp
             <div className="flex items-center gap-2 flex-shrink-0">
               {!isEditing ? (
                 <>
-                  {onDelete && (
-                    <Button
-                      onClick={() => {
-                        onClose();
-                        setTimeout(() => onDelete(), 200);
-                      }}
-                      variant="outline"
-                      size="sm"
-                      className="gap-2 border-2 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Elimina
-                    </Button>
+                  {/* Approval buttons - Show only when stato is 'da_approvare' */}
+                  {rapportino.stato === 'da_approvare' && (
+                    <>
+                      <Button
+                        onClick={handleReject}
+                        variant="outline"
+                        size="sm"
+                        className="gap-2 border-2 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                        disabled={isSaving}
+                      >
+                        <X className="h-4 w-4" />
+                        Rifiuta
+                      </Button>
+                      <Button
+                        onClick={handleApprove}
+                        size="sm"
+                        className="gap-2 bg-green-600 hover:bg-green-700"
+                        disabled={isSaving}
+                      >
+                        <Check className="h-4 w-4" />
+                        Approva
+                      </Button>
+                    </>
                   )}
-                  <Button
-                    onClick={handleEdit}
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                  >
-                    <Edit className="h-4 w-4" />
-                    Modifica
-                  </Button>
+
+                  {/* Regular buttons - Show when not in da_approvare state */}
+                  {rapportino.stato !== 'da_approvare' && (
+                    <>
+                      {onDelete && (
+                        <Button
+                          onClick={() => {
+                            onClose();
+                            setTimeout(() => onDelete(), 200);
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="gap-2 border-2 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Elimina
+                        </Button>
+                      )}
+                      <Button
+                        onClick={handleEdit}
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                      >
+                        <Edit className="h-4 w-4" />
+                        Modifica
+                      </Button>
+                    </>
+                  )}
                 </>
               ) : (
                 <>

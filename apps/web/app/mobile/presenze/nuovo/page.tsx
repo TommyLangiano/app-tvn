@@ -17,7 +17,6 @@ export default function MobileRapportiniPage() {
   const [loading, setLoading] = useState(false);
   const [dipendenteId, setDipendenteId] = useState<string>('');
   const [tenantId, setTenantId] = useState<string>('');
-  const [richiedeApprovazione, setRichiedeApprovazione] = useState(false);
 
   // Form state
   const [commessaId, setCommessaId] = useState('');
@@ -59,15 +58,6 @@ export default function MobileRapportiniPage() {
       setDipendenteId(dipendente.id);
       setTenantId(dipendente.tenant_id);
 
-      // Get tenant settings
-      const { data: tenant } = await supabase
-        .from('tenants')
-        .select('richiede_approvazione_rapportini')
-        .eq('id', dipendente.tenant_id)
-        .single();
-
-      setRichiedeApprovazione(tenant?.richiede_approvazione_rapportini || false);
-
       // Get commesse attive
       const { data: commesseData } = await supabase
         .from('commesse')
@@ -104,29 +94,47 @@ export default function MobileRapportiniPage() {
 
       if (!user) return;
 
-      // Determine stato based on tenant settings
-      const stato = richiedeApprovazione ? 'richiesto' : 'approvato';
+      // Validate dipendente_id exists
+      if (!dipendenteId) {
+        toast.error('Errore: dipendente non trovato. Riprova.');
+        return;
+      }
+
+      // Check if this specific commessa requires approval for presenze
+      const { data: approvalSettings } = await supabase
+        .from('commesse_impostazioni_approvazione')
+        .select('abilitato')
+        .eq('commessa_id', commessaId)
+        .eq('tipo_approvazione', 'presenze')
+        .maybeSingle();
+
+      // Determine stato based on commessa-specific approval settings
+      const richiedeApprovazioneCommessa = approvalSettings?.abilitato || false;
+      const stato = richiedeApprovazioneCommessa ? 'da_approvare' : 'approvato';
+
+      const insertData = {
+        tenant_id: tenantId,
+        dipendente_id: dipendenteId,
+        commessa_id: commessaId,
+        data_rapportino: dataRapportino,
+        ore_lavorate: parseFloat(oreLavorate),
+        orario_inizio: orarioInizio || null,
+        orario_fine: orarioFine || null,
+        tempo_pausa: tempoPausa ? parseInt(tempoPausa) : 60,
+        note: note || null,
+        stato,
+        created_by: user.id,
+      };
+
+      console.log('Inserting rapportino:', insertData);
 
       const { error } = await supabase
         .from('rapportini')
-        .insert({
-          tenant_id: tenantId,
-          user_id: user.id,
-          dipendente_id: dipendenteId,
-          commessa_id: commessaId,
-          data_rapportino: dataRapportino,
-          ore_lavorate: parseFloat(oreLavorate),
-          orario_inizio: orarioInizio || null,
-          orario_fine: orarioFine || null,
-          tempo_pausa: tempoPausa ? parseInt(tempoPausa) : 60,
-          note: note || null,
-          stato,
-          created_by: user.id,
-        });
+        .insert(insertData);
 
       if (error) throw error;
 
-      if (richiedeApprovazione) {
+      if (richiedeApprovazioneCommessa) {
         toast.success('Rapportino inviato! In attesa di approvazione.');
       } else {
         toast.success('Rapportino registrato con successo!');
@@ -159,20 +167,7 @@ export default function MobileRapportiniPage() {
         <p className="text-sm text-gray-500 mt-1">Registra le tue ore di lavoro</p>
       </div>
 
-      {/* Info Alert */}
-      {richiedeApprovazione && (
-        <Card className="p-4 border-2 border-amber-200 bg-amber-50">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-amber-900">Approvazione richiesta</p>
-              <p className="text-xs text-amber-700 mt-1">
-                Le ore inserite saranno inviate al tuo responsabile per l'approvazione
-              </p>
-            </div>
-          </div>
-        </Card>
-      )}
+      {/* Info Alert - Will be shown based on selected commessa */}
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-4">

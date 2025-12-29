@@ -272,7 +272,7 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
       `)
       .eq('tenant_id', userTenant.tenant_id)
       .eq('commessa_id', commessaId)
-      .is('approvato', null)
+      .eq('stato', 'da_approvare')
       .order('data_rapportino', { ascending: false });
 
     setRapportiniDaApprovare(data || []);
@@ -309,7 +309,7 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
       `)
       .eq('tenant_id', userTenant.tenant_id)
       .eq('commessa_id', commessaId)
-      .eq('approvato', false)
+      .eq('stato', 'rifiutato')
       .order('data_rapportino', { ascending: false });
 
     setRapportiniRifiutati(data || []);
