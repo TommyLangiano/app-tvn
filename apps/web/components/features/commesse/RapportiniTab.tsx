@@ -609,9 +609,8 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
 
   return (
     <div className="space-y-4">
-      {/* Header: Tabs e Nuovo Rapportino - Only for 'approvate' tab */}
-      {(activeRapportiniTab as TabType) === 'approvate' && (
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+      {/* Header: Tabs + Search + Filtro su stessa riga */}
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
         {/* Tabs - Inline style come Fatture */}
         <div className="inline-flex rounded-md border border-border bg-background p-1">
           <button
@@ -670,139 +669,52 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
           </button>
         </div>
 
-        <div className="flex-1" />
+        {/* Divider */}
+        <div className="hidden lg:block h-8 w-px bg-border"></div>
 
-        {/* Nuovo Rapportino */}
-        <Button
-          onClick={() => setShowNuovoModal(true)}
-          className="gap-2 h-10 rounded-sm"
-        >
-          <Plus className="h-4 w-4" />
-          Nuovo Rapportino
-        </Button>
+        {/* Search Bar - stile Fatture */}
+        <div className="relative w-full lg:w-[400px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground" />
+          <Input
+            placeholder="Cerca per dipendente, note"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 h-11 border-2 border-border rounded-sm bg-background text-foreground placeholder:text-muted-foreground w-full"
+          />
+        </div>
+
+        {/* Spazio flessibile per spingere i filtri a destra */}
+        <div className="flex-1"></div>
+
+        {/* Filtro Dipendente */}
+        <Select value={filtroUtente || undefined} onValueChange={(value) => setFiltroUtente(value)}>
+          <SelectTrigger className="h-11 w-full lg:w-[200px] border-2 border-border rounded-sm bg-white">
+            <SelectValue placeholder="Tutti i dipendenti" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tutti i dipendenti</SelectItem>
+            {users.map(user => (
+              <SelectItem key={user.id} value={user.dipendente_id || user.id}>
+                {user.user_metadata?.full_name || user.email}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
-      )}
 
-      {/* Header per altri tab (da_approvare, rifiutate) */}
-      {activeRapportiniTab !== 'approvate' && (
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          {/* Tabs - Inline style come Fatture */}
-          <div className="inline-flex rounded-md border border-border bg-background p-1">
-            <button
-              onClick={() => setActiveRapportiniTab('approvate')}
-              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-                (activeRapportiniTab as TabType) === 'approvate'
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <ClipboardCheck className="h-4 w-4" />
-              Approvate
-              <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
-                (activeRapportiniTab as TabType) === 'approvate'
-                  ? 'bg-primary-foreground/20 text-primary-foreground'
-                  : 'bg-green-100 text-green-700'
-              }`}>
-                {tabCounts.approvate}
-              </span>
-            </button>
-            <button
-              onClick={() => setActiveRapportiniTab('da_approvare')}
-              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-                (activeRapportiniTab as TabType) === 'da_approvare'
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <ClipboardList className="h-4 w-4" />
-              Da Approvare
-              <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
-                (activeRapportiniTab as TabType) === 'da_approvare'
-                  ? 'bg-primary-foreground/20 text-primary-foreground'
-                  : 'bg-green-100 text-green-700'
-              }`}>
-                {tabCounts.da_approvare}
-              </span>
-            </button>
-            <button
-              onClick={() => setActiveRapportiniTab('rifiutate')}
-              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-                (activeRapportiniTab as TabType) === 'rifiutate'
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <ClipboardX className="h-4 w-4" />
-              Rifiutate
-              <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
-                (activeRapportiniTab as TabType) === 'rifiutate'
-                  ? 'bg-primary-foreground/20 text-primary-foreground'
-                  : 'bg-green-100 text-green-700'
-              }`}>
-                {tabCounts.rifiutate}
-              </span>
-            </button>
-          </div>
-
-          <div className="flex-1" />
-
+      {/* Clear Filters Button */}
+      {activeFiltersCount > 0 && (
+        <div className="flex justify-end">
           <Button
-            onClick={() => setShowNuovoModal(true)}
-            className="gap-2 h-10 rounded-sm"
+            variant="outline"
+            onClick={clearAllFilters}
+            className="gap-2"
           >
-            <Plus className="h-4 w-4" />
-            Nuovo Rapportino
+            <X className="h-4 w-4" />
+            Azzera filtri
           </Button>
         </div>
       )}
-
-      {/* Search Bar and Filters */}
-      <div className="space-y-0">
-        <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
-          {/* Search Bar - stile Fatture */}
-          <div className="relative w-full lg:w-[400px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground" />
-            <Input
-              placeholder="Cerca per dipendente, note"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-11 border-2 border-border rounded-sm bg-background text-foreground placeholder:text-muted-foreground w-full"
-            />
-          </div>
-
-          {/* Spazio flessibile per spingere i filtri a destra */}
-          <div className="flex-1"></div>
-
-          {/* Filtro Dipendente */}
-          <Select value={filtroUtente || undefined} onValueChange={(value) => setFiltroUtente(value)}>
-            <SelectTrigger className="h-11 w-full lg:w-[200px] border-2 border-border rounded-sm bg-white">
-              <SelectValue placeholder="Tutti i dipendenti" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tutti i dipendenti</SelectItem>
-              {users.map(user => (
-                <SelectItem key={user.id} value={user.dipendente_id || user.id}>
-                  {user.user_metadata?.full_name || user.email}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Clear Filters Button */}
-        {activeFiltersCount > 0 && (
-          <div className="flex justify-end">
-            <Button
-              variant="outline"
-              onClick={clearAllFilters}
-              className="gap-2"
-            >
-              <X className="h-4 w-4" />
-              Azzera filtri
-            </Button>
-          </div>
-        )}
-      </div>
 
       {/* Month Navigator + Esporta e View Toggle - Sotto i Filtri */}
       {(activeRapportiniTab as TabType) === 'approvate' && (
