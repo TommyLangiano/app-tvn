@@ -76,7 +76,7 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
 
   // Modal states
   const [selectedRapportino, setSelectedRapportino] = useState<Rapportino | null>(null);
-  const [showInfoModal, setShowInfoModal] = useState(false);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showNuovoModal, setShowNuovoModal] = useState(false);
@@ -565,7 +565,7 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
 
   const handleRowClick = (rapportino: Rapportino) => {
     setSelectedRapportino(rapportino);
-    setShowInfoModal(true);
+    setIsSheetOpen(true);
   };
 
   const handleSort = (field: string) => {
@@ -1012,7 +1012,7 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
                                       onClick={() => {
                                         setSelectedRapportino(rapportiniDelGiorno[0]);
                                         setSelectedRapportiniForInfo(rapportiniDelGiorno);
-                                        setShowInfoModal(true);
+                                        setIsSheetOpen(true);
                                       }}
                                       className="w-full h-12 rounded-lg bg-emerald-500/10 border-2 border-emerald-500/30 hover:bg-emerald-500/20 transition-colors flex flex-col items-center justify-center gap-0.5"
                                       title={`${rapportiniDelGiorno[0].ore_lavorate}h - ${rapportiniDelGiorno[0].commesse?.titolo || ''}\n${rapportiniDelGiorno[0].note ? `Note: ${rapportiniDelGiorno[0].note}` : ''}`}
@@ -1046,7 +1046,7 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
                                       onClick={() => {
                                         setSelectedRapportino(rapportiniDelGiorno[0]);
                                         setSelectedRapportiniForInfo(rapportiniDelGiorno);
-                                        setShowInfoModal(true);
+                                        setIsSheetOpen(true);
                                       }}
                                       className="w-full h-12 rounded-lg bg-blue-500/10 border-2 border-blue-500/30 hover:bg-blue-500/20 transition-colors flex flex-col items-center justify-center gap-0.5"
                                       title={`${rapportiniDelGiorno.length} rapportini - Totale: ${rapportiniDelGiorno.reduce((sum, r) => sum + r.ore_lavorate, 0)}h`}
@@ -1132,19 +1132,17 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
       )}
 
       {/* Modals */}
-      {showInfoModal && selectedRapportino && (
+      {isSheetOpen && selectedRapportino && (
         <InfoRapportinoModal
           rapportino={selectedRapportino}
           users={users}
           commesse={commesse}
-          onClose={() => {
-            setShowInfoModal(false);
-            setSelectedRapportino(null);
-          }}
+          isOpen={isSheetOpen}
+          onOpenChange={setIsSheetOpen}
           onUpdate={handleRapportinoUpdated}
           onDelete={() => {
-            setShowInfoModal(false);
-            setShowDeleteModal(true);
+            setIsSheetOpen(false);
+            setTimeout(() => setShowDeleteModal(true), 200);
           }}
         />
       )}

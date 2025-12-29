@@ -27,16 +27,27 @@ interface Commessa {
   nome_commessa: string;
 }
 
+// Extend Rapportino to support both titolo and nome_commessa for backwards compatibility
+type RapportinoExtended = Rapportino & {
+  commesse?: {
+    titolo?: string;
+    slug?: string;
+    nome_commessa?: string;
+  };
+};
+
 interface InfoRapportinoModalProps {
   rapportino: Rapportino;
   users: User[];
   commesse: Commessa[];
-  onClose: () => void;
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
   onUpdate: () => void;
   onDelete?: () => void;
 }
 
-export function InfoRapportinoModal({ rapportino, users, commesse, onClose, onUpdate, onDelete }: InfoRapportinoModalProps) {
+export function InfoRapportinoModal({ rapportino: rapportinoRaw, users, commesse, isOpen, onOpenChange, onUpdate, onDelete }: InfoRapportinoModalProps) {
+  const rapportino = rapportinoRaw as RapportinoExtended;
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editedData, setEditedData] = useState<Partial<Rapportino>>(rapportino);
@@ -193,7 +204,7 @@ export function InfoRapportinoModal({ rapportino, users, commesse, onClose, onUp
       setNewFile(null);
       setDeleteCurrentFile(false);
       onUpdate();
-      onClose();
+      onOpenChange(false);
     } catch (error) {
       console.error('Errore nel salvataggio:', error);
       toast.error('Errore nel salvataggio del rapportino');
@@ -219,7 +230,7 @@ export function InfoRapportinoModal({ rapportino, users, commesse, onClose, onUp
 
       toast.success('Rapportino approvato');
       onUpdate();
-      onClose();
+      onOpenChange(false);
     } catch (error) {
       console.error('Errore nell\'approvazione:', error);
       toast.error('Errore nell\'approvazione del rapportino');
@@ -245,7 +256,7 @@ export function InfoRapportinoModal({ rapportino, users, commesse, onClose, onUp
 
       toast.success('Rapportino rifiutato');
       onUpdate();
-      onClose();
+      onOpenChange(false);
     } catch (error) {
       console.error('Errore nel rifiuto:', error);
       toast.error('Errore nel rifiuto del rapportino');
@@ -256,7 +267,7 @@ export function InfoRapportinoModal({ rapportino, users, commesse, onClose, onUp
 
 
   return (
-    <Sheet open={true} onOpenChange={(open) => !open && onClose()}>
+    <Sheet open={isOpen} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col [&>button]:hidden">
         {/* Header fisso */}
         <div className="px-6 py-4 border-b border-border flex-shrink-0">
@@ -302,9 +313,7 @@ export function InfoRapportinoModal({ rapportino, users, commesse, onClose, onUp
                       {onDelete && (
                         <Button
                           onClick={() => {
-                            // Chiudi prima il sheet per permettere l'animazione
-                            onClose();
-                            // Dopo l'animazione di chiusura, apri il delete modal
+                            onOpenChange(false);
                             setTimeout(() => onDelete(), 200);
                           }}
                           variant="outline"
@@ -328,7 +337,7 @@ export function InfoRapportinoModal({ rapportino, users, commesse, onClose, onUp
                   )}
                   {/* Close button - Always visible when not editing */}
                   <Button
-                    onClick={onClose}
+                    onClick={() => onOpenChange(false)}
                     variant="outline"
                     size="icon"
                     className="h-8 w-8 border-2"
@@ -359,7 +368,7 @@ export function InfoRapportinoModal({ rapportino, users, commesse, onClose, onUp
                   </Button>
                   {/* Close button - Also visible when editing */}
                   <Button
-                    onClick={onClose}
+                    onClick={() => onOpenChange(false)}
                     variant="outline"
                     size="icon"
                     className="h-8 w-8 border-2"
@@ -452,7 +461,7 @@ export function InfoRapportinoModal({ rapportino, users, commesse, onClose, onUp
                       </SelectContent>
                     </Select>
                   ) : (
-                    <p className="font-semibold">{rapportino.commesse?.nome_commessa || 'N/A'}</p>
+                    <p className="font-semibold">{rapportino.commesse?.titolo || rapportino.commesse?.nome_commessa || 'N/A'}</p>
                   )}
                 </div>
 

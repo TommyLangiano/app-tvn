@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { createClient } from '@/lib/supabase/client';
@@ -44,7 +45,8 @@ export function DeleteRapportinoModal({ rapportino, onClose, onDelete }: DeleteR
       if (error) throw error;
 
       toast.success('Rapportino eliminato con successo');
-      onDelete();
+      onClose(); // Chiudi il modal
+      onDelete(); // Ricarica i dati
     } catch {
       toast.error('Errore nell\'eliminazione del rapportino');
     } finally {
@@ -52,15 +54,9 @@ export function DeleteRapportinoModal({ rapportino, onClose, onDelete }: DeleteR
     }
   };
 
-  return (
-    <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4 animate-in fade-in duration-200"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6 space-y-4 relative animate-in zoom-in-95 duration-200 border-2 border-border"
-        onClick={(e) => e.stopPropagation()}
-      >
+  return typeof window !== 'undefined' ? createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 animate-in fade-in duration-200">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6 space-y-4 relative animate-in zoom-in-95 duration-200 border-2 border-border">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
@@ -126,17 +122,11 @@ export function DeleteRapportinoModal({ rapportino, onClose, onDelete }: DeleteR
             disabled={loading}
             className="bg-red-600 hover:bg-red-700 text-white"
           >
-            {loading ? (
-              <>
-                <span className="inline-block animate-spin mr-2">⏳</span>
-                Eliminazione...
-              </>
-            ) : (
-              'Elimina'
-            )}
+            {loading ? 'Eliminazione...' : 'Elimina'}
           </Button>
         </div>
       </div>
-    </div>
-  );
+    </div>,
+    document.body
+  ) : null;
 }
