@@ -301,7 +301,12 @@ export function InfoRapportinoModal({ rapportino, users, commesse, onClose, onUp
                     <>
                       {onDelete && (
                         <Button
-                          onClick={onDelete}
+                          onClick={() => {
+                            // Chiudi prima il sheet per permettere l'animazione
+                            onClose();
+                            // Dopo l'animazione di chiusura, apri il delete modal
+                            setTimeout(() => onDelete(), 200);
+                          }}
                           variant="outline"
                           size="sm"
                           className="gap-2 border-2 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"

@@ -54,11 +54,11 @@ export function DeleteRapportinoModal({ rapportino, onClose, onDelete }: DeleteR
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4"
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4 animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div
-        className="bg-background rounded-xl border-2 border-border max-w-md w-full shadow-2xl"
+        className="bg-background rounded-xl border-2 border-border max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
