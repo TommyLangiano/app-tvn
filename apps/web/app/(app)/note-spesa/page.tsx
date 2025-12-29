@@ -12,7 +12,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import type { NotaSpesa } from '@/types/nota-spesa';
@@ -71,7 +70,7 @@ export default function NoteSpesaPage() {
 
   // Modal states
   const [selectedNotaSpesa, setSelectedNotaSpesa] = useState<NotaSpesa | null>(null);
-  const [showInfoModal, setShowInfoModal] = useState(false);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showNuovaModal, setShowNuovaModal] = useState(false);
   const [modalTipo, setModalTipo] = useState<'approva' | 'rifiuta' | null>(null);
@@ -566,7 +565,7 @@ export default function NoteSpesaPage() {
 
   const handleRowClick = (notaSpesa: NotaSpesa) => {
     setSelectedNotaSpesa(notaSpesa);
-    setShowInfoModal(true);
+    setIsSheetOpen(true);
   };
 
   const handleSort = (field: string) => {
@@ -796,24 +795,18 @@ export default function NoteSpesaPage() {
       </div>
 
       {/* Modals */}
-      <Sheet open={showInfoModal} onOpenChange={setShowInfoModal}>
-        <SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col [&>button]:hidden">
-          {selectedNotaSpesa && (
-            <InfoNotaSpesaModal
-              notaSpesa={selectedNotaSpesa}
-              onClose={() => {
-                setShowInfoModal(false);
-                setSelectedNotaSpesa(null);
-              }}
-              onUpdate={handleNotaSpesaUpdated}
-              onDelete={() => {
-                setShowInfoModal(false);
-                setShowDeleteModal(true);
-              }}
-            />
-          )}
-        </SheetContent>
-      </Sheet>
+      {isSheetOpen && selectedNotaSpesa && (
+        <InfoNotaSpesaModal
+          notaSpesa={selectedNotaSpesa}
+          isOpen={isSheetOpen}
+          onOpenChange={setIsSheetOpen}
+          onUpdate={handleNotaSpesaUpdated}
+          onDelete={() => {
+            setIsSheetOpen(false);
+            setTimeout(() => setShowDeleteModal(true), 200);
+          }}
+        />
+      )}
 
       {showDeleteModal && selectedNotaSpesa && (
         <DeleteNotaSpesaModal

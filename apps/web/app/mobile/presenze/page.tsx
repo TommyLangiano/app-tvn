@@ -231,7 +231,7 @@ export default function MobilePresenzePage() {
         <Popover open={showMonthPicker} onOpenChange={setShowMonthPicker}>
           <PopoverTrigger asChild>
             <button
-              className="h-11 px-6 font-bold text-xl flex-1 hover:text-primary transition-colors"
+              className="h-11 px-6 font-bold text-2xl flex-1 hover:text-primary transition-colors"
               onClick={() => {
                 setSelectedMonth(currentMonth);
                 setSelectedYear(currentYear);

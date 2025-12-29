@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Receipt, X, Edit, Trash2, Save, XCircle, ChevronsUpDown, Check, CloudUpload, FileText, CheckCircle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -30,13 +30,14 @@ interface Commessa {
 
 interface InfoNotaSpesaModalProps {
   notaSpesa: NotaSpesa;
-  onClose: () => void;
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
   onUpdate: () => void;
   onDelete?: () => void;
   onOpenFile?: (path: string) => void;
 }
 
-export function InfoNotaSpesaModal({ notaSpesa, onClose, onUpdate, onDelete, onOpenFile }: InfoNotaSpesaModalProps) {
+export function InfoNotaSpesaModal({ notaSpesa, isOpen, onOpenChange, onUpdate, onDelete, onOpenFile }: InfoNotaSpesaModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editedData, setEditedData] = useState<Partial<NotaSpesa>>(notaSpesa);
@@ -458,9 +459,10 @@ export function InfoNotaSpesaModal({ notaSpesa, onClose, onUpdate, onDelete, onO
   };
 
   return (
-    <>
-      {/* Header fisso */}
-      <div className="px-6 py-4 border-b border-border flex-shrink-0">
+    <Sheet open={isOpen} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col [&>button]:hidden">
+        {/* Header fisso */}
+        <div className="px-6 py-4 border-b border-border flex-shrink-0">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <Receipt className="h-6 w-6 text-primary flex-shrink-0" />
@@ -475,7 +477,7 @@ export function InfoNotaSpesaModal({ notaSpesa, onClose, onUpdate, onDelete, onO
                 {onDelete && (
                   <Button
                     onClick={() => {
-                      onClose();
+                      onOpenChange(false);
                       setTimeout(() => onDelete(), 200);
                     }}
                     variant="outline"
@@ -496,7 +498,7 @@ export function InfoNotaSpesaModal({ notaSpesa, onClose, onUpdate, onDelete, onO
                   Modifica
                 </Button>
                 <Button
-                  onClick={onClose}
+                  onClick={() => onOpenChange(false)}
                   variant="outline"
                   size="icon"
                   className="h-8 w-8 border-2"
@@ -524,6 +526,15 @@ export function InfoNotaSpesaModal({ notaSpesa, onClose, onUpdate, onDelete, onO
                 >
                   <Save className="h-4 w-4" />
                   {isSaving ? 'Salvataggio...' : 'Salva'}
+                </Button>
+                {/* Close button - Also visible when editing */}
+                <Button
+                  onClick={() => onOpenChange(false)}
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8 border-2"
+                >
+                  <X className="h-4 w-4" />
                 </Button>
               </>
             )}
@@ -930,6 +941,7 @@ export function InfoNotaSpesaModal({ notaSpesa, onClose, onUpdate, onDelete, onO
           )}
         </div>
       </div>
-    </>
+      </SheetContent>
+    </Sheet>
   );
 }

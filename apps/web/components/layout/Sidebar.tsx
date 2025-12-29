@@ -57,6 +57,16 @@ const menuStructure = [
     icon: LayoutDashboard
   },
   {
+    type: 'category',
+    label: 'Report',
+    icon: BarChart3,
+    items: [
+      { href: '/report/azienda', label: 'Azienda', icon: Building2 },
+      { href: '/report/hr', label: 'HR', icon: Users },
+      { href: '/report/commesse', label: 'Commesse', icon: Briefcase },
+    ]
+  },
+  {
     type: 'single',
     href: '/commesse',
     label: 'Commesse',
@@ -150,16 +160,6 @@ const menuStructure = [
     label: 'Mezzi e Attrezzature',
     icon: Truck,
     disabled: true
-  },
-  {
-    type: 'category',
-    label: 'Report',
-    icon: BarChart3,
-    items: [
-      { href: '/report/azienda', label: 'Azienda', icon: Building2 },
-      { href: '/report/hr', label: 'HR', icon: Users },
-      { href: '/report/commesse', label: 'Commesse', icon: Briefcase },
-    ]
   },
   {
     type: 'category',

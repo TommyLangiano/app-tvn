@@ -160,8 +160,8 @@ export default function ReportPage() {
       <div className="max-w-[1600px] mx-auto">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Report & Analytics
+          <h1 className="text-4xl font-bold text-foreground mb-2">
+            Report Azienda
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
             Analisi completa delle performance aziendali

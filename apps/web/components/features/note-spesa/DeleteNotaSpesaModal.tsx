@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, AlertTriangle, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ModalWrapper } from '@/components/common/ModalWrapper';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/utils/currency';
@@ -87,9 +87,9 @@ export function DeleteNotaSpesaModal({ notaSpesa, onClose, onDelete }: DeleteNot
     }
   };
 
-  return (
-    <ModalWrapper onClose={onClose}>
-      <div className="max-w-lg w-full mx-auto rounded-xl border-2 border-border bg-card shadow-lg animate-in zoom-in-95 duration-200">
+  return typeof window !== 'undefined' ? createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 animate-in fade-in duration-200">
+      <div className="max-w-lg w-full mx-4 rounded-xl border-2 border-border bg-card shadow-lg animate-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b-2 border-border">
           <div className="flex items-center gap-3">
@@ -205,6 +205,7 @@ export function DeleteNotaSpesaModal({ notaSpesa, onClose, onDelete }: DeleteNot
           </div>
         </div>
       </div>
-    </ModalWrapper>
-  );
+    </div>,
+    document.body
+  ) : null;
 }
