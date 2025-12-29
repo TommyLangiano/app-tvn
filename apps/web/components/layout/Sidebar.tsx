@@ -67,9 +67,9 @@ const menuStructure = [
     icon: Users,
     items: [
       { href: '/dipendenti', label: 'Dipendenti', icon: Users },
-      { href: '/contratti', label: 'Contratti', icon: FileSignature },
-      { href: '/documenti', label: 'Documenti', icon: FolderOpen },
-      { href: '/sicurezza-formazione', label: 'Sicurezza & Formazione', icon: GraduationCap },
+      { href: '/contratti', label: 'Contratti', icon: FileSignature, disabled: true },
+      { href: '/documenti', label: 'Documenti', icon: FolderOpen, disabled: true },
+      { href: '/sicurezza-formazione', label: 'Sicurezza & Formazione', icon: GraduationCap, disabled: true },
     ]
   },
   {
@@ -77,27 +77,29 @@ const menuStructure = [
     label: 'Presenze',
     icon: Clock,
     items: [
-      { href: '/timbrature', label: 'Timbrature', icon: Clock },
+      { href: '/timbrature', label: 'Timbrature', icon: Clock, disabled: true },
       { href: '/registro-presenze', label: 'Registro Presenze', icon: FileText },
-      { href: '/assenze-ferie', label: 'Assenze & Ferie', icon: CalendarX },
-      { href: '/anomalie', label: 'Anomalie', icon: AlertCircle },
-      { href: '/richieste-correzioni', label: 'Richieste & Correzioni', icon: FileCheck },
+      { href: '/assenze-ferie', label: 'Assenze & Ferie', icon: CalendarX, disabled: true },
+      { href: '/anomalie', label: 'Anomalie', icon: AlertCircle, disabled: true },
+      { href: '/richieste-correzioni', label: 'Richieste & Correzioni', icon: FileCheck, disabled: true },
     ]
   },
   {
     type: 'category',
     label: 'Turni',
     icon: Calendar,
+    disabled: true,
     items: [
-      { href: '/calendario-turni', label: 'Calendario Turni', icon: Calendar },
-      { href: '/scambi-modifiche', label: 'Scambi & Modifiche', icon: Repeat },
+      { href: '/calendario-turni', label: 'Calendario Turni', icon: Calendar, disabled: true },
+      { href: '/scambi-modifiche', label: 'Scambi & Modifiche', icon: Repeat, disabled: true },
     ]
   },
   {
     type: 'single',
     href: '/scadenziario',
     label: 'Scadenziario',
-    icon: Calendar
+    icon: Calendar,
+    disabled: true
   },
   {
     type: 'single',
@@ -109,10 +111,11 @@ const menuStructure = [
     type: 'category',
     label: 'Paghe e Contributi',
     icon: Wallet,
+    disabled: true,
     items: [
-      { href: '/buste-paga', label: 'Buste Paga', icon: Banknote },
-      { href: '/f24', label: 'F24', icon: BadgeEuro },
-      { href: '/cedolini', label: 'Cedolini', icon: FileSpreadsheet },
+      { href: '/buste-paga', label: 'Buste Paga', icon: Banknote, disabled: true },
+      { href: '/f24', label: 'F24', icon: BadgeEuro, disabled: true },
+      { href: '/cedolini', label: 'Cedolini', icon: FileSpreadsheet, disabled: true },
     ]
   },
   {
@@ -131,13 +134,15 @@ const menuStructure = [
     type: 'single',
     href: '/magazzino',
     label: 'Magazzino',
-    icon: Package
+    icon: Package,
+    disabled: true
   },
   {
     type: 'single',
     href: '/mezzi-attrezzature',
     label: 'Mezzi e Attrezzature',
-    icon: Truck
+    icon: Truck,
+    disabled: true
   },
   {
     type: 'category',
@@ -153,12 +158,13 @@ const menuStructure = [
     type: 'category',
     label: 'Impostazioni',
     icon: Settings,
+    disabled: true,
     items: [
-      { href: '/impostazioni', label: 'Azienda', icon: Building2 },
-      { href: '/impostazioni/sedi', label: 'Sedi', icon: MapPin },
-      { href: '/impostazioni/regole', label: 'Regole', icon: FileCheck },
-      { href: '/impostazioni/ccnl', label: 'CCNL', icon: FileText },
-      { href: '/impostazioni/permessi-ruoli', label: 'Permessi & Ruoli', icon: Shield },
+      { href: '/impostazioni', label: 'Azienda', icon: Building2, disabled: true },
+      { href: '/impostazioni/sedi', label: 'Sedi', icon: MapPin, disabled: true },
+      { href: '/impostazioni/regole', label: 'Regole', icon: FileCheck, disabled: true },
+      { href: '/impostazioni/ccnl', label: 'CCNL', icon: FileText, disabled: true },
+      { href: '/impostazioni/permessi-ruoli', label: 'Permessi & Ruoli', icon: Shield, disabled: true },
     ]
   },
 ];
@@ -248,6 +254,19 @@ export function Sidebar() {
                 const Icon = item.icon;
                 const href = item.href!; // Type assertion: single items always have href
                 const isActive = pathname === href || pathname.startsWith(href + '/');
+                const isDisabled = item.disabled;
+
+                if (isDisabled) {
+                  return (
+                    <div
+                      key={href}
+                      className="group flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-lg opacity-40 cursor-not-allowed"
+                    >
+                      <Icon className="h-4 w-4 flex-shrink-0 text-gray-400" />
+                      <span className="text-gray-500">{item.label}</span>
+                    </div>
+                  );
+                }
 
                 return (
                   <Link
@@ -275,15 +294,19 @@ export function Sidebar() {
                 const hasActiveChild = item.items?.some(child =>
                   pathname === child.href || pathname.startsWith(child.href + '/')
                 );
+                const isDisabled = item.disabled;
 
                 return (
                   <div key={index}>
                     {/* Category Header */}
                     <button
-                      onClick={() => toggleCategory(item.label)}
+                      onClick={() => !isDisabled && toggleCategory(item.label)}
+                      disabled={isDisabled}
                       className={cn(
                         'w-full group flex items-center justify-between gap-3 px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200',
-                        hasActiveChild
+                        isDisabled
+                          ? 'opacity-40 cursor-not-allowed'
+                          : hasActiveChild
                           ? 'bg-primary/5 text-primary'
                           : 'text-gray-700 dark:text-gray-300 hover:bg-primary/5'
                       )}
@@ -310,6 +333,23 @@ export function Sidebar() {
                         {item.items && item.items.map((subItem, subIndex) => {
                           const SubIcon = subItem.icon;
                           const isActive = pathname === subItem.href || pathname.startsWith(subItem.href + '/');
+                          const isSubDisabled = subItem.disabled;
+
+                          if (isSubDisabled) {
+                            return (
+                              <div
+                                key={subItem.href}
+                                className="group flex items-center gap-3 px-4 py-2 text-sm font-medium rounded-lg opacity-40 cursor-not-allowed"
+                                style={{
+                                  animationDelay: `${subIndex * 50}ms`,
+                                  animation: isExpanded ? 'slideIn 0.3s ease-out forwards' : 'none'
+                                }}
+                              >
+                                <SubIcon className="h-3.5 w-3.5 flex-shrink-0 text-gray-400" />
+                                <span className="text-gray-500">{subItem.label}</span>
+                              </div>
+                            );
+                          }
 
                           return (
                             <Link
