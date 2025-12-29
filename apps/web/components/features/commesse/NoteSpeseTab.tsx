@@ -20,7 +20,6 @@ import { formatCurrency } from '@/lib/utils/currency';
 import { InfoNotaSpesaModal } from '@/components/features/note-spesa/InfoNotaSpesaModal';
 import { DeleteNotaSpesaModal } from '@/components/features/note-spesa/DeleteNotaSpesaModal';
 import { ConfermaNotaSpesaModal } from '@/components/features/note-spesa/ConfermaNotaSpesaModal';
-import { TabsFilter } from '@/components/ui/tabs-filter';
 
 type User = {
   id: string;
@@ -666,38 +665,64 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Tabs - Stile uguale a Fatture */}
-      <TabsFilter<TabType>
-        tabs={[
-          {
-            value: 'approvate',
-            label: 'Approvate',
-            icon: CheckCircle,
-            count: tabCounts.approvate,
-            activeColor: 'border-green-500 text-green-700',
-            badgeClassName: 'bg-primary/10 text-primary',
-          },
-          {
-            value: 'da_approvare',
-            label: 'Da approvare',
-            icon: Clock,
-            count: tabCounts.da_approvare,
-            activeColor: 'border-yellow-500 text-yellow-700',
-            badgeClassName: 'bg-primary/10 text-primary',
-          },
-          {
-            value: 'rifiutate',
-            label: 'Rifiutate',
-            icon: XCircle,
-            count: tabCounts.rifiutate,
-            activeColor: 'border-red-500 text-red-700',
-            badgeClassName: 'bg-primary/10 text-primary',
-          },
-        ]}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-      />
+    <div className="space-y-4">
+      {/* Tabs - Inline style */}
+      <div className="inline-flex rounded-md border border-border bg-background p-1">
+        <button
+          onClick={() => setActiveTab('approvate')}
+          className={`inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+            (activeTab as TabType) === 'approvate'
+              ? 'bg-primary text-primary-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <CheckCircle className="h-4 w-4" />
+          Approvate
+          <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
+            (activeTab as TabType) === 'approvate'
+              ? 'bg-primary-foreground/20 text-primary-foreground'
+              : 'bg-green-100 text-green-700'
+          }`}>
+            {tabCounts.approvate}
+          </span>
+        </button>
+        <button
+          onClick={() => setActiveTab('da_approvare')}
+          className={`inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+            (activeTab as TabType) === 'da_approvare'
+              ? 'bg-primary text-primary-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <Clock className="h-4 w-4" />
+          Da approvare
+          <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
+            (activeTab as TabType) === 'da_approvare'
+              ? 'bg-primary-foreground/20 text-primary-foreground'
+              : 'bg-yellow-100 text-yellow-700'
+          }`}>
+            {tabCounts.da_approvare}
+          </span>
+        </button>
+        <button
+          onClick={() => setActiveTab('rifiutate')}
+          className={`inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+            (activeTab as TabType) === 'rifiutate'
+              ? 'bg-primary text-primary-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <XCircle className="h-4 w-4" />
+          Rifiutate
+          <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
+            (activeTab as TabType) === 'rifiutate'
+              ? 'bg-primary-foreground/20 text-primary-foreground'
+              : 'bg-red-100 text-red-700'
+          }`}>
+            {tabCounts.rifiutate}
+          </span>
+        </button>
+      </div>
 
       {/* Search and Filters - Stile uguale a fatture */}
       <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
