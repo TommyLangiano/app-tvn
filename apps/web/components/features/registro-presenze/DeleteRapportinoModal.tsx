@@ -17,6 +17,9 @@ export function DeleteRapportinoModal({ rapportino, onClose, onDelete }: DeleteR
   const [loading, setLoading] = useState(false);
 
   const getUserDisplayName = () => {
+    if (rapportino.dipendenti) {
+      return `${rapportino.dipendenti.nome} ${rapportino.dipendenti.cognome}`;
+    }
     return rapportino.user_name || rapportino.user_email?.split('@')[0] || 'Utente';
   };
 
@@ -43,7 +46,7 @@ export function DeleteRapportinoModal({ rapportino, onClose, onDelete }: DeleteR
       toast.success('Rapportino eliminato con successo');
       onDelete();
     } catch {
-      toast.error('Errore nell&apos;eliminazione del rapportino');
+      toast.error('Errore nell\'eliminazione del rapportino');
     } finally {
       setLoading(false);
     }
@@ -51,50 +54,71 @@ export function DeleteRapportinoModal({ rapportino, onClose, onDelete }: DeleteR
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4"
       onClick={onClose}
     >
       <div
-        className="bg-background rounded-xl border-2 border-border max-w-md w-full"
+        className="bg-background rounded-xl border-2 border-border max-w-md w-full shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b-2 border-border">
+        <div className="flex items-center justify-between p-6 border-b border-border">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-destructive/10">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
+            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+              <AlertTriangle className="h-5 w-5 text-red-600" />
             </div>
-            <h2 className="text-xl font-bold">Elimina Rapportino</h2>
+            <h3 className="text-lg font-semibold text-gray-900">Elimina Rapportino</h3>
           </div>
           <Button
-            variant="ghost"
-            size="sm"
+            variant="outline"
+            size="icon"
             onClick={onClose}
-            className="rounded-full"
+            className="h-8 w-8 border-2 flex-shrink-0"
+            disabled={loading}
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4" />
           </Button>
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-4">
-          <p>
-            Sei sicuro di voler eliminare il rapportino di <strong>{getUserDisplayName()}</strong> del{' '}
-            <strong>
-              {new Date(rapportino.data_rapportino).toLocaleDateString('it-IT')}
-            </strong>?
+        <div className="p-6 space-y-3">
+          <p className="text-sm text-gray-600">
+            Sei sicuro di voler eliminare questo rapportino?
           </p>
-          <p className="text-sm text-muted-foreground">
+          <div className="bg-gray-50 rounded-lg p-3 space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="font-medium text-gray-700">Dipendente:</span>
+              <span className="text-gray-900">{getUserDisplayName()}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="font-medium text-gray-700">Data:</span>
+              <span className="text-gray-900">
+                {new Date(rapportino.data_rapportino).toLocaleDateString('it-IT')}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="font-medium text-gray-700">Ore:</span>
+              <span className="text-gray-900 font-semibold">{rapportino.ore_lavorate}h</span>
+            </div>
+            {rapportino.commesse && (
+              <div className="flex justify-between">
+                <span className="font-medium text-gray-700">Commessa:</span>
+                <span className="text-gray-900">{rapportino.commesse.nome_commessa}</span>
+              </div>
+            )}
+          </div>
+          <p className="text-sm text-gray-500 italic">
             Questa azione non può essere annullata.
           </p>
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 p-6 border-t-2 border-border">
+        <div className="flex justify-end gap-3 p-6 border-t border-border bg-gray-50 rounded-b-xl">
           <Button
             variant="outline"
             onClick={onClose}
             disabled={loading}
+            className="border-2"
           >
             Annulla
           </Button>
