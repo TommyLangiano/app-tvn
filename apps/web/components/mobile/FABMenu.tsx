@@ -52,7 +52,7 @@ export function FABMenu({ isOpen, onClose, items }: FABMenuProps) {
           />
 
           {/* Menu Items */}
-          <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[65] flex flex-col-reverse gap-4">
+          <div className="fixed bottom-28 left-1/2 -translate-x-1/2 z-[65] flex flex-col-reverse gap-3">
             {defaultItems.map((item, index) => {
               const Icon = item.icon;
               return (
@@ -66,9 +66,9 @@ export function FABMenu({ isOpen, onClose, items }: FABMenuProps) {
                     item.onClick();
                     onClose();
                   }}
-                  className="flex items-center gap-3 bg-white rounded-full shadow-xl px-6 py-4 hover:shadow-2xl transition-shadow"
+                  className="flex items-center gap-3 bg-white rounded-2xl shadow-xl px-6 py-4 hover:shadow-2xl transition-shadow border-2 border-gray-200"
                 >
-                  <div className={`${item.color || 'bg-emerald-600'} rounded-full p-3`}>
+                  <div className={`${item.color || 'bg-emerald-600'} rounded-xl p-3`}>
                     <Icon className="w-6 h-6 text-white" />
                   </div>
                   <span className="font-semibold text-gray-900 pr-2">{item.label}</span>
@@ -76,17 +76,6 @@ export function FABMenu({ isOpen, onClose, items }: FABMenuProps) {
               );
             })}
           </div>
-
-          {/* Close Button (FAB transforms to X) */}
-          <motion.button
-            initial={{ rotate: 0 }}
-            animate={{ rotate: 45 }}
-            exit={{ rotate: 0 }}
-            onClick={onClose}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] w-16 h-16 bg-white rounded-full shadow-2xl flex items-center justify-center transition-transform hover:scale-110 active:scale-95 border-4 border-emerald-600"
-          >
-            <X className="w-8 h-8 text-emerald-600 stroke-[3]" />
-          </motion.button>
         </>
       )}
     </AnimatePresence>
