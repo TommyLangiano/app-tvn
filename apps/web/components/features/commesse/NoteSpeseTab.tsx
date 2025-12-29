@@ -666,66 +666,65 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
 
   return (
     <div className="space-y-4">
-      {/* Tabs - Inline style */}
-      <div className="inline-flex rounded-md border border-border bg-background p-1">
-        <button
-          onClick={() => setActiveTab('approvate')}
-          className={`inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-            (activeTab as TabType) === 'approvate'
-              ? 'bg-primary text-primary-foreground shadow-sm'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <CheckCircle className="h-4 w-4" />
-          Approvate
-          <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
-            (activeTab as TabType) === 'approvate'
-              ? 'bg-primary-foreground/20 text-primary-foreground'
-              : 'bg-green-100 text-green-700'
-          }`}>
-            {tabCounts.approvate}
-          </span>
-        </button>
-        <button
-          onClick={() => setActiveTab('da_approvare')}
-          className={`inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-            (activeTab as TabType) === 'da_approvare'
-              ? 'bg-primary text-primary-foreground shadow-sm'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <Clock className="h-4 w-4" />
-          Da approvare
-          <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
-            (activeTab as TabType) === 'da_approvare'
-              ? 'bg-primary-foreground/20 text-primary-foreground'
-              : 'bg-yellow-100 text-yellow-700'
-          }`}>
-            {tabCounts.da_approvare}
-          </span>
-        </button>
-        <button
-          onClick={() => setActiveTab('rifiutate')}
-          className={`inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-            (activeTab as TabType) === 'rifiutate'
-              ? 'bg-primary text-primary-foreground shadow-sm'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <XCircle className="h-4 w-4" />
-          Rifiutate
-          <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
-            (activeTab as TabType) === 'rifiutate'
-              ? 'bg-primary-foreground/20 text-primary-foreground'
-              : 'bg-red-100 text-red-700'
-          }`}>
-            {tabCounts.rifiutate}
-          </span>
-        </button>
-      </div>
-
-      {/* Search and Filters - Stile uguale a fatture */}
+      {/* Tabs + Search and Filters sulla stessa riga */}
       <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
+        {/* Tabs - Inline style */}
+        <div className="inline-flex rounded-md border border-border bg-background p-1">
+          <button
+            onClick={() => setActiveTab('approvate')}
+            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+              (activeTab as TabType) === 'approvate'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <CheckCircle className="h-4 w-4" />
+            Approvate
+            <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
+              (activeTab as TabType) === 'approvate'
+                ? 'bg-primary-foreground/20 text-primary-foreground'
+                : 'bg-green-100 text-green-700'
+            }`}>
+              {tabCounts.approvate}
+            </span>
+          </button>
+          <button
+            onClick={() => setActiveTab('da_approvare')}
+            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+              (activeTab as TabType) === 'da_approvare'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Clock className="h-4 w-4" />
+            Da approvare
+            <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
+              (activeTab as TabType) === 'da_approvare'
+                ? 'bg-primary-foreground/20 text-primary-foreground'
+                : 'bg-yellow-100 text-yellow-700'
+            }`}>
+              {tabCounts.da_approvare}
+            </span>
+          </button>
+          <button
+            onClick={() => setActiveTab('rifiutate')}
+            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+              (activeTab as TabType) === 'rifiutate'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <XCircle className="h-4 w-4" />
+            Rifiutate
+            <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
+              (activeTab as TabType) === 'rifiutate'
+                ? 'bg-primary-foreground/20 text-primary-foreground'
+                : 'bg-red-100 text-red-700'
+            }`}>
+              {tabCounts.rifiutate}
+            </span>
+          </button>
+        </div>
         {/* Search field */}
         <div className="relative w-full lg:w-[400px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground" />
