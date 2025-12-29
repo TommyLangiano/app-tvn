@@ -26,6 +26,7 @@ import { ProjectTimeline } from './components/charts/ProjectTimeline';
 import { ResourceUtilization } from './components/charts/ResourceUtilization';
 import { ProfitabilityTrends } from './components/charts/ProfitabilityTrends';
 import { WorkingCapital } from './components/charts/WorkingCapital';
+import { RiepilogoEconomicoChart } from './components/charts/RiepilogoEconomicoChart';
 import { exportToPDF } from './components/export/ExportPDF';
 import { exportToExcel } from './components/export/ExportExcel';
 import { getAnalyticsData, type AnalyticsData } from '@/lib/analytics';
@@ -248,6 +249,21 @@ export default function ReportPage() {
             <AlertsPanel alerts={analyticsData.alerts} loading={loading} />
           </div>
         )}
+
+        {/* Riepilogo Economico Generale - Full Width */}
+        <div className="mb-6">
+          <RiepilogoEconomicoChart
+            data={analyticsData?.riepilogoEconomico || {
+              fatturatoPrevisto: 0,
+              fatturatoEmesso: 0,
+              costiTotali: 0,
+              noteSpesa: 0,
+              utileLordo: 0,
+              saldoIva: 0,
+            }}
+            loading={loading}
+          />
+        </div>
 
         {/* Cash Flow Forecast - Full Width */}
         <div className="mb-6">

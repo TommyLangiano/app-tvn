@@ -133,6 +133,14 @@ export interface AnalyticsData {
     giornoPagamentoMedi: number;
     cicloCassa: number;
   };
+  riepilogoEconomico: {
+    fatturatoPrevisto: number;
+    fatturatoEmesso: number;
+    costiTotali: number;
+    noteSpesa: number;
+    utileLordo: number;
+    saldoIva: number;
+  };
 }
 
 export interface AnalyticsFilters {
@@ -200,6 +208,14 @@ function getEmptyAnalyticsData(): AnalyticsData {
       giornoPagamentoMedi: 0,
       cicloCassa: 0,
     },
+    riepilogoEconomico: {
+      fatturatoPrevisto: 0,
+      fatturatoEmesso: 0,
+      costiTotali: 0,
+      noteSpesa: 0,
+      utileLordo: 0,
+      saldoIva: 0,
+    },
   };
 }
 
@@ -251,18 +267,26 @@ export async function getAnalyticsData(filters: AnalyticsFilters): Promise<Analy
     // Fetch fatture attive (revenue)
     const { data: fatture } = await supabase
       .from('fatture_attive')
-      .select('id, commessa_id, data_emissione, importo_totale')
+      .select('id, commessa_id, data_fattura, importo_totale, importo_imponibile, importo_iva')
       .in('commessa_id', commessaIds)
-      .gte('data_emissione', format(filters.dateFrom, 'yyyy-MM-dd'))
-      .lte('data_emissione', format(filters.dateTo, 'yyyy-MM-dd'));
+      .gte('data_fattura', format(filters.dateFrom, 'yyyy-MM-dd'))
+      .lte('data_fattura', format(filters.dateTo, 'yyyy-MM-dd'));
 
     // Fetch fatture passive (costs)
     const { data: fatturePassive } = await supabase
       .from('fatture_passive')
-      .select('id, commessa_id, data_emissione, importo_totale')
+      .select('id, commessa_id, data_fattura, importo_totale, importo_imponibile, importo_iva')
       .in('commessa_id', commessaIds)
-      .gte('data_emissione', format(filters.dateFrom, 'yyyy-MM-dd'))
-      .lte('data_emissione', format(filters.dateTo, 'yyyy-MM-dd'));
+      .gte('data_fattura', format(filters.dateFrom, 'yyyy-MM-dd'))
+      .lte('data_fattura', format(filters.dateTo, 'yyyy-MM-dd'));
+
+    // Fetch note spesa
+    const { data: noteSpesa } = await supabase
+      .from('note_spesa')
+      .select('id, commessa_id, data_nota, importo')
+      .in('commessa_id', commessaIds)
+      .gte('data_nota', format(filters.dateFrom, 'yyyy-MM-dd'))
+      .lte('data_nota', format(filters.dateTo, 'yyyy-MM-dd'));
 
     // Fetch scontrini (costs with categories)
     const { data: scontrini } = await supabase
@@ -318,6 +342,7 @@ export async function getAnalyticsData(filters: AnalyticsFilters): Promise<Analy
       fatture: fatture || [],
       fatturePassive: fatturePassive || [],
       scontrini: scontrini || [],
+      noteSpesa: noteSpesa || [],
       clienti: clientiData,
       rapportini: rapportini || [],
       dipendenti: dipendentiData,
@@ -336,12 +361,13 @@ function buildAnalyticsData(params: {
   fatture: any[];
   fatturePassive: any[];
   scontrini: any[];
+  noteSpesa: any[];
   clienti: any[];
   rapportini: any[];
   dipendenti: any[];
   filters: AnalyticsFilters;
 }): AnalyticsData {
-  const { commesse, fatture, fatturePassive, scontrini, clienti, rapportini, dipendenti, filters } = params;
+  const { commesse, fatture, fatturePassive, scontrini, noteSpesa, clienti, rapportini, dipendenti, filters } = params;
 
   // Calculate total revenue
   const totalRevenue = (fatture || []).reduce((sum, f) => sum + (f.importo_totale || 0), 0);
@@ -402,6 +428,9 @@ function buildAnalyticsData(params: {
   // Enhanced alerts with suggested actions
   const alerts = generateEnhancedAlerts(kpis, marginByProject, cashFlowForecast, agingReport, budgetVsActual);
 
+  // Riepilogo Economico
+  const riepilogoEconomico = calculateRiepilogoEconomico(commesse, fatture, fatturePassive, noteSpesa);
+
   return {
     kpis,
     revenueByMonth,
@@ -417,6 +446,7 @@ function buildAnalyticsData(params: {
     resourceUtilization,
     profitabilityTrends,
     workingCapital,
+    riepilogoEconomico,
   };
 }
 
@@ -572,5 +602,55 @@ function calculateTopClients(commesse: any[], fatture: any[], clienti: any[]) {
     .filter((c: any) => c.fatturato > 0)
     .sort((a: any, b: any) => b.fatturato - a.fatturato)
     .slice(0, 10);
+}
+
+function calculateRiepilogoEconomico(
+  commesse: any[],
+  fatture: any[],
+  fatturePassive: any[],
+  noteSpesa: any[]
+) {
+  // 1. Fatturato Totale Previsto: somma degli importo_commessa di tutte le commesse
+  const fatturatoPrevisto = commesse.reduce((sum, c) => {
+    return sum + (c.importo_commessa || c.budget_commessa || 0);
+  }, 0);
+
+  // 2. Totale Imponibile Fatturato: somma di tutte le fatture emesse (imponibile)
+  const fatturatoEmesso = fatture.reduce((sum, f) => {
+    return sum + (f.importo_imponibile || 0);
+  }, 0);
+
+  // 3. Totale Imponibile Costi: somma di tutte le fatture passive (imponibile)
+  const costiTotali = fatturePassive.reduce((sum, f) => {
+    return sum + (f.importo_imponibile || 0);
+  }, 0);
+
+  // 4. Note spesa: somma di tutte le note spesa
+  const totaleNoteSpesa = noteSpesa.reduce((sum, n) => {
+    return sum + (n.importo || 0);
+  }, 0);
+
+  // 5. Utile Lordo: Fatturato Emesso - Costi Totali - Note spesa
+  const utileLordo = fatturatoEmesso - costiTotali - totaleNoteSpesa;
+
+  // 6. Saldo IVA: IVA fatture passive (IVA a credito) - IVA fatture attive (IVA a debito)
+  const ivaFatturePassive = fatturePassive.reduce((sum, f) => {
+    return sum + (f.importo_iva || 0);
+  }, 0);
+
+  const ivaFattureAttive = fatture.reduce((sum, f) => {
+    return sum + (f.importo_iva || 0);
+  }, 0);
+
+  const saldoIva = ivaFatturePassive - ivaFattureAttive;
+
+  return {
+    fatturatoPrevisto,
+    fatturatoEmesso,
+    costiTotali,
+    noteSpesa: totaleNoteSpesa,
+    utileLordo,
+    saldoIva,
+  };
 }
 
