@@ -105,17 +105,19 @@ export default function ReportAziendaPage() {
 
       const tenantId = userTenant.tenant_id;
 
-      // Fetch commesse per calcolare fatturato previsto
-      const { data: commesse } = await supabase
-        .from('commesse')
-        .select('id, importo_commessa, budget_commessa')
-        .eq('tenant_id', tenantId);
-
-      const commessaIds = (commesse || []).map(c => c.id);
-
       // Formatta le date per Supabase
       const dateFrom = format(range.from, 'yyyy-MM-dd');
       const dateTo = format(range.to, 'yyyy-MM-dd');
+
+      // Fetch commesse per calcolare fatturato previsto - filtrate per data_inizio
+      const { data: commesse } = await supabase
+        .from('commesse')
+        .select('id, importo_commessa, budget_commessa, data_inizio')
+        .eq('tenant_id', tenantId)
+        .gte('data_inizio', dateFrom)
+        .lte('data_inizio', dateTo);
+
+      const commessaIds = (commesse || []).map(c => c.id);
 
       // Ottimizzazione: esegui tutte le query in parallelo con filtri di data
       const [
