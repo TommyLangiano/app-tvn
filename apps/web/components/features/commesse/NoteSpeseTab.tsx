@@ -725,6 +725,10 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
             </span>
           </button>
         </div>
+
+        {/* Divider */}
+        <div className="hidden lg:block h-8 w-px bg-border"></div>
+
         {/* Search field */}
         <div className="relative w-full lg:w-[400px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground" />
