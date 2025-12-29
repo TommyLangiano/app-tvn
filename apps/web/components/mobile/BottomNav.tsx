@@ -65,7 +65,7 @@ export function BottomNav({ items, onFabClick }: BottomNavProps) {
           maxWidth: '64px',
           maxHeight: '64px',
           padding: 0,
-          borderRadius: '16px',
+          borderRadius: '24px',
           backgroundColor: 'white',
           border: '4px solid #059669',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
