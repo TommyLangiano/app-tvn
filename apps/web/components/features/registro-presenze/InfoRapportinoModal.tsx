@@ -275,7 +275,7 @@ export function InfoRapportinoModal({ rapportino, users, commesse, onClose, onUp
                         className="gap-2 border-2 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
                         disabled={isSaving}
                       >
-                        <X className="h-4 w-4" />
+                        <XCircle className="h-4 w-4" />
                         Rifiuta
                       </Button>
                       <Button
@@ -318,6 +318,15 @@ export function InfoRapportinoModal({ rapportino, users, commesse, onClose, onUp
                       </Button>
                     </>
                   )}
+                  {/* Close button - Always visible when not editing */}
+                  <Button
+                    onClick={onClose}
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8 border-2"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
                 </>
               ) : (
                 <>
@@ -339,6 +348,15 @@ export function InfoRapportinoModal({ rapportino, users, commesse, onClose, onUp
                   >
                     <Save className="h-4 w-4" />
                     {isSaving ? 'Salvataggio...' : 'Salva'}
+                  </Button>
+                  {/* Close button - Also visible when editing */}
+                  <Button
+                    onClick={onClose}
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8 border-2"
+                  >
+                    <X className="h-4 w-4" />
                   </Button>
                 </>
               )}
