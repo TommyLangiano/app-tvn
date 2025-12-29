@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Search, Plus, ClipboardCheck, ClipboardList, ClipboardX, Download, Grid3x3, List, X, ChevronRight, User, FileText } from 'lucide-react';
+import { Search, Plus, ClipboardCheck, ClipboardList, ClipboardX, Download, Grid3x3, List, X, ChevronRight, User, FileText, CheckCircle, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -420,8 +420,59 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
   // Calcola totale ore
   const totaleOre = rapportiniFiltrati.reduce((sum, r) => sum + r.ore_lavorate, 0);
 
-  // DataTable columns
-  const columns: DataTableColumn<Rapportino>[] = [
+  // Handlers for inline approval/rejection
+  const handleApprova = async (rapportino: Rapportino) => {
+    try {
+      const supabase = createClient();
+
+      const { error } = await supabase
+        .from('rapportini')
+        .update({ stato: 'approvato' })
+        .eq('id', rapportino.id);
+
+      if (error) throw error;
+
+      toast.success('Rapportino approvato');
+
+      // Reload all lists
+      await Promise.all([
+        loadRapportini(),
+        loadRapportiniDaApprovare(),
+        loadRapportiniRifiutati()
+      ]);
+    } catch (error) {
+      toast.error('Errore nell\'approvazione');
+      console.error(error);
+    }
+  };
+
+  const handleRifiuta = async (rapportino: Rapportino) => {
+    try {
+      const supabase = createClient();
+
+      const { error } = await supabase
+        .from('rapportini')
+        .update({ stato: 'rifiutato' })
+        .eq('id', rapportino.id);
+
+      if (error) throw error;
+
+      toast.success('Rapportino rifiutato');
+
+      // Reload all lists
+      await Promise.all([
+        loadRapportini(),
+        loadRapportiniDaApprovare(),
+        loadRapportiniRifiutati()
+      ]);
+    } catch (error) {
+      toast.error('Errore nel rifiuto');
+      console.error(error);
+    }
+  };
+
+  // Base columns
+  const baseColumns: DataTableColumn<Rapportino>[] = [
     {
       key: 'user_name',
       label: 'Dipendente',
@@ -457,18 +508,60 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
         </span>
       ),
     },
-    {
-      key: 'arrow',
-      label: '',
-      sortable: false,
-      width: 'w-12',
-      render: () => (
-        <div className="flex justify-end">
-          <ChevronRight className="h-5 w-5 text-muted-foreground" />
-        </div>
-      ),
-    },
   ];
+
+  // Colonna azioni per tab "Da Approvare"
+  const azioniColumn: DataTableColumn<Rapportino> = {
+    key: 'azioni',
+    label: 'Azioni',
+    sortable: false,
+    width: 'w-32',
+    render: (rapportino) => (
+      <div className="flex items-center gap-2">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleApprova(rapportino);
+          }}
+          className="inline-flex items-center justify-center hover:bg-green-100 rounded-md p-2 transition-colors group"
+          title="Approva"
+        >
+          <CheckCircle className="h-5 w-5 text-green-600 group-hover:text-green-700" />
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleRifiuta(rapportino);
+          }}
+          className="inline-flex items-center justify-center hover:bg-red-100 rounded-md p-2 transition-colors group"
+          title="Rifiuta"
+        >
+          <XCircle className="h-5 w-5 text-red-600 group-hover:text-red-700" />
+        </button>
+      </div>
+    ),
+  };
+
+  // Arrow column
+  const arrowColumn: DataTableColumn<Rapportino> = {
+    key: 'arrow',
+    label: '',
+    sortable: false,
+    width: 'w-12',
+    render: () => (
+      <div className="flex justify-end">
+        <ChevronRight className="h-5 w-5 text-muted-foreground" />
+      </div>
+    ),
+  };
+
+  // Costruisci le colonne in base al tab attivo
+  const columns: DataTableColumn<Rapportino>[] = useMemo(() => {
+    if (activeRapportiniTab === 'da_approvare') {
+      return [...baseColumns, azioniColumn, arrowColumn];
+    }
+    return [...baseColumns, arrowColumn];
+  }, [activeRapportiniTab]);
 
   const handleRowClick = (rapportino: Rapportino) => {
     setSelectedRapportino(rapportino);
