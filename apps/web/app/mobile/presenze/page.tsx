@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Clock, CheckCircle, AlertCircle, XCircle, Plus } from 'lucide-react';
+import { Clock, CheckCircle, AlertCircle, XCircle, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 
 interface Rapportino {
@@ -24,9 +24,14 @@ export default function MobilePresenzePage() {
   const [rapportini, setRapportini] = useState<Rapportino[]>([]);
   const [filter, setFilter] = useState<'tutti' | 'approvato' | 'da_approvare' | 'rifiutato'>('tutti');
 
+  // Month navigation
+  const now = new Date();
+  const [currentMonth, setCurrentMonth] = useState(now.getMonth());
+  const [currentYear, setCurrentYear] = useState(now.getFullYear());
+
   useEffect(() => {
     loadRapportini();
-  }, []);
+  }, [currentMonth, currentYear]);
 
   const loadRapportini = async () => {
     try {
@@ -44,7 +49,11 @@ export default function MobilePresenzePage() {
 
       if (!dipendente) return;
 
-      // Get rapportini
+      // Get first and last day of selected month
+      const firstDay = new Date(currentYear, currentMonth, 1);
+      const lastDay = new Date(currentYear, currentMonth + 1, 0);
+
+      // Get rapportini for selected month
       const { data } = await supabase
         .from('rapportini')
         .select(`
@@ -59,8 +68,9 @@ export default function MobilePresenzePage() {
           )
         `)
         .eq('dipendente_id', dipendente.id)
-        .order('data_rapportino', { ascending: false })
-        .limit(50);
+        .gte('data_rapportino', firstDay.toISOString().split('T')[0])
+        .lte('data_rapportino', lastDay.toISOString().split('T')[0])
+        .order('data_rapportino', { ascending: false });
 
       // Map data to correct format (Supabase returns commesse as array, we need object)
       const mappedData: Rapportino[] = (data || []).map((item: any) => ({
@@ -118,6 +128,29 @@ export default function MobilePresenzePage() {
     }).format(date);
   };
 
+  const previousMonth = () => {
+    if (currentMonth === 0) {
+      setCurrentMonth(11);
+      setCurrentYear(currentYear - 1);
+    } else {
+      setCurrentMonth(currentMonth - 1);
+    }
+  };
+
+  const nextMonth = () => {
+    if (currentMonth === 11) {
+      setCurrentMonth(0);
+      setCurrentYear(currentYear + 1);
+    } else {
+      setCurrentMonth(currentMonth + 1);
+    }
+  };
+
+  const getMonthName = () => {
+    const months = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+    return `${months[currentMonth]} ${currentYear}`;
+  };
+
   const filteredRapportini = filter === 'tutti'
     ? rapportini
     : rapportini.filter(r => r.stato === filter);
@@ -142,7 +175,7 @@ export default function MobilePresenzePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Presenze</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Registro Presenze</h1>
           <p className="text-sm text-gray-500 mt-1">Storico dei tuoi rapportini</p>
         </div>
         <Link href="/mobile/presenze/nuovo">
@@ -153,7 +186,30 @@ export default function MobilePresenzePage() {
         </Link>
       </div>
 
-      {/* Stats */}
+      {/* Month Navigator */}
+      <div className="flex items-center justify-center gap-2 bg-white border-2 border-border rounded-xl p-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={previousMonth}
+          className="h-10 w-10 p-0"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </Button>
+        <div className="flex-1 text-center">
+          <p className="font-bold text-base">{getMonthName()}</p>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={nextMonth}
+          className="h-10 w-10 p-0"
+        >
+          <ChevronRight className="h-5 w-5" />
+        </Button>
+      </div>
+
+      {/* Stats - Always show all 4 cards */}
       <div className="grid grid-cols-2 gap-3">
         <Card className="p-3 border-2 border-gray-200">
           <p className="text-xs text-gray-500">Totale</p>
@@ -163,18 +219,14 @@ export default function MobilePresenzePage() {
           <p className="text-xs text-green-700">Approvati</p>
           <p className="text-2xl font-bold text-green-900">{stats.approvati}</p>
         </Card>
-        {stats.daApprovare > 0 && (
-          <Card className="p-3 border-2 border-amber-200 bg-amber-50/50">
-            <p className="text-xs text-amber-700">Da approvare</p>
-            <p className="text-2xl font-bold text-amber-900">{stats.daApprovare}</p>
-          </Card>
-        )}
-        {stats.rifiutati > 0 && (
-          <Card className="p-3 border-2 border-red-200 bg-red-50/50">
-            <p className="text-xs text-red-700">Rifiutati</p>
-            <p className="text-2xl font-bold text-red-900">{stats.rifiutati}</p>
-          </Card>
-        )}
+        <Card className="p-3 border-2 border-amber-200 bg-amber-50/50">
+          <p className="text-xs text-amber-700">Da approvare</p>
+          <p className="text-2xl font-bold text-amber-900">{stats.daApprovare}</p>
+        </Card>
+        <Card className="p-3 border-2 border-red-200 bg-red-50/50">
+          <p className="text-xs text-red-700">Rifiutati</p>
+          <p className="text-2xl font-bold text-red-900">{stats.rifiutati}</p>
+        </Card>
       </div>
 
       {/* Filters */}
@@ -199,30 +251,26 @@ export default function MobilePresenzePage() {
         >
           Approvati ({stats.approvati})
         </button>
-        {stats.daApprovare > 0 && (
-          <button
-            onClick={() => setFilter('da_approvare')}
-            className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-              filter === 'da_approvare'
-                ? 'bg-amber-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Da approvare ({stats.daApprovare})
-          </button>
-        )}
-        {stats.rifiutati > 0 && (
-          <button
-            onClick={() => setFilter('rifiutato')}
-            className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-              filter === 'rifiutato'
-                ? 'bg-red-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Rifiutati ({stats.rifiutati})
-          </button>
-        )}
+        <button
+          onClick={() => setFilter('da_approvare')}
+          className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+            filter === 'da_approvare'
+              ? 'bg-amber-600 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          Da approvare ({stats.daApprovare})
+        </button>
+        <button
+          onClick={() => setFilter('rifiutato')}
+          className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+            filter === 'rifiutato'
+              ? 'bg-red-600 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          Rifiutati ({stats.rifiutati})
+        </button>
       </div>
 
       {/* Rapportini List */}
