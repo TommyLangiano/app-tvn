@@ -1964,7 +1964,13 @@ export default function RapportiniPage() {
           onSuccess={() => {
             setShowEditModal(false);
             setSelectedRapportino(null);
-            loadRapportini();
+            if (tenantId) {
+              Promise.all([
+                loadRapportini(tenantId),
+                loadRapportiniDaApprovare(tenantId),
+                loadRapportiniRifiutati(tenantId)
+              ]);
+            }
           }}
         />
       )}
@@ -1979,7 +1985,13 @@ export default function RapportiniPage() {
           onDelete={() => {
             setShowDeleteModal(false);
             setSelectedRapportino(null);
-            loadRapportini();
+            if (tenantId) {
+              Promise.all([
+                loadRapportini(tenantId),
+                loadRapportiniDaApprovare(tenantId),
+                loadRapportiniRifiutati(tenantId)
+              ]);
+            }
           }}
         />
       )}

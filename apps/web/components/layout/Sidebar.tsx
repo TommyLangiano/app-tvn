@@ -112,7 +112,7 @@ const menuStructure = [
     type: 'single',
     href: '/note-spesa',
     label: 'Note Spesa',
-    icon: CreditCard
+    icon: Receipt
   },
   {
     type: 'category',

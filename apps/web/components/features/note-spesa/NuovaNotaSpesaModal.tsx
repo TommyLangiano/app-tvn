@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { X, Upload, Calendar, Euro, RotateCcw, FileText, Trash, Tag } from 'lucide-react';
+import { X, Upload, Calendar, Euro, RotateCcw, FileText, Trash, Tag, ChevronsUpDown, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
 import { ModalWrapper } from '@/components/common/ModalWrapper';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
@@ -16,7 +18,7 @@ import type { CategoriaNotaSpesa } from '@/types/nota-spesa';
 interface NuovaNotaSpesaModalProps {
   onClose: () => void;
   onSuccess: () => void;
-  commessaId: string;
+  commessaId?: string; // Optional - se non fornito mostra ComboBox
 }
 
 const initialFormData = {
@@ -39,11 +41,17 @@ export function NuovaNotaSpesaModal({ onClose, onSuccess, commessaId }: NuovaNot
   const [categorie, setCategorie] = useState<CategoriaNotaSpesa[]>([]);
   const [dipendenti, setDipendenti] = useState<Array<{id: string; nome: string; cognome: string}>>([]);
   const [selectedDipendenteId, setSelectedDipendenteId] = useState<string>('');
+  const [commesse, setCommesse] = useState<Array<{id: string; nome_commessa: string; codice_commessa?: string}>>([]);
+  const [selectedCommessaId, setSelectedCommessaId] = useState<string>(commessaId || '');
+  const [openCommessaCombo, setOpenCommessaCombo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadCategorie();
     loadDipendenti();
+    if (!commessaId) {
+      loadCommesse();
+    }
   }, []);
 
   const loadCategorie = async () => {
@@ -75,6 +83,34 @@ export function NuovaNotaSpesaModal({ onClose, onSuccess, commessaId }: NuovaNot
     }
   };
 
+  const loadCommesse = async () => {
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: userTenants } = await supabase
+        .from('user_tenants')
+        .select('tenant_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!userTenants) return;
+
+      const { data: commesseData } = await supabase
+        .from('commesse')
+        .select('id, nome_commessa, codice_commessa')
+        .eq('tenant_id', userTenants.tenant_id)
+        .order('nome_commessa');
+
+      if (commesseData) {
+        setCommesse(commesseData);
+      }
+    } catch (error) {
+      console.error('Error loading commesse:', error);
+    }
+  };
+
   const loadDipendenti = async () => {
     try {
       const supabase = createClient();
@@ -89,39 +125,55 @@ export function NuovaNotaSpesaModal({ onClose, onSuccess, commessaId }: NuovaNot
 
       if (!userTenants) return;
 
-      // Load dipendenti from commesse_team
-      const { data: teamData } = await supabase
-        .from('commesse_team')
-        .select(`
-          dipendente_id,
-          dipendenti!commesse_team_dipendente_id_fkey (
-            id,
-            nome,
-            cognome
-          )
-        `)
-        .eq('commessa_id', commessaId)
-        .eq('tenant_id', userTenants.tenant_id);
+      let dipendentiList: Array<{id: string; nome: string; cognome: string}> = [];
 
-      if (teamData) {
-        const dipendentiList = teamData.map((t: any) => ({
-          id: t.dipendenti.id,
-          nome: t.dipendenti.nome,
-          cognome: t.dipendenti.cognome
-        }));
-        setDipendenti(dipendentiList);
+      // Se c'è commessaId, carica solo dipendenti del team
+      if (commessaId) {
+        const { data: teamData } = await supabase
+          .from('commesse_team')
+          .select(`
+            dipendente_id,
+            dipendenti!commesse_team_dipendente_id_fkey (
+              id,
+              nome,
+              cognome
+            )
+          `)
+          .eq('commessa_id', commessaId)
+          .eq('tenant_id', userTenants.tenant_id);
 
-        // Auto-select current user's dipendente if exists
-        const { data: currentDipendente } = await supabase
-          .from('dipendenti')
-          .select('id, tenant_id')
-          .eq('user_id', user.id)
-          .eq('tenant_id', userTenants.tenant_id)
-          .single();
-
-        if (currentDipendente && dipendentiList.some(d => d.id === currentDipendente.id)) {
-          setSelectedDipendenteId(currentDipendente.id);
+        if (teamData) {
+          dipendentiList = teamData.map((t: any) => ({
+            id: t.dipendenti.id,
+            nome: t.dipendenti.nome,
+            cognome: t.dipendenti.cognome
+          }));
         }
+      } else {
+        // Altrimenti carica tutti i dipendenti
+        const { data: allDipendenti } = await supabase
+          .from('dipendenti')
+          .select('id, nome, cognome')
+          .eq('tenant_id', userTenants.tenant_id)
+          .order('cognome, nome');
+
+        if (allDipendenti) {
+          dipendentiList = allDipendenti;
+        }
+      }
+
+      setDipendenti(dipendentiList);
+
+      // Auto-select current user's dipendente if exists
+      const { data: currentDipendente } = await supabase
+        .from('dipendenti')
+        .select('id, tenant_id')
+        .eq('user_id', user.id)
+        .eq('tenant_id', userTenants.tenant_id)
+        .single();
+
+      if (currentDipendente && dipendentiList.some(d => d.id === currentDipendente.id)) {
+        setSelectedDipendenteId(currentDipendente.id);
       }
     } catch (error) {
       console.error('Error loading dipendenti:', error);
@@ -212,6 +264,11 @@ export function NuovaNotaSpesaModal({ onClose, onSuccess, commessaId }: NuovaNot
     e.preventDefault();
 
     // Validazione
+    if (!selectedCommessaId) {
+      toast.error('Seleziona una commessa');
+      return;
+    }
+
     if (!selectedDipendenteId) {
       toast.error('Seleziona un dipendente');
       return;
@@ -262,7 +319,7 @@ export function NuovaNotaSpesaModal({ onClose, onSuccess, commessaId }: NuovaNot
       // Upload allegato
       const allegati = [];
       if (selectedFile) {
-        const filePath = `${userTenants.tenant_id}/note-spesa/${commessaId}/${Date.now()}_${selectedFile.file.name}`;
+        const filePath = `${userTenants.tenant_id}/note-spesa/${selectedCommessaId}/${Date.now()}_${selectedFile.file.name}`;
 
         const { error: uploadError } = await supabase.storage
           .from('app-storage')
@@ -286,7 +343,7 @@ export function NuovaNotaSpesaModal({ onClose, onSuccess, commessaId }: NuovaNot
         .from('note_spesa')
         .insert({
           tenant_id: userTenants.tenant_id,
-          commessa_id: commessaId,
+          commessa_id: selectedCommessaId,
           dipendente_id: dipendenteId,
           data_nota: formData.data_nota,
           importo: importoNum,
@@ -368,6 +425,57 @@ export function NuovaNotaSpesaModal({ onClose, onSuccess, commessaId }: NuovaNot
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {/* Commessa - Solo se non è passata come prop */}
+          {!commessaId && (
+            <div className="space-y-2">
+              <Label htmlFor="commessa">
+                Commessa <span className="text-destructive">*</span>
+              </Label>
+              <Popover open={openCommessaCombo} onOpenChange={setOpenCommessaCombo}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={openCommessaCombo}
+                    className="w-full justify-between h-11 border-2 border-border bg-background"
+                  >
+                    {selectedCommessaId
+                      ? commesse.find((c) => c.id === selectedCommessaId)?.nome_commessa
+                      : "Seleziona commessa..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[400px] p-0">
+                  <Command>
+                    <CommandInput placeholder="Cerca commessa..." />
+                    <CommandEmpty>Nessuna commessa trovata.</CommandEmpty>
+                    <CommandGroup className="max-h-64 overflow-auto">
+                      {commesse.map((commessa) => (
+                        <CommandItem
+                          key={commessa.id}
+                          value={commessa.nome_commessa}
+                          onSelect={() => {
+                            setSelectedCommessaId(commessa.id);
+                            setOpenCommessaCombo(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              selectedCommessaId === commessa.id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {commessa.codice_commessa ? `${commessa.codice_commessa} - ` : ''}
+                          {commessa.nome_commessa}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
+
           {/* Dipendente */}
           <div className="space-y-2">
             <Label htmlFor="dipendente">

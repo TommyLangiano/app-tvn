@@ -497,7 +497,13 @@ export function EditRapportinoModal({ rapportino, onClose, onSuccess, commesse }
             <div className="flex items-center justify-between px-4 py-2.5 rounded-lg border-2 border-border bg-background h-11 cursor-not-allowed">
               <div className="flex items-center gap-2 min-w-0">
                 <UserIcon className="h-4 w-4 text-muted-foreground shrink-0" />
-                <span className="font-medium truncate">{rapportino.user_name || rapportino.user_email}</span>
+                <span className="font-medium truncate">
+                  {rapportino.user_name ||
+                   (rapportino.dipendenti ? `${rapportino.dipendenti.nome} ${rapportino.dipendenti.cognome}` : null) ||
+                   rapportino.user_email ||
+                   rapportino.dipendenti?.email ||
+                   'Dipendente'}
+                </span>
               </div>
             </div>
           </div>
