@@ -251,7 +251,7 @@ export function InfoRapportinoModal({ rapportino, users, commesse, onClose, onUp
 
   return (
     <Sheet open={true} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col" hideCloseButton>
+      <SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col [&>button]:hidden">
         {/* Header fisso */}
         <div className="px-6 py-4 border-b border-border flex-shrink-0">
           <div className="flex items-center justify-between gap-4">
@@ -297,7 +297,7 @@ export function InfoRapportinoModal({ rapportino, users, commesse, onClose, onUp
                         <Button
                           onClick={() => {
                             onClose();
-                            setTimeout(() => onDelete(), 200);
+                            setTimeout(() => onDelete(), 300);
                           }}
                           variant="outline"
                           size="sm"
