@@ -1,13 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FileText, Edit, Trash2, Save, XCircle, Upload, Trash, Check, X, AlertTriangle } from 'lucide-react';
+import { FileText, Edit, Trash2, Save, XCircle, Upload, Trash, Check, X } from 'lucide-react';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { getSignedUrl } from '@/lib/utils/storage';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
@@ -40,8 +39,6 @@ interface InfoRapportinoModalProps {
 export function InfoRapportinoModal({ rapportino, users, commesse, onClose, onUpdate, onDelete }: InfoRapportinoModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [editedData, setEditedData] = useState<Partial<Rapportino>>(rapportino);
   const [allegatoUrl, setAllegatoUrl] = useState<string | null>(null);
   const [newFile, setNewFile] = useState<File | null>(null);
@@ -99,6 +96,11 @@ export function InfoRapportinoModal({ rapportino, users, commesse, onClose, onUp
   };
 
   const getUserDisplayName = (rapp: Rapportino) => {
+    // Prima prova con i dati del dipendente (joined data)
+    if (rapp.dipendenti) {
+      return `${rapp.dipendenti.cognome} ${rapp.dipendenti.nome}`;
+    }
+    // Altrimenti usa user_name o email
     return rapp.user_name || rapp.user_email?.split('@')[0] || 'Utente';
   };
 
