@@ -21,9 +21,9 @@ export function BottomNav({ items, onFabClick }: BottomNavProps) {
   return (
     <>
       {/* Floating Bottom Navigation Bar */}
-      <div className="fixed bottom-4 left-4 right-4 z-50 pointer-events-none">
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
         <nav className="relative bg-emerald-600 rounded-2xl shadow-2xl border-2 border-gray-300 pointer-events-auto">
-          <div className="relative flex items-center justify-around h-16 px-2">
+          <div className="relative flex items-center justify-center gap-2 h-16 px-6">
             {items.map((item, index) => {
               const Icon = item.icon;
               const isActive = pathname.startsWith(item.href);
@@ -33,7 +33,7 @@ export function BottomNav({ items, onFabClick }: BottomNavProps) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex flex-col items-center justify-center flex-1 h-full space-y-0.5 transition-all ${
+                  className={`flex items-center justify-center w-12 h-12 transition-all ${
                     isMiddle ? 'invisible' : ''
                   } ${
                     isActive
@@ -41,10 +41,7 @@ export function BottomNav({ items, onFabClick }: BottomNavProps) {
                       : 'text-emerald-100 hover:text-white'
                   }`}
                 >
-                  <Icon className={`w-6 h-6 ${isActive ? 'stroke-[2.5]' : 'stroke-2'}`} />
-                  <span className={`text-[10px] font-medium ${isActive ? 'font-bold' : 'font-normal'}`}>
-                    {item.label}
-                  </span>
+                  <Icon className={`w-7 h-7 ${isActive ? 'stroke-[2.5]' : 'stroke-2'}`} />
                 </Link>
               );
             })}
