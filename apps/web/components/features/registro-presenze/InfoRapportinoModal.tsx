@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FileText, Edit, Trash2, Save, XCircle, Upload, Trash, Check, X } from 'lucide-react';
+import { FileText, Edit, Trash2, Save, XCircle, Upload, Trash, Check, X, AlertTriangle } from 'lucide-react';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { getSignedUrl } from '@/lib/utils/storage';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
@@ -39,6 +40,8 @@ interface InfoRapportinoModalProps {
 export function InfoRapportinoModal({ rapportino, users, commesse, onClose, onUpdate, onDelete }: InfoRapportinoModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [editedData, setEditedData] = useState<Partial<Rapportino>>(rapportino);
   const [allegatoUrl, setAllegatoUrl] = useState<string | null>(null);
   const [newFile, setNewFile] = useState<File | null>(null);
@@ -249,6 +252,38 @@ export function InfoRapportinoModal({ rapportino, users, commesse, onClose, onUp
     }
   };
 
+  const handleDeleteConfirm = async () => {
+    try {
+      setIsDeleting(true);
+      const supabase = createClient();
+
+      // Delete file if exists
+      if (rapportino.allegato_url) {
+        await supabase.storage
+          .from('app-storage')
+          .remove([rapportino.allegato_url]);
+      }
+
+      // Delete rapportino
+      const { error } = await supabase
+        .from('rapportini')
+        .delete()
+        .eq('id', rapportino.id);
+
+      if (error) throw error;
+
+      toast.success('Rapportino eliminato con successo');
+      setShowDeleteDialog(false);
+      onClose();
+      if (onDelete) onDelete();
+    } catch (error) {
+      console.error('Errore nell\'eliminazione:', error);
+      toast.error('Errore nell\'eliminazione del rapportino');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <Sheet open={true} onOpenChange={(open) => !open && onClose()}>
       <SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col [&>button]:hidden">
@@ -295,10 +330,7 @@ export function InfoRapportinoModal({ rapportino, users, commesse, onClose, onUp
                     <>
                       {onDelete && (
                         <Button
-                          onClick={() => {
-                            onClose();
-                            setTimeout(() => onDelete(), 300);
-                          }}
+                          onClick={() => setShowDeleteDialog(true)}
                           variant="outline"
                           size="sm"
                           className="gap-2 border-2 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
@@ -444,7 +476,7 @@ export function InfoRapportinoModal({ rapportino, users, commesse, onClose, onUp
                       </SelectContent>
                     </Select>
                   ) : (
-                    <p className="font-semibold">{rapportino.commesse?.titolo || 'N/A'}</p>
+                    <p className="font-semibold">{rapportino.commesse?.nome_commessa || 'N/A'}</p>
                   )}
                 </div>
 
@@ -603,6 +635,45 @@ export function InfoRapportinoModal({ rapportino, users, commesse, onClose, onUp
           </div>
         </div>
       </SheetContent>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 rounded-lg bg-destructive/10">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+              </div>
+              <DialogTitle>Elimina Rapportino</DialogTitle>
+            </div>
+            <DialogDescription>
+              Sei sicuro di voler eliminare questo rapportino?
+              <br />
+              <span className="font-semibold mt-2 block">
+                {getUserDisplayName(rapportino)} - {new Date(rapportino.data_rapportino).toLocaleDateString('it-IT')} - {rapportino.ore_lavorate}h
+              </span>
+              <br />
+              Questa azione non può essere annullata.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteDialog(false)}
+              disabled={isDeleting}
+            >
+              Annulla
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+            >
+              {isDeleting ? 'Eliminazione...' : 'Elimina'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Sheet>
   );
 }
