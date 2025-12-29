@@ -5,7 +5,24 @@ import { createClient } from '@/lib/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Clock, CheckCircle, AlertCircle, XCircle, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import Link from 'next/link';
+
+const MESI = [
+  'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+  'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
+];
 
 interface Rapportino {
   id: string;
@@ -28,6 +45,14 @@ export default function MobilePresenzePage() {
   const now = new Date();
   const [currentMonth, setCurrentMonth] = useState(now.getMonth());
   const [currentYear, setCurrentYear] = useState(now.getFullYear());
+
+  // Popover state
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+
+  // Generate years (current year ± 5 years)
+  const years = Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i);
 
   useEffect(() => {
     loadRapportini();
@@ -147,8 +172,13 @@ export default function MobilePresenzePage() {
   };
 
   const getMonthName = () => {
-    const months = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
-    return `${months[currentMonth]} ${currentYear}`;
+    return `${MESI[currentMonth]} ${currentYear}`;
+  };
+
+  const applyMonthYearSelection = () => {
+    setCurrentMonth(selectedMonth);
+    setCurrentYear(selectedYear);
+    setShowMonthPicker(false);
   };
 
   const filteredRapportini = filter === 'tutti'
@@ -174,63 +204,112 @@ export default function MobilePresenzePage() {
     <div className="p-4 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Registro Presenze</h1>
-          <p className="text-sm text-gray-500 mt-1">Storico dei tuoi rapportini</p>
-        </div>
+        <h1 className="text-2xl font-bold text-gray-900">Registro Presenze</h1>
         <Link href="/mobile/presenze/nuovo">
-          <Button className="bg-emerald-600 hover:bg-emerald-700">
-            <Plus className="w-4 h-4 mr-2" />
-            Nuovo
+          <Button className="bg-emerald-600 hover:bg-emerald-700 h-10 w-10 p-0">
+            <Plus className="w-5 h-5" />
           </Button>
         </Link>
       </div>
 
       {/* Month Navigator */}
-      <div className="flex items-center justify-center gap-2 bg-white border-2 border-border rounded-xl p-2">
+      <div className="flex items-center rounded-lg bg-card overflow-hidden">
         <Button
           variant="ghost"
           size="sm"
           onClick={previousMonth}
-          className="h-10 w-10 p-0"
+          className="h-11 w-11 p-0 rounded-none border-0"
         >
-          <ChevronLeft className="h-5 w-5" />
+          <ChevronLeft className="h-6 w-6" />
         </Button>
-        <div className="flex-1 text-center">
-          <p className="font-bold text-base">{getMonthName()}</p>
-        </div>
+
+        <div className="w-px h-7 bg-border" />
+
+        <Popover open={showMonthPicker} onOpenChange={setShowMonthPicker}>
+          <PopoverTrigger asChild>
+            <button
+              className="h-11 px-6 font-bold text-xl flex-1 hover:text-primary transition-colors"
+              onClick={() => {
+                setSelectedMonth(currentMonth);
+                setSelectedYear(currentYear);
+              }}
+            >
+              {getMonthName()}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-4" align="center">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Anno</label>
+                <Select
+                  value={String(selectedYear)}
+                  onValueChange={(value) => setSelectedYear(Number(value))}
+                >
+                  <SelectTrigger className="w-full border-2 border-border bg-card">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {years.map(year => (
+                      <SelectItem key={year} value={String(year)}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Mese</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {MESI.map((mese, index) => (
+                    <Button
+                      key={index}
+                      variant={selectedMonth === index ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setSelectedMonth(index)}
+                      className="text-xs"
+                    >
+                      {mese.substring(0, 3)}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <hr className="border-border" />
+
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowMonthPicker(false)}
+                >
+                  Annulla
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={applyMonthYearSelection}
+                >
+                  Applica
+                </Button>
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
+
+        <div className="w-px h-7 bg-border" />
+
         <Button
           variant="ghost"
           size="sm"
           onClick={nextMonth}
-          className="h-10 w-10 p-0"
+          className="h-11 w-11 p-0 rounded-none border-0"
         >
-          <ChevronRight className="h-5 w-5" />
+          <ChevronRight className="h-6 w-6" />
         </Button>
       </div>
 
-      {/* Stats - Always show all 4 cards */}
-      <div className="grid grid-cols-2 gap-3">
-        <Card className="p-3 border-2 border-gray-200">
-          <p className="text-xs text-gray-500">Totale</p>
-          <p className="text-2xl font-bold text-gray-900">{stats.totale}</p>
-        </Card>
-        <Card className="p-3 border-2 border-green-200 bg-green-50/50">
-          <p className="text-xs text-green-700">Approvati</p>
-          <p className="text-2xl font-bold text-green-900">{stats.approvati}</p>
-        </Card>
-        <Card className="p-3 border-2 border-amber-200 bg-amber-50/50">
-          <p className="text-xs text-amber-700">Da approvare</p>
-          <p className="text-2xl font-bold text-amber-900">{stats.daApprovare}</p>
-        </Card>
-        <Card className="p-3 border-2 border-red-200 bg-red-50/50">
-          <p className="text-xs text-red-700">Rifiutati</p>
-          <p className="text-2xl font-bold text-red-900">{stats.rifiutati}</p>
-        </Card>
-      </div>
-
       {/* Filters */}
-      <div className="flex gap-2 overflow-x-auto pb-2">
+      <div className="grid grid-cols-2 gap-2">
         <button
           onClick={() => setFilter('tutti')}
           className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${

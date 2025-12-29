@@ -29,7 +29,8 @@ import {
   FileCheck,
   Banknote,
   BadgeEuro,
-  FileSpreadsheet
+  FileSpreadsheet,
+  CreditCard
 } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -106,6 +107,12 @@ const menuStructure = [
     href: '/fatture',
     label: 'Fatture',
     icon: Receipt
+  },
+  {
+    type: 'single',
+    href: '/note-spesa',
+    label: 'Note Spesa',
+    icon: CreditCard
   },
   {
     type: 'category',

@@ -1273,7 +1273,7 @@ export function RapportiniSection({ commessaId, hideMonthSelector = false }: Rap
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         {/* Month Navigator */}
         {!hideMonthSelector && (
-          <div className="flex items-center rounded-lg border-2 border-border bg-card overflow-hidden">
+          <div className="flex items-center rounded-lg bg-card overflow-hidden">
             <Button
               variant="ghost"
               size="sm"

@@ -71,8 +71,8 @@ export default function RapportiniPage() {
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
 
   // Tab state
-  type TabType = 'approvate' | 'da_approvare' | 'rifiutate';
-  const [activeTab, setActiveTab] = useState<TabType>('approvate');
+  type TabType = 'tutti' | 'approvate' | 'da_approvare' | 'rifiutate';
+  const [activeTab, setActiveTab] = useState<TabType>('tutti');
 
   // DataTable sorting states
   const [sortField, setSortField] = useState<string>('data_rapportino');
@@ -1444,22 +1444,29 @@ export default function RapportiniPage() {
       <TabsFilter<TabType>
         tabs={[
           {
+            value: 'tutti',
+            label: 'Tutti',
+            icon: ClipboardList,
+            count: tabCounts.approvate + tabCounts.da_approvare + tabCounts.rifiutate,
+            badgeClassName: 'bg-primary/10 text-primary',
+          },
+          {
             value: 'approvate',
-            label: 'Approvate',
+            label: 'Approvati',
             icon: ClipboardCheck,
             count: tabCounts.approvate,
             badgeClassName: 'bg-primary/10 text-primary',
           },
           {
             value: 'da_approvare',
-            label: 'Da Approvare',
+            label: 'Da approvare',
             icon: ClipboardList,
             count: tabCounts.da_approvare,
             badgeClassName: 'bg-primary/10 text-primary',
           },
           {
             value: 'rifiutate',
-            label: 'Rifiutate',
+            label: 'Rifiutati',
             icon: ClipboardX,
             count: tabCounts.rifiutate,
             badgeClassName: 'bg-primary/10 text-primary',
@@ -1467,11 +1474,12 @@ export default function RapportiniPage() {
         ]}
         activeTab={activeTab}
         onTabChange={setActiveTab}
+        twoRows
       />
 
 
       {/* Search Bar and Filters */}
-      {(activeTab === 'approvate' || activeTab === 'da_approvare' || activeTab === 'rifiutate') && (
+      {(activeTab === 'tutti' || activeTab === 'approvate' || activeTab === 'da_approvare' || activeTab === 'rifiutate') && (
       <div className="space-y-0">
         <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
           {/* Search Bar - stile Fatture */}
@@ -1535,8 +1543,8 @@ export default function RapportiniPage() {
       </div>
       )}
 
-      {/* Month Navigator + Export + View Toggle - Only for 'approvate' tab */}
-      {activeTab === 'approvate' && (
+      {/* Month Navigator + Export + View Toggle - Only for 'tutti' and 'approvate' tabs */}
+      {(activeTab === 'tutti' || activeTab === 'approvate') && (
         <div className="flex items-center justify-between gap-3">
           <div className="flex-1" />
 
@@ -1651,8 +1659,8 @@ export default function RapportiniPage() {
         />
       )}
 
-      {/* Grid View - Timesheet Style - Only for 'approvate' tab */}
-      {viewMode === 'grid' && activeTab === 'approvate' && (
+      {/* Grid View - Timesheet Style - Only for 'tutti' and 'approvate' tabs */}
+      {viewMode === 'grid' && (activeTab === 'tutti' || activeTab === 'approvate') && (
         <div className="rounded-xl border-2 border-border bg-card overflow-hidden">
           <div
             className="overflow-x-auto"

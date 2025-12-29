@@ -22,6 +22,7 @@ export interface TabsFilterProps<T extends string = string> {
   onTabChange: (tab: T) => void;
   rightContent?: ReactNode;
   className?: string;
+  twoRows?: boolean;
 }
 
 // ===== COMPONENT =====
@@ -32,7 +33,53 @@ export function TabsFilter<T extends string = string>({
   onTabChange,
   rightContent,
   className,
+  twoRows = false,
 }: TabsFilterProps<T>) {
+  if (twoRows) {
+    return (
+      <div className={cn("border-b border-border", className)}>
+        <div className="grid grid-cols-2 gap-0">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.value;
+
+            return (
+              <button
+                key={tab.value}
+                onClick={() => onTabChange(tab.value)}
+                className={cn(
+                  "flex items-center justify-center gap-2 px-4 py-3 border-b-2 transition-colors",
+                  isActive
+                    ? tab.activeColor || 'border-primary text-primary bg-primary/5'
+                    : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-gray-50'
+                )}
+              >
+                {Icon && <Icon className="h-4 w-4" />}
+                <span className="font-medium">{tab.label}</span>
+                {tab.count !== undefined && (
+                  <Badge
+                    variant="secondary"
+                    className={cn(
+                      "pointer-events-none",
+                      tab.badgeClassName
+                    )}
+                  >
+                    {tab.count}
+                  </Badge>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        {rightContent && (
+          <div className="flex gap-1 px-4 py-2">
+            {rightContent}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className={cn("flex items-center justify-between border-b border-border", className)}>
       <div className="flex gap-6">
