@@ -604,8 +604,8 @@ export default function DipendenteDetailPage() {
           const patentiFiltered = (sectionData.patenti.patente_guida as string[]).filter(p => p.trim() !== '');
           const patentiniFiltered = (sectionData.patenti.patentini as string[]).filter(p => p.trim() !== '');
           updateData = {
-            patente_guida: patentiFiltered.length > 0 ? patentiFiltered : null,
-            patentini: patentiniFiltered.length > 0 ? patentiniFiltered : null
+            patente_guida: patentiFiltered.length > 0 ? patentiFiltered : undefined,
+            patentini: patentiniFiltered.length > 0 ? patentiniFiltered : undefined
           };
           break;
         case 'contratto':
