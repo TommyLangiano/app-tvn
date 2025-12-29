@@ -1474,7 +1474,6 @@ export default function RapportiniPage() {
         ]}
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        twoRows
       />
 
 
@@ -2007,7 +2006,13 @@ export default function RapportiniPage() {
             setShowNuovoModal(false);
             setPrefilledUserId('');
             setPrefilledDate('');
-            loadRapportini();
+            if (tenantId) {
+              Promise.all([
+                loadRapportini(tenantId),
+                loadRapportiniDaApprovare(tenantId),
+                loadRapportiniRifiutati(tenantId)
+              ]);
+            }
           }}
           users={users}
           commesse={commesse}

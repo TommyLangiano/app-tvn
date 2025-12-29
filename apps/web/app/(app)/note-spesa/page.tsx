@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Receipt, Plus, Search, FileText, ChevronRight, User, Calendar } from 'lucide-react';
+import { Receipt, Plus, Search, FileText, ChevronRight, User, Calendar, Clock, CheckCircle, XCircle, Trash2 } from 'lucide-react';
 import { DataTable, DataTableColumn } from '@/components/ui/data-table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TabsFilter, TabItem } from '@/components/ui/tabs-filter';
@@ -21,6 +22,7 @@ type TabType = 'tutte' | 'in_attesa' | 'approvate' | 'rifiutate';
 
 interface NotaSpesa {
   id: string;
+  tenant_id?: string;
   numero_nota?: string;
   dipendente_id: string;
   commessa_id: string;
@@ -36,6 +38,7 @@ interface NotaSpesa {
   approvata_da?: string | null;
   approvata_il?: string | null;
   created_at: string;
+  created_by?: string;
   updated_at?: string;
   dipendenti?: {
     id: string;
@@ -63,6 +66,13 @@ interface Commessa {
   codice_commessa?: string;
 }
 
+interface CategoriaNotaSpesa {
+  id: string;
+  nome: string;
+  descrizione?: string;
+  tenant_id: string;
+}
+
 export default function NoteSpesaPage() {
   const [activeTab, setActiveTab] = useState<TabType>('tutte');
   const [noteSpese, setNoteSpese] = useState<NotaSpesa[]>([]);
@@ -78,6 +88,7 @@ export default function NoteSpesaPage() {
   // Data for filters
   const [dipendenti, setDipendenti] = useState<Dipendente[]>([]);
   const [commesse, setCommesse] = useState<Commessa[]>([]);
+  const [categorie, setCategorie] = useState<CategoriaNotaSpesa[]>([]);
 
   // Modals & Sheets
   const [showNuovaModal, setShowNuovaModal] = useState(false);
@@ -85,18 +96,14 @@ export default function NoteSpesaPage() {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
+  // Bulk selection and delete
+  const [selectedNoteSpese, setSelectedNoteSpese] = useState<Set<string>>(new Set());
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [isDeletingBulk, setIsDeletingBulk] = useState(false);
+
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
-
-  const CATEGORIE_NOTA_SPESA = [
-    'Carburante',
-    'Vitto',
-    'Alloggio',
-    'Trasporti',
-    'Materiali',
-    'Altro'
-  ];
 
   useEffect(() => {
     loadData();
@@ -159,6 +166,15 @@ export default function NoteSpesaPage() {
         .order('nome_commessa');
 
       setCommesse(commData || []);
+
+      // Load categorie from database
+      const { data: catData } = await supabase
+        .from('categorie_note_spesa')
+        .select('*')
+        .eq('tenant_id', userTenant.tenant_id)
+        .order('nome');
+
+      setCategorie(catData || []);
     } catch (error) {
       console.error('Error loading data:', error);
       toast.error('Errore nel caricamento dei dati');
@@ -240,10 +256,10 @@ export default function NoteSpesaPage() {
   };
 
   const tabs: TabItem<TabType>[] = [
-    { value: 'tutte', label: 'Tutte', count: counts.tutte },
-    { value: 'in_attesa', label: 'In Attesa', count: counts.in_attesa },
-    { value: 'approvate', label: 'Approvate', count: counts.approvate },
-    { value: 'rifiutate', label: 'Rifiutate', count: counts.rifiutate },
+    { value: 'tutte', label: 'Tutte', icon: Receipt, count: counts.tutte },
+    { value: 'in_attesa', label: 'In Attesa', icon: Clock, count: counts.in_attesa },
+    { value: 'approvate', label: 'Approvate', icon: CheckCircle, count: counts.approvate },
+    { value: 'rifiutate', label: 'Rifiutate', icon: XCircle, count: counts.rifiutate },
   ];
 
   const handleRowClick = (notaSpesa: NotaSpesa) => {
@@ -266,18 +282,43 @@ export default function NoteSpesaPage() {
     loadData();
   };
 
+  const handleBulkDelete = async () => {
+    try {
+      setIsDeletingBulk(true);
+      const supabase = createClient();
+
+      // Delete all selected note spese
+      const { error } = await supabase
+        .from('note_spesa')
+        .delete()
+        .in('id', Array.from(selectedNoteSpese));
+
+      if (error) throw error;
+
+      toast.success(`${selectedNoteSpese.size} note spesa eliminate con successo`);
+      setSelectedNoteSpese(new Set());
+      setShowBulkDeleteModal(false);
+      loadData();
+    } catch (error) {
+      console.error('Error deleting note spese:', error);
+      toast.error('Errore nell\'eliminazione delle note spesa');
+    } finally {
+      setIsDeletingBulk(false);
+    }
+  };
+
   const getStatoBadge = (stato: string) => {
     const badges = {
-      'in_attesa': { label: 'In Attesa', class: 'bg-yellow-100 text-yellow-700' },
-      'da_approvare': { label: 'Da Approvare', class: 'bg-yellow-100 text-yellow-700' },
-      'approvata': { label: 'Approvata', class: 'bg-green-100 text-green-700' },
-      'rifiutata': { label: 'Rifiutata', class: 'bg-red-100 text-red-700' },
+      'in_attesa': { label: 'In Attesa', class: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
+      'da_approvare': { label: 'Da Approvare', class: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
+      'approvata': { label: 'Approvata', class: 'bg-green-100 text-green-800 border-green-200' },
+      'rifiutata': { label: 'Rifiutata', class: 'bg-red-100 text-red-800 border-red-200' },
     };
-    const badge = badges[stato as keyof typeof badges] || { label: stato, class: 'bg-gray-100 text-gray-700' };
+    const badge = badges[stato as keyof typeof badges] || { label: stato, class: 'bg-gray-100 text-gray-800 border-gray-200' };
     return (
-      <span className={cn('px-2.5 py-1 rounded-full text-xs font-semibold', badge.class)}>
+      <Badge className={cn(badge.class)}>
         {badge.label}
-      </span>
+      </Badge>
     );
   };
 
@@ -423,8 +464,8 @@ export default function NoteSpesaPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="tutte">Tutte le categorie</SelectItem>
-            {CATEGORIE_NOTA_SPESA.map((cat) => (
-              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+            {categorie.map((cat) => (
+              <SelectItem key={cat.id} value={cat.nome}>{cat.nome}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -460,12 +501,31 @@ export default function NoteSpesaPage() {
         </Select>
       </div>
 
+      {/* Bulk Delete Button */}
+      {selectedNoteSpese.size > 0 && (
+        <div className="flex items-center justify-between bg-muted/50 rounded-lg border-2 border-border p-4">
+          <div className="text-sm font-medium">
+            {selectedNoteSpese.size} {selectedNoteSpese.size === 1 ? 'nota spesa selezionata' : 'note spesa selezionate'}
+          </div>
+          <Button
+            onClick={() => setShowBulkDeleteModal(true)}
+            variant="outline"
+            className="gap-2 bg-red-50 text-red-600 border-red-200 hover:bg-red-100 hover:text-red-700"
+          >
+            <Trash2 className="h-4 w-4" />
+            Elimina selezionate
+          </Button>
+        </div>
+      )}
+
       {/* DataTable */}
       <DataTable
         data={paginatedNoteSpese}
         columns={columns}
         loading={loading}
         onRowClick={handleRowClick}
+        selectedRows={selectedNoteSpese}
+        onSelectionChange={setSelectedNoteSpese}
         emptyTitle="Nessuna nota spesa trovata"
         emptyDescription="Non ci sono note spesa da visualizzare"
       />
@@ -545,6 +605,50 @@ export default function NoteSpesaPage() {
           onClose={() => setShowDeleteModal(false)}
           onDelete={handleDeleteConfirm}
         />,
+        document.body
+      )}
+
+      {/* Bulk Delete Modal */}
+      {showBulkDeleteModal && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-10 w-10 rounded-lg bg-red-100 flex items-center justify-center">
+                <Trash2 className="h-5 w-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold">Elimina note spesa</h3>
+                <p className="text-sm text-muted-foreground">
+                  Conferma l'eliminazione
+                </p>
+              </div>
+            </div>
+
+            <p className="text-sm text-foreground mb-6">
+              Sei sicuro di voler eliminare {selectedNoteSpese.size} {selectedNoteSpese.size === 1 ? 'nota spesa' : 'note spesa'}?
+              Questa azione non può essere annullata.
+            </p>
+
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setShowBulkDeleteModal(false)}
+                disabled={isDeletingBulk}
+              >
+                Annulla
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleBulkDelete}
+                disabled={isDeletingBulk}
+                className="gap-2"
+              >
+                <Trash2 className="h-4 w-4" />
+                {isDeletingBulk ? 'Eliminazione...' : 'Elimina'}
+              </Button>
+            </div>
+          </div>
+        </div>,
         document.body
       )}
     </div>
