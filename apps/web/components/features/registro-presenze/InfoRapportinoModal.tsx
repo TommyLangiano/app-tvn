@@ -301,10 +301,7 @@ export function InfoRapportinoModal({ rapportino, users, commesse, onClose, onUp
                     <>
                       {onDelete && (
                         <Button
-                          onClick={() => {
-                            onClose();
-                            setTimeout(() => onDelete(), 300);
-                          }}
+                          onClick={onDelete}
                           variant="outline"
                           size="sm"
                           className="gap-2 border-2 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
