@@ -523,7 +523,7 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
             e.stopPropagation();
             handleApprova(rapportino);
           }}
-          className="inline-flex items-center justify-center hover:bg-green-100 rounded-md p-2 transition-colors group"
+          className="inline-flex items-center justify-center bg-green-50 border-2 border-green-300 hover:bg-green-100 hover:border-green-400 rounded-md p-2.5 transition-all group"
           title="Approva"
         >
           <CheckCircle className="h-5 w-5 text-green-600 group-hover:text-green-700" />
@@ -533,7 +533,7 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
             e.stopPropagation();
             handleRifiuta(rapportino);
           }}
-          className="inline-flex items-center justify-center hover:bg-red-100 rounded-md p-2 transition-colors group"
+          className="inline-flex items-center justify-center bg-red-50 border-2 border-red-300 hover:bg-red-100 hover:border-red-400 rounded-md p-2.5 transition-all group"
           title="Rifiuta"
         >
           <XCircle className="h-5 w-5 text-red-600 group-hover:text-red-700" />
