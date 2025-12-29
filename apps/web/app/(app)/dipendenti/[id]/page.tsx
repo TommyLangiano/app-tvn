@@ -552,52 +552,52 @@ export default function DipendenteDetailPage() {
           updateData = {
             nome: sectionData.datiGenerali.nome as string,
             cognome: sectionData.datiGenerali.cognome as string,
-            codice_fiscale: sectionData.datiGenerali.codice_fiscale as string || null,
-            data_nascita: sectionData.datiGenerali.data_nascita as string || null,
-            luogo_nascita: sectionData.datiGenerali.luogo_nascita as string || null
+            codice_fiscale: (sectionData.datiGenerali.codice_fiscale as string) || undefined,
+            data_nascita: (sectionData.datiGenerali.data_nascita as string) || undefined,
+            luogo_nascita: (sectionData.datiGenerali.luogo_nascita as string) || undefined
           };
           break;
         case 'contatti':
           updateData = {
-            email: sectionData.contatti.email as string || null,
-            telefono: sectionData.contatti.telefono as string || null,
-            pec: sectionData.contatti.pec as string || null
+            email: (sectionData.contatti.email as string) || undefined,
+            telefono: (sectionData.contatti.telefono as string) || undefined,
+            pec: (sectionData.contatti.pec as string) || undefined
           };
           break;
         case 'residenza':
           updateData = {
-            residenza_via: sectionData.residenza.residenza_via as string || null,
-            residenza_civico: sectionData.residenza.residenza_civico as string || null,
-            residenza_cap: sectionData.residenza.residenza_cap as string || null,
-            residenza_citta: sectionData.residenza.residenza_citta as string || null,
-            residenza_provincia: sectionData.residenza.residenza_provincia as string || null,
-            residenza_nazione: sectionData.residenza.residenza_nazione as string || null
+            residenza_via: (sectionData.residenza.residenza_via as string) || undefined,
+            residenza_civico: (sectionData.residenza.residenza_civico as string) || undefined,
+            residenza_cap: (sectionData.residenza.residenza_cap as string) || undefined,
+            residenza_citta: (sectionData.residenza.residenza_citta as string) || undefined,
+            residenza_provincia: (sectionData.residenza.residenza_provincia as string) || undefined,
+            residenza_nazione: (sectionData.residenza.residenza_nazione as string) || undefined
           };
           break;
         case 'domicilio':
           updateData = {
             domicilio_diverso: sectionData.domicilio.domicilio_diverso as boolean,
-            domicilio_via: sectionData.domicilio.domicilio_via as string || null,
-            domicilio_civico: sectionData.domicilio.domicilio_civico as string || null,
-            domicilio_cap: sectionData.domicilio.domicilio_cap as string || null,
-            domicilio_citta: sectionData.domicilio.domicilio_citta as string || null,
-            domicilio_provincia: sectionData.domicilio.domicilio_provincia as string || null,
-            domicilio_nazione: sectionData.domicilio.domicilio_nazione as string || null
+            domicilio_via: (sectionData.domicilio.domicilio_via as string) || undefined,
+            domicilio_civico: (sectionData.domicilio.domicilio_civico as string) || undefined,
+            domicilio_cap: (sectionData.domicilio.domicilio_cap as string) || undefined,
+            domicilio_citta: (sectionData.domicilio.domicilio_citta as string) || undefined,
+            domicilio_provincia: (sectionData.domicilio.domicilio_provincia as string) || undefined,
+            domicilio_nazione: (sectionData.domicilio.domicilio_nazione as string) || undefined
           };
           break;
         case 'professionali':
           updateData = {
-            matricola: sectionData.professionali.matricola as string || null,
-            qualifica: sectionData.professionali.qualifica as string || null,
-            mansione: sectionData.professionali.mansione as string || null,
-            livello: sectionData.professionali.livello as string || null,
-            ccnl: sectionData.professionali.ccnl as string || null
+            matricola: (sectionData.professionali.matricola as string) || undefined,
+            qualifica: (sectionData.professionali.qualifica as string) || undefined,
+            mansione: (sectionData.professionali.mansione as string) || undefined,
+            livello: (sectionData.professionali.livello as string) || undefined,
+            ccnl: (sectionData.professionali.ccnl as string) || undefined
           };
           break;
         case 'badge':
           updateData = {
-            badge_numero: sectionData.badge.badge_numero as string || null,
-            turno_default: sectionData.badge.turno_default as string || null
+            badge_numero: (sectionData.badge.badge_numero as string) || undefined,
+            turno_default: (sectionData.badge.turno_default as string) || undefined
           };
           break;
         case 'patenti':
@@ -610,35 +610,35 @@ export default function DipendenteDetailPage() {
           break;
         case 'contratto':
           updateData = {
-            tipo_contratto: sectionData.contratto.tipo_contratto as string || null,
-            data_assunzione: sectionData.contratto.data_assunzione as string || null,
-            data_fine_contratto: sectionData.contratto.data_fine_contratto as string || null,
-            stato: sectionData.contratto.stato as string || 'attivo'
+            tipo_contratto: (sectionData.contratto.tipo_contratto as string) || undefined,
+            data_assunzione: (sectionData.contratto.data_assunzione as string) || undefined,
+            data_fine_contratto: (sectionData.contratto.data_fine_contratto as string) || undefined,
+            stato: (sectionData.contratto.stato as string) || 'attivo'
           };
           break;
         case 'orario':
           updateData = {
             ore_settimanali: sectionData.orario.ore_settimanali as number,
             part_time: sectionData.orario.part_time as boolean,
-            percentuale_part_time: sectionData.orario.percentuale_part_time as number || null
+            percentuale_part_time: (sectionData.orario.percentuale_part_time as number) || undefined
           };
           break;
         case 'retribuzione':
           updateData = {
-            retribuzione_lorda_mensile: sectionData.retribuzione.retribuzione_lorda_mensile as number || null,
-            retribuzione_lorda_annua: sectionData.retribuzione.retribuzione_lorda_annua as number || null,
-            superminimo: sectionData.retribuzione.superminimo as number || null
+            retribuzione_lorda_mensile: (sectionData.retribuzione.retribuzione_lorda_mensile as number) || undefined,
+            retribuzione_lorda_annua: (sectionData.retribuzione.retribuzione_lorda_annua as number) || undefined,
+            superminimo: (sectionData.retribuzione.superminimo as number) || undefined
           };
           break;
         case 'bancari':
           updateData = {
-            iban: sectionData.bancari.iban as string || null,
-            intestatario_iban: sectionData.bancari.intestatario_iban as string || null
+            iban: (sectionData.bancari.iban as string) || undefined,
+            intestatario_iban: (sectionData.bancari.intestatario_iban as string) || undefined
           };
           break;
         case 'note':
           updateData = {
-            note_interne: sectionData.note.note_interne as string || null
+            note_interne: (sectionData.note.note_interne as string) || undefined
           };
           break;
       }
