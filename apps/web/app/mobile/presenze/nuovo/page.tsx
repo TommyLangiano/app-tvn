@@ -151,9 +151,15 @@ export default function MobileRapportiniPage() {
 
       // Redirect to presenze
       router.push('/mobile/presenze');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating rapportino:', error);
-      toast.error('Errore durante il salvataggio');
+
+      // Check for duplicate constraint violation
+      if (error?.code === '23505' || error?.message?.includes('rapportini_dipendente_unique')) {
+        toast.error('Hai già inserito un rapportino per questa commessa in questa data');
+      } else {
+        toast.error('Errore durante il salvataggio');
+      }
     } finally {
       setLoading(false);
     }

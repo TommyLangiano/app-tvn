@@ -192,6 +192,9 @@ export default function MobilePresenzePage() {
     rifiutati: rapportini.filter(r => r.stato === 'rifiutato').length,
   };
 
+  // Calculate total hours for the month
+  const totaleOreMese = rapportini.reduce((sum, r) => sum + (Number(r.ore_lavorate) || 0), 0);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
@@ -352,47 +355,56 @@ export default function MobilePresenzePage() {
         </button>
       </div>
 
-      {/* Rapportini List */}
-      <div className="space-y-3 pb-4">
+      {/* Rapportini List - Scrollable */}
+      <div className="space-y-2 pb-24">
         {filteredRapportini.length === 0 ? (
-          <Card className="p-8 text-center">
-            <p className="text-gray-500">Nessun rapportino trovato</p>
+          <Card className="p-6 text-center">
+            <p className="text-gray-500 text-sm">Nessun rapportino trovato</p>
           </Card>
         ) : (
           filteredRapportini.map((rapportino) => (
-            <Card key={rapportino.id} className="p-4 border-2 border-gray-200">
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-3">
+            <Card key={rapportino.id} className="p-3 border-2 border-gray-200">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
                   {getStatoIcon(rapportino.stato)}
-                  <div>
-                    <p className="font-semibold text-gray-900">
-                      {formatDate(rapportino.data_rapportino)}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm text-gray-900 truncate">
+                      {rapportino.commesse?.nome_commessa || 'Commessa non disponibile'}
                     </p>
                     <p className="text-xs text-gray-500">
-                      {rapportino.commesse?.nome_commessa || 'Commessa non disponibile'}
+                      {formatDate(rapportino.data_rapportino)}
                     </p>
                   </div>
                 </div>
-                {getStatoBadge(rapportino.stato)}
-              </div>
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-gray-400" />
-                  <span className="text-lg font-bold text-gray-900">
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className="text-base font-bold text-gray-900">
                     {rapportino.ore_lavorate}h
                   </span>
+                  {getStatoBadge(rapportino.stato)}
                 </div>
-                {rapportino.note && (
-                  <p className="text-xs text-gray-500 max-w-[200px] truncate">
-                    {rapportino.note}
-                  </p>
-                )}
               </div>
             </Card>
           ))
         )}
       </div>
+
+      {/* Total Hours Summary - Fixed at bottom */}
+      {rapportini.length > 0 && (
+        <div className="fixed bottom-32 left-4 right-4 z-10">
+          <Card className="p-4 border-2 border-emerald-200 bg-emerald-50 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Clock className="w-5 h-5 text-emerald-600" />
+                <span className="font-semibold text-gray-900">Totale ore {getMonthName()}</span>
+              </div>
+              <span className="text-2xl font-bold text-emerald-900">
+                {totaleOreMese}h
+              </span>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

@@ -24,6 +24,7 @@ const sectionNames: Record<string, string> = {
   '/fatture/passive': 'Fatture Passive',
   '/fatture/f24': 'F24',
   '/fatture/movimenti': 'Movimenti',
+  '/note-spesa': 'Note Spesa',
   '/scadenziario': 'Scadenziario',
   '/mezzi-attrezzature': 'Mezzi & Attrezzature',
   '/magazzino': 'Magazzino',
