@@ -57,16 +57,11 @@ export function DeleteNotaSpesaModal({ notaSpesa, onClose, onDelete }: DeleteNot
           .remove(filePaths);
       }
 
-      // Create azione log before deletion
+      // Delete azioni first (to avoid foreign key constraint)
       await supabase
         .from('note_spesa_azioni')
-        .insert({
-          nota_spesa_id: notaSpesa.id,
-          tenant_id: userTenants.tenant_id,
-          azione: 'eliminata',
-          eseguita_da: user.id,
-          stato_precedente: notaSpesa.stato,
-        });
+        .delete()
+        .eq('nota_spesa_id', notaSpesa.id);
 
       // Delete nota spesa
       const { error: deleteError } = await supabase
