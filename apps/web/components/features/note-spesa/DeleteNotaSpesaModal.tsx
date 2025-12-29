@@ -49,7 +49,7 @@ export function DeleteNotaSpesaModal({ notaSpesa, onClose, onDelete }: DeleteNot
 
       if (!userTenants) throw new Error('No tenant found');
 
-      // Delete allegati from storage
+      // Delete allegati from storage first
       if (notaSpesa.allegati && notaSpesa.allegati.length > 0) {
         const filePaths = notaSpesa.allegati.map(a => a.file_path);
         await supabase.storage
@@ -57,13 +57,7 @@ export function DeleteNotaSpesaModal({ notaSpesa, onClose, onDelete }: DeleteNot
           .remove(filePaths);
       }
 
-      // Delete azioni first (to avoid foreign key constraint)
-      await supabase
-        .from('note_spesa_azioni')
-        .delete()
-        .eq('nota_spesa_id', notaSpesa.id);
-
-      // Delete nota spesa
+      // Delete nota spesa (CASCADE will handle azioni if configured)
       const { error: deleteError } = await supabase
         .from('note_spesa')
         .delete()

@@ -7,7 +7,7 @@ export default function ReportAziendaPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Azienda</h1>
+        <h1 className="text-2xl font-bold text-foreground">Report Aziendale</h1>
       </div>
 
       {/* TODO: Implementare report aziendali */}
