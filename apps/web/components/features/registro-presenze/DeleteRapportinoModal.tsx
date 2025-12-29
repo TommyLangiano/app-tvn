@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { X, AlertTriangle } from 'lucide-react';
+import { X, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
@@ -58,21 +58,22 @@ export function DeleteRapportinoModal({ rapportino, onClose, onDelete }: DeleteR
       onClick={onClose}
     >
       <div
-        className="bg-background rounded-xl border-2 border-border max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-200"
+        className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6 space-y-4 relative animate-in zoom-in-95 duration-200 border-2 border-border"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-border">
+        <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
-              <AlertTriangle className="h-5 w-5 text-red-600" />
+              <Trash2 className="h-5 w-5 text-red-600" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900">Elimina Rapportino</h3>
+            <h3 className="text-lg font-semibold text-gray-900">
+              Elimina Rapportino
+            </h3>
           </div>
           <Button
+            onClick={onClose}
             variant="outline"
             size="icon"
-            onClick={onClose}
             className="h-8 w-8 border-2 flex-shrink-0"
             disabled={loading}
           >
@@ -80,54 +81,59 @@ export function DeleteRapportinoModal({ rapportino, onClose, onDelete }: DeleteR
           </Button>
         </div>
 
-        {/* Content */}
-        <div className="p-6 space-y-3">
+        <div className="space-y-3">
           <p className="text-sm text-gray-600">
             Sei sicuro di voler eliminare questo rapportino?
           </p>
           <div className="bg-gray-50 rounded-lg p-3 space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="font-medium text-gray-700">Dipendente:</span>
-              <span className="text-gray-900">{getUserDisplayName()}</span>
+              <span className="text-gray-600">Operaio:</span>
+              <span className="font-semibold">{getUserDisplayName()}</span>
             </div>
             <div className="flex justify-between">
-              <span className="font-medium text-gray-700">Data:</span>
-              <span className="text-gray-900">
+              <span className="text-gray-600">Data:</span>
+              <span className="font-semibold">
                 {new Date(rapportino.data_rapportino).toLocaleDateString('it-IT')}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="font-medium text-gray-700">Ore:</span>
-              <span className="text-gray-900 font-semibold">{rapportino.ore_lavorate}h</span>
+              <span className="text-gray-600">Ore Lavorate:</span>
+              <span className="font-semibold">{rapportino.ore_lavorate}h</span>
             </div>
-            {rapportino.commesse && (
+            {rapportino.commesse?.titolo && (
               <div className="flex justify-between">
-                <span className="font-medium text-gray-700">Commessa:</span>
-                <span className="text-gray-900">{rapportino.commesse.nome_commessa}</span>
+                <span className="text-gray-600">Commessa:</span>
+                <span className="font-semibold">{rapportino.commesse.titolo}</span>
               </div>
             )}
           </div>
-          <p className="text-sm text-gray-500 italic">
+          <p className="text-sm text-red-600 font-medium">
             Questa azione non può essere annullata.
           </p>
         </div>
 
-        {/* Footer */}
-        <div className="flex justify-end gap-3 p-6 border-t border-border bg-gray-50 rounded-b-xl">
+        <div className="flex justify-end gap-3 pt-2">
           <Button
-            variant="outline"
             onClick={onClose}
+            variant="outline"
             disabled={loading}
             className="border-2"
           >
             Annulla
           </Button>
           <Button
-            variant="destructive"
             onClick={handleDelete}
             disabled={loading}
+            className="bg-red-600 hover:bg-red-700 text-white"
           >
-            {loading ? 'Eliminazione...' : 'Elimina'}
+            {loading ? (
+              <>
+                <span className="inline-block animate-spin mr-2">⏳</span>
+                Eliminazione...
+              </>
+            ) : (
+              'Elimina'
+            )}
           </Button>
         </div>
       </div>
