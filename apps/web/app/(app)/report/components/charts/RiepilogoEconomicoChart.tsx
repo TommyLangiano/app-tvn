@@ -1,18 +1,52 @@
 'use client';
 
-import { memo, useMemo, useCallback } from 'react';
+import { memo, useMemo } from 'react';
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
   Tooltip,
   Legend,
-  ResponsiveContainer,
-  Cell,
-} from 'recharts';
-import { formatCurrency } from '@/lib/utils/currency';
+} from 'chart.js';
+import { Bar } from 'react-chartjs-2';
+
+// Formatta valuta con notazione k per migliaia (solo per assi)
+const formatCurrencyNoDecimals = (value: number) => {
+  const absValue = Math.abs(value);
+  const isNegative = value < 0;
+
+  if (absValue >= 1000) {
+    return `${isNegative ? '-' : ''}€${(absValue / 1000).toFixed(0)}k`;
+  }
+  return new Intl.NumberFormat('it-IT', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
+};
+
+// Formatta valuta esatta per tooltip
+const formatCurrencyExact = (value: number) => {
+  return new Intl.NumberFormat('it-IT', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+};
+
+// Registra i componenti Chart.js
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 interface RiepilogoEconomicoData {
   fatturatoPrevisto: number;
@@ -28,184 +62,147 @@ interface RiepilogoEconomicoChartProps {
   loading?: boolean;
 }
 
-interface ChartDataItem {
-  name: string;
-  shortName: string;
-  value: number;
-  color: string;
-}
-
-// Memoizza il componente Tooltip per evitare re-render
-const CustomTooltip = memo(({ active, payload }: any) => {
-  if (!active || !payload || !payload.length) {
-    return null;
-  }
-
-  const data = payload[0];
-  return (
-    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-3">
-      <p className="font-semibold text-gray-900 dark:text-white mb-1">
-        {data.payload.name}
-      </p>
-      <p className="text-sm font-medium" style={{ color: data.payload.color }}>
-        {formatCurrency(data.value)}
-      </p>
-    </div>
-  );
-});
-
-CustomTooltip.displayName = 'CustomTooltip';
-
-// Memoizza il componente XAxisTick per evitare re-render
-const CustomXAxisTick = memo(({ x, y, payload }: any) => {
-  // Se è "Utile Lordo", mostra anche la formula sotto
-  const isUtileLordo = payload.value === 'Utile Lordo';
-
-  return (
-    <g transform={`translate(${x},${y})`}>
-      <text
-        x={0}
-        y={0}
-        dy={16}
-        textAnchor="middle"
-        fill="currentColor"
-        className="text-xs font-medium"
-      >
-        {payload.value}
-      </text>
-      {isUtileLordo && (
-        <text
-          x={0}
-          y={0}
-          dy={30}
-          textAnchor="middle"
-          fill="#9ca3af"
-          className="text-[10px]"
-        >
-          (Tot. Imp. Fatt. - Tot. Imp. Costi - Note Sp.)
-        </text>
-      )}
-    </g>
-  );
-});
-
-CustomXAxisTick.displayName = 'CustomXAxisTick';
-
-
-// Helper per calcolare il colore basato sul valore (esternalizzato per essere puro)
-const getColorForUtileLordo = (value: number): string => {
-  return value >= 0 ? '#059669' : '#dc2626'; // emerald or red
-};
-
-const getColorForSaldoIva = (value: number): string => {
-  return value >= 0 ? '#8b5cf6' : '#ec4899'; // violet or pink
-};
-
-// Componente principale memoizzato con shallow comparison ottimizzato
 export const RiepilogoEconomicoChart = memo(({ data, loading = false }: RiepilogoEconomicoChartProps) => {
-  // Memoizza il formatter dell'asse Y per evitare ricreazioni
-  const yAxisTickFormatter = useCallback((value: number) => {
-    return formatCurrency(value).replace(/\s/g, '');
-  }, []);
+  const chartData = useMemo(() => ({
+    labels: [
+      'Importo Contratto',
+      'Tot. Imp. Fatturato',
+      'Tot. Imp. Costi',
+      'Note Spesa',
+      'Utile Lordo',
+      'Saldo IVA'
+    ],
+    datasets: [
+      {
+        label: 'Importo (€)',
+        data: [
+          data.fatturatoPrevisto,
+          data.fatturatoEmesso,
+          data.costiTotali,
+          data.noteSpesa,
+          data.utileLordo,
+          data.saldoIva
+        ],
+        backgroundColor: 'rgb(5, 150, 105)', // emerald-600 (primary)
+        borderColor: 'rgb(5, 150, 105)',
+        borderWidth: 0,
+        borderRadius: 6,
+        borderSkipped: 'bottom',
+        maxBarThickness: 60, // Larghezza massima barra
+        barPercentage: 0.6, // Riduce larghezza barra
+        categoryPercentage: 0.7, // Aumenta spazio tra categorie
+      }
+    ]
+  }), [data]);
 
-  // Memoizza i dati del grafico - si ricalcola solo quando `data` cambia
-  const chartData = useMemo<ChartDataItem[]>(() => {
-    return [
-      {
-        name: 'Importo Contratto',
-        shortName: 'Importo Contratto',
-        value: data.fatturatoPrevisto,
-        color: '#3b82f6', // blue
+  const options = useMemo(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: false,
       },
-      {
-        name: 'Totale Imponibile Fatturato',
-        shortName: 'Tot. Imp. Fatturato',
-        value: data.fatturatoEmesso,
-        color: '#10b981', // green
+      tooltip: {
+        enabled: true,
+        backgroundColor: 'rgba(255, 255, 255, 0.98)',
+        titleColor: '#1f2937',
+        bodyColor: '#1f2937',
+        borderColor: 'rgb(5, 150, 105)',
+        borderWidth: 2,
+        padding: 16,
+        displayColors: false,
+        cornerRadius: 8,
+        titleFont: {
+          size: 14,
+          weight: 'bold' as const,
+        },
+        bodyFont: {
+          size: 15,
+          weight: '600' as const,
+        },
+        callbacks: {
+          label: function(context: any) {
+            return formatCurrencyExact(context.parsed.y);
+          }
+        }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        grid: {
+          color: 'rgba(0, 0, 0, 0.05)',
+          drawBorder: false,
+        },
+        ticks: {
+          maxTicksLimit: 6,
+          callback: function(value: any) {
+            return formatCurrencyNoDecimals(value);
+          },
+          font: {
+            size: 16,
+            weight: 'bold' as const,
+          }
+        }
       },
-      {
-        name: 'Totale Imponibile Costi',
-        shortName: 'Tot. Imp. Costi',
-        value: data.costiTotali,
-        color: '#ef4444', // red
-      },
-      {
-        name: 'Note Spesa',
-        shortName: 'Note Spesa',
-        value: data.noteSpesa,
-        color: '#f59e0b', // amber
-      },
-      {
-        name: 'Utile Lordo',
-        shortName: 'Utile Lordo',
-        value: data.utileLordo,
-        color: getColorForUtileLordo(data.utileLordo),
-      },
-      {
-        name: 'Saldo IVA',
-        shortName: 'Saldo IVA',
-        value: data.saldoIva,
-        color: getColorForSaldoIva(data.saldoIva),
-      },
-    ];
-  }, [data.fatturatoPrevisto, data.fatturatoEmesso, data.costiTotali, data.noteSpesa, data.utileLordo, data.saldoIva]);
+      x: {
+        grid: {
+          display: false,
+        },
+        border: {
+          display: false,
+        },
+        ticks: {
+          font: {
+            size: 13,
+            weight: 'bold' as const,
+          }
+        }
+      }
+    },
+    interaction: {
+      mode: 'index' as const,
+      intersect: false,
+    },
+  }), []);
 
-  // Loading state (non memoizzato perché è semplice e cambia raramente)
   if (loading) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-        <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 animate-pulse rounded mb-4"></div>
-        <div className="h-[400px] bg-gray-100 dark:bg-gray-700 animate-pulse rounded"></div>
+      <div className="bg-card rounded-lg border border-border p-6">
+        <div className="h-[450px] bg-muted animate-pulse rounded"></div>
+      </div>
+    );
+  }
+
+  // Controlla se non ci sono dati
+  const hasNoData =
+    data.fatturatoPrevisto === 0 &&
+    data.fatturatoEmesso === 0 &&
+    data.costiTotali === 0 &&
+    data.noteSpesa === 0 &&
+    data.utileLordo === 0 &&
+    data.saldoIva === 0;
+
+  if (hasNoData) {
+    return (
+      <div className="w-full h-[450px] flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-lg font-medium text-muted-foreground">
+            Nessun dato disponibile per il periodo selezionato
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="[&_*]:outline-none [&_*]:focus:outline-none [&_.recharts-surface]:outline-none">
-      <ResponsiveContainer width="100%" height={470}>
-        <BarChart
-          data={chartData}
-          margin={{ top: 20, right: 40, left: 60, bottom: 60 }}
-          barCategoryGap="20%"
-        >
-          <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-gray-200 dark:stroke-gray-700" />
-          <XAxis
-            dataKey="shortName"
-            tick={<CustomXAxisTick />}
-            interval={0}
-            height={55}
-          />
-          <YAxis
-            className="text-sm"
-            tick={{ fill: 'currentColor' }}
-            tickFormatter={yAxisTickFormatter}
-            width={80}
-          />
-          <Tooltip
-            content={<CustomTooltip />}
-            cursor={false}
-          />
-          <Bar
-            dataKey="value"
-            radius={[8, 8, 0, 0]}
-            maxBarSize={120}
-          >
-            {chartData.map((entry, index) => (
-              <Cell
-                key={`cell-${index}`}
-                fill={entry.color}
-              />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
+    <div className="w-full h-[450px]">
+      <Bar data={chartData} options={options} />
     </div>
   );
 }, (prevProps, nextProps) => {
-  // Custom comparison per evitare re-render quando i dati non cambiano effettivamente
   if (prevProps.loading !== nextProps.loading) return false;
 
-  // Deep comparison dei valori numerici
   return (
     prevProps.data.fatturatoPrevisto === nextProps.data.fatturatoPrevisto &&
     prevProps.data.fatturatoEmesso === nextProps.data.fatturatoEmesso &&

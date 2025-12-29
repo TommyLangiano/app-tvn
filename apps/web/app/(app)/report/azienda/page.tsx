@@ -64,14 +64,16 @@ export default function ReportAziendaPage() {
   // Gestione cambio periodo
   const handlePeriodChange = useCallback((period: PeriodType) => {
     setSelectedPeriod(period);
-    const newRange = getDateRangeFromPeriod(period, selectedYear);
+    setSelectedYear(new Date().getFullYear()); // Reset anno corrente
+    const newRange = getDateRangeFromPeriod(period);
     setDateRange(newRange);
-  }, [selectedYear]);
+  }, []);
 
-  // Gestione cambio anno - filtra i dati per l'anno selezionato
+  // Gestione cambio anno - mostra tutto l'anno selezionato
   const handleYearChange = useCallback((year: number) => {
     setSelectedYear(year);
-    // Mostra sempre l'anno selezionato (1 gen - 31 dic)
+    setSelectedPeriod('oggi'); // Reset periodo
+    // Mostra sempre l'anno completo (1 gen - 31 dic)
     const newRange = {
       from: new Date(year, 0, 1), // 1 gennaio
       to: new Date(year, 11, 31, 23, 59, 59), // 31 dicembre
@@ -188,21 +190,29 @@ export default function ReportAziendaPage() {
   return (
     <div className="space-y-6">
       {/* Header e Chart in un unico container */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-foreground">Report Aziendale</h1>
+      <div className="bg-card rounded-xl border border-border overflow-hidden">
+        {/* Header con titolo e filtri sulla stessa riga */}
+        <div className="px-6 pt-6 pb-6">
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-bold text-foreground">Riepilogo Economico</h1>
+
+            {/* Filtri Periodo */}
+            <PeriodFilter
+              selectedPeriod={selectedPeriod}
+              selectedYear={selectedYear}
+              onPeriodChange={handlePeriodChange}
+              onYearChange={handleYearChange}
+            />
+          </div>
         </div>
 
-        {/* Filtri Periodo */}
-        <PeriodFilter
-          selectedPeriod={selectedPeriod}
-          selectedYear={selectedYear}
-          onPeriodChange={handlePeriodChange}
-          onYearChange={handleYearChange}
-        />
+        {/* Linea divisoria */}
+        <div className="border-b border-border"></div>
 
         {/* Riepilogo Economico Chart */}
-        <RiepilogoEconomicoChart data={riepilogoData} loading={loading} />
+        <div className="p-6">
+          <RiepilogoEconomicoChart data={riepilogoData} loading={loading} />
+        </div>
       </div>
     </div>
   );
