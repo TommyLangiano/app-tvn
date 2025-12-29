@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Search, Plus, Receipt, CheckCircle, XCircle, Download, Grid3x3, List, X, ChevronRight, User, Paperclip, FileText } from 'lucide-react';
+import { Search, Receipt, CheckCircle, XCircle, ChevronRight, FileText, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -12,16 +12,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
-import { MonthNavigator } from '@/components/ui/month-navigator';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import type { NotaSpesa } from '@/types/nota-spesa';
 import { DataTable, DataTableColumn } from '@/components/ui/data-table';
 import { formatCurrency } from '@/lib/utils/currency';
-import { NuovaNotaSpesaModal } from '@/components/features/note-spesa/NuovaNotaSpesaModal';
 import { InfoNotaSpesaModal } from '@/components/features/note-spesa/InfoNotaSpesaModal';
 import { DeleteNotaSpesaModal } from '@/components/features/note-spesa/DeleteNotaSpesaModal';
 import { ConfermaNotaSpesaModal } from '@/components/features/note-spesa/ConfermaNotaSpesaModal';
+import { TabsFilter } from '@/components/ui/tabs-filter';
 
 type User = {
   id: string;
@@ -55,17 +54,9 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [commesse, setCommesse] = useState<Commessa[]>([]);
 
-  // Month navigation state
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const currentMonth = currentDate.getMonth();
-  const currentYear = currentDate.getFullYear();
-
   // Filtri
   const [searchTerm, setSearchTerm] = useState('');
   const [filtroUtente, setFiltroUtente] = useState<string>('');
-
-  // View mode
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
 
   // Tab state
   const [activeTab, setActiveTab] = useState<TabType>('approvate');
@@ -78,7 +69,6 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
   const [selectedNotaSpesa, setSelectedNotaSpesa] = useState<NotaSpesa | null>(null);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showNuovaModal, setShowNuovaModal] = useState(false);
   const [modalTipo, setModalTipo] = useState<'approva' | 'rifiuta' | null>(null);
 
   // Pagination states
@@ -105,13 +95,6 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
     initializeData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(() => {
-    if (!loading) {
-      loadNoteSpese();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentMonth, currentYear]);
 
   const loadInitialData = async () => {
     const supabase = createClient();
@@ -318,10 +301,6 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
       .order('data_nota', { ascending: false });
 
     setNoteSpeseRifiutate(data || []);
-  };
-
-  const handleMonthChange = (month: number, year: number) => {
-    setCurrentDate(new Date(year, month, 1));
   };
 
   const getUserDisplayName = (notaSpesa: NotaSpesa) => {
@@ -599,12 +578,6 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
   };
 
 
-  const handleNotaSpesaCreated = () => {
-    loadNoteSpese();
-    loadNoteSpeseDaApprovare();
-    loadNoteSpeseRifiutate();
-  };
-
   const handleNotaSpesaUpdated = () => {
     loadNoteSpese();
     loadNoteSpeseDaApprovare();
@@ -701,78 +674,38 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
   }
 
   return (
-    <div className="space-y-4">
-      {/* Header: Tabs e Nuova Nota Spesa */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-        {/* Tabs - Inline style come Fatture */}
-        <div className="inline-flex rounded-md border border-border bg-background p-1">
-          <button
-            onClick={() => setActiveTab('approvate')}
-            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-              (activeTab as TabType) === 'approvate'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <CheckCircle className="h-4 w-4" />
-            Approvate
-            <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
-              (activeTab as TabType) === 'approvate'
-                ? 'bg-primary-foreground/20 text-primary-foreground'
-                : 'bg-green-100 text-green-700'
-            }`}>
-              {tabCounts.approvate}
-            </span>
-          </button>
-          <button
-            onClick={() => setActiveTab('da_approvare')}
-            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-              (activeTab as TabType) === 'da_approvare'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Receipt className="h-4 w-4" />
-            Da Approvare
-            <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
-              (activeTab as TabType) === 'da_approvare'
-                ? 'bg-primary-foreground/20 text-primary-foreground'
-                : 'bg-yellow-100 text-yellow-700'
-            }`}>
-              {tabCounts.da_approvare}
-            </span>
-          </button>
-          <button
-            onClick={() => setActiveTab('rifiutate')}
-            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-              (activeTab as TabType) === 'rifiutate'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <XCircle className="h-4 w-4" />
-            Rifiutate
-            <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
-              (activeTab as TabType) === 'rifiutate'
-                ? 'bg-primary-foreground/20 text-primary-foreground'
-                : 'bg-red-100 text-red-700'
-            }`}>
-              {tabCounts.rifiutate}
-            </span>
-          </button>
-        </div>
-
-        <div className="flex-1" />
-
-        {/* Nuova Nota Spesa */}
-        <Button
-          onClick={() => setShowNuovaModal(true)}
-          className="gap-2 h-10 rounded-sm"
-        >
-          <Plus className="h-4 w-4" />
-          Nuova Nota Spesa
-        </Button>
-      </div>
+    <div className="space-y-6">
+      {/* Tabs - Stile uguale a Fatture */}
+      <TabsFilter<TabType>
+        tabs={[
+          {
+            value: 'approvate',
+            label: 'Approvate',
+            icon: CheckCircle,
+            count: tabCounts.approvate,
+            activeColor: 'border-green-500 text-green-700',
+            badgeClassName: 'bg-primary/10 text-primary',
+          },
+          {
+            value: 'da_approvare',
+            label: 'Da approvare',
+            icon: Clock,
+            count: tabCounts.da_approvare,
+            activeColor: 'border-yellow-500 text-yellow-700',
+            badgeClassName: 'bg-primary/10 text-primary',
+          },
+          {
+            value: 'rifiutate',
+            label: 'Rifiutate',
+            icon: XCircle,
+            count: tabCounts.rifiutate,
+            activeColor: 'border-red-500 text-red-700',
+            badgeClassName: 'bg-primary/10 text-primary',
+          },
+        ]}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      />
 
       {/* Search and Filters - Stile uguale a fatture */}
       <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
@@ -805,49 +738,8 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
         </Select>
       </div>
 
-      {/* Month Navigator + Export e View Toggle - Solo per tab approvate */}
-      {(activeTab as TabType) === 'approvate' && (
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex-1" />
-          <MonthNavigator
-            currentMonth={currentMonth}
-            currentYear={currentYear}
-            onMonthChange={handleMonthChange}
-          />
-          <div className="flex items-center gap-3 flex-1 justify-end">
-            <Button
-              onClick={() => toast.info('Esportazione in sviluppo')}
-              variant="outline"
-              className="gap-2 h-10 rounded-sm border-2"
-            >
-              <Download className="h-4 w-4" />
-              Esporta
-            </Button>
-
-            {/* View Toggle */}
-            <Button
-              variant={viewMode === 'grid' ? 'default' : 'outline'}
-              size="icon"
-              onClick={() => setViewMode('grid')}
-              className="h-10 w-10 rounded-sm border-2"
-            >
-              <Grid3x3 className="h-4 w-4" />
-            </Button>
-            <Button
-              variant={viewMode === 'list' ? 'default' : 'outline'}
-              size="icon"
-              onClick={() => setViewMode('list')}
-              className="h-10 w-10 rounded-sm border-2"
-            >
-              <List className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* DataTable - List view */}
-      {viewMode === 'list' && (
-        <div className="!mt-0">
+      {/* DataTable */}
+      <div className="!mt-0">
           <DataTable<NotaSpesa>
             columns={columns}
             data={noteSpesePaginate}
@@ -866,71 +758,7 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
             selectedRows={selectedNoteSpese}
             onSelectionChange={setSelectedNoteSpese}
           />
-        </div>
-      )}
-
-      {/* Grid View */}
-      {viewMode === 'grid' && (activeTab as TabType) === 'approvate' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {noteSpesePaginate.map((notaSpesa) => (
-            <div
-              key={notaSpesa.id}
-              onClick={() => handleRowClick(notaSpesa)}
-              className={`rounded-lg border-2 p-4 cursor-pointer transition-all hover:shadow-md ${
-                notaSpesa.stato === 'approvato' ? 'border-green-200 bg-green-50/50' :
-                notaSpesa.stato === 'da_approvare' ? 'border-yellow-200 bg-yellow-50/50' :
-                notaSpesa.stato === 'rifiutato' ? 'border-red-200 bg-red-50/50' :
-                'border-gray-200 bg-gray-50/50'
-              }`}
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <Receipt className="h-5 w-5 text-primary" />
-                  <span className="font-semibold text-foreground">{notaSpesa.numero_nota}</span>
-                </div>
-                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                  notaSpesa.stato === 'approvato' ? 'bg-green-100 text-green-700' :
-                  notaSpesa.stato === 'da_approvare' ? 'bg-yellow-100 text-yellow-700' :
-                  notaSpesa.stato === 'rifiutato' ? 'bg-red-100 text-red-700' :
-                  'bg-gray-100 text-gray-700'
-                }`}>
-                  {notaSpesa.stato === 'approvato' ? 'Approvata' :
-                   notaSpesa.stato === 'da_approvare' ? 'Da Approvare' :
-                   notaSpesa.stato === 'rifiutato' ? 'Rifiutata' :
-                   'Bozza'}
-                </span>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-foreground">{getUserDisplayName(notaSpesa)}</span>
-                </div>
-
-                <div className="text-sm text-muted-foreground">
-                  {new Date(notaSpesa.data_nota).toLocaleDateString('it-IT', {
-                    day: '2-digit',
-                    month: 'long',
-                    year: 'numeric'
-                  })}
-                </div>
-
-                <div className="flex items-center justify-between pt-2 border-t border-border">
-                  <span className="text-sm text-muted-foreground">{notaSpesa.categoria}</span>
-                  <span className="text-lg font-bold text-primary">{formatCurrency(notaSpesa.importo)}</span>
-                </div>
-
-                {notaSpesa.allegati && notaSpesa.allegati.length > 0 && (
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground pt-1">
-                    <Paperclip className="h-4 w-4" />
-                    <span>{notaSpesa.allegati.length} allegat{notaSpesa.allegati.length === 1 ? 'o' : 'i'}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      </div>
 
       {/* Modals */}
       <Sheet open={showInfoModal} onOpenChange={setShowInfoModal}>
@@ -960,14 +788,6 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
             setSelectedNotaSpesa(null);
           }}
           onDelete={handleNotaSpesaDeleted}
-        />
-      )}
-
-      {showNuovaModal && (
-        <NuovaNotaSpesaModal
-          onClose={() => setShowNuovaModal(false)}
-          onSuccess={handleNotaSpesaCreated}
-          commessaId={commessaId}
         />
       )}
 
