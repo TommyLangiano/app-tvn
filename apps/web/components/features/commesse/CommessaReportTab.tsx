@@ -1,12 +1,10 @@
 'use client';
 
-export const dynamic = 'force-dynamic';
-
 import { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
-import { RiepilogoEconomicoChart } from '../components/charts/RiepilogoEconomicoChart';
-import { PeriodFilter, type PeriodType } from './components/PeriodFilter';
-import { getDateRangeFromPeriod, type DateRange } from './utils/dateFilters';
+import { RiepilogoEconomicoChart } from '@/app/(app)/report/components/charts/RiepilogoEconomicoChart';
+import { PeriodFilter, type PeriodType } from '@/app/(app)/report/azienda/components/PeriodFilter';
+import { getDateRangeFromPeriod, type DateRange } from '@/app/(app)/report/azienda/utils/dateFilters';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 
@@ -17,6 +15,10 @@ interface RiepilogoEconomicoData {
   noteSpesa: number;
   utileLordo: number;
   saldoIva: number;
+}
+
+interface CommessaReportTabProps {
+  commessaId: string;
 }
 
 // Helper ottimizzato per ridurre operazioni di reduce
@@ -47,7 +49,7 @@ const sumImporti = (items: any[] | null): number => {
   return sum;
 };
 
-export default function ReportAziendaPage() {
+export function CommessaReportTab({ commessaId }: CommessaReportTabProps) {
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>('oggi');
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
@@ -111,15 +113,15 @@ export default function ReportAziendaPage() {
       const dateFrom = format(range.from, 'yyyy-MM-dd');
       const dateTo = format(range.to, 'yyyy-MM-dd');
 
-      // Fetch commesse per calcolare fatturato previsto - filtrate per data_inizio
-      const { data: commesse } = await supabase
+      // Fetch commessa per calcolare fatturato previsto - filtrata per data_inizio
+      const { data: commessa } = await supabase
         .from('commesse')
         .select('id, importo_commessa, budget_commessa, data_inizio')
         .eq('tenant_id', tenantId)
+        .eq('id', commessaId)
         .gte('data_inizio', dateFrom)
-        .lte('data_inizio', dateTo);
-
-      const commessaIds = (commesse || []).map(c => c.id);
+        .lte('data_inizio', dateTo)
+        .single();
 
       // Ottimizzazione: esegui tutte le query in parallelo con filtri di data
       // Note: solo note_spesa hanno sistema approvazione (stato: approvato/da_approvare/rifiutato)
@@ -131,31 +133,28 @@ export default function ReportAziendaPage() {
         supabase
           .from('fatture_attive')
           .select('importo_imponibile, importo_iva')
-          .in('commessa_id', commessaIds)
+          .eq('commessa_id', commessaId)
           .gte('data_fattura', dateFrom)
           .lte('data_fattura', dateTo),
         supabase
           .from('fatture_passive')
           .select('importo_imponibile, importo_iva')
-          .in('commessa_id', commessaIds)
+          .eq('commessa_id', commessaId)
           .gte('data_fattura', dateFrom)
           .lte('data_fattura', dateTo),
         supabase
           .from('note_spesa')
           .select('importo')
-          .in('commessa_id', commessaIds)
+          .eq('commessa_id', commessaId)
           .eq('stato', 'approvato')
           .gte('data_nota', dateFrom)
           .lte('data_nota', dateTo)
       ]);
 
       // Calcola i totali usando helper ottimizzati
-      let fatturatoPrevisto = 0;
-      if (commesse?.length) {
-        for (let i = 0; i < commesse.length; i++) {
-          fatturatoPrevisto += commesse[i].importo_commessa || commesse[i].budget_commessa || 0;
-        }
-      }
+      const fatturatoPrevisto = commessa
+        ? (commessa.importo_commessa || commessa.budget_commessa || 0)
+        : 0;
 
       const fatturatoEmesso = sumImponibili(fattureAttive);
       const costiTotali = sumImponibili(fatturePassive);
@@ -182,7 +181,7 @@ export default function ReportAziendaPage() {
     } finally {
       setLoading(false);
     }
-  }, []); // Nessuna dipendenza esterna, funzione stabile
+  }, [commessaId]);
 
   // Effetto per ricaricare i dati quando cambia il dateRange
   useEffect(() => {

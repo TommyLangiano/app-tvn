@@ -32,6 +32,7 @@ import { BulkDeleteMovimentiModal } from '@/components/features/commesse/BulkDel
 import { RapportiniTab } from '@/components/features/commesse/RapportiniTab';
 import { MovimentiTab } from '@/components/features/commesse/MovimentiTab';
 import { NoteSpeseTab } from '@/components/features/commesse/NoteSpeseTab';
+import { CommessaReportTab } from '@/components/features/commesse/CommessaReportTab';
 import { getSignedUrl } from '@/lib/utils/storage';
 import { formatCurrency } from '@/lib/utils/currency';
 
@@ -1174,11 +1175,8 @@ export default function CommessaDetailPage() {
       )}
 
       {/* TAB: Report */}
-      {activeTab === 'report' && (
-        <div className="rounded-xl border-2 border-dashed border-border bg-card p-12 text-center">
-          <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-          <p className="text-muted-foreground">Grafiche e report della commessa in arrivo</p>
-        </div>
+      {activeTab === 'report' && commessa && (
+        <CommessaReportTab commessaId={commessa.id} />
       )}
 
       {/* TAB: Documenti */}
