@@ -1124,9 +1124,7 @@ export default function CommessaDetailPage() {
           {
             value: 'movimenti',
             label: 'Fatture',
-            icon: Receipt,
-            count: totalMovimenti,
-            badgeClassName: 'bg-green-100 text-green-700 hover:bg-green-100'
+            icon: Receipt
           },
           { value: 'note-spesa', label: 'Note Spesa', icon: FileText },
           { value: 'rapportini', label: 'Registro Presenze', icon: Users },
