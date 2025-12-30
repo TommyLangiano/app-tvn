@@ -87,7 +87,7 @@ export const RiepilogoEconomicoChart = memo(({ data, loading = false }: Riepilog
         borderColor: 'rgb(5, 150, 105)',
         borderWidth: 0,
         borderRadius: 6,
-        borderSkipped: 'bottom',
+        borderSkipped: 'bottom' as const,
         maxBarThickness: 60, // Larghezza massima barra
         barPercentage: 0.6, // Riduce larghezza barra
         categoryPercentage: 0.7, // Aumenta spazio tra categorie
@@ -118,7 +118,7 @@ export const RiepilogoEconomicoChart = memo(({ data, loading = false }: Riepilog
         },
         bodyFont: {
           size: 15,
-          weight: '600' as const,
+          weight: 600,
         },
         callbacks: {
           label: function(context: any) {
