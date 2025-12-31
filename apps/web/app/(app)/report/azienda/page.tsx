@@ -213,7 +213,7 @@ export default function ReportAziendaPage() {
 
         {/* Riepilogo Economico Chart */}
         <div className="p-6">
-          <RiepilogoEconomicoChart data={riepilogoData} loading={loading} />
+          <RiepilogoEconomicoChart data={riepilogoData} />
         </div>
       </div>
     </div>
