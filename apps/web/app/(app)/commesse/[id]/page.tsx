@@ -1319,7 +1319,13 @@ export default function CommessaDetailPage() {
 
       {/* TAB: Report */}
       {activeTab === 'report' && commessa && (
-        <CommessaReportTab commessaId={commessa.id} />
+        <CommessaReportTab
+          commessaId={commessa.id}
+          commessa={commessa}
+          fattureAttive={fatture}
+          fatturePassive={fatturePassive}
+          noteSpese={noteSpese}
+        />
       )}
 
       {/* TAB: Documenti */}
@@ -1334,7 +1340,7 @@ export default function CommessaDetailPage() {
       {activeTab === 'dettagli' && commessa && (
         <div className="space-y-6">
           {/* 1. INFORMAZIONI GENERALI */}
-          <div className="space-y-6 p-6 rounded-xl bg-card shadow-sm">
+          <div className="space-y-6 p-6 rounded-xl bg-card">
             {/* Header */}
             <div className="border-b-2 border-border pb-3 border-l-4 border-l-primary pl-4 flex items-start justify-between">
               <div>
@@ -1391,7 +1397,7 @@ export default function CommessaDetailPage() {
                     id="edit-codice"
                     value={sectionData.informazioniGenerali.codice_commessa as string}
                     onChange={(e) => updateSectionData('informazioniGenerali', 'codice_commessa', e.target.value)}
-                    className={`bg-white border border-input ${sectionErrors.codice_commessa ? '!border-red-500' : ''}`}
+                    className={`h-11 border-2 border-border bg-white ${sectionErrors.codice_commessa ? '!border-red-500' : ''}`}
                   />
                   {sectionErrors.codice_commessa && (
                     <p className="text-sm text-red-500 font-medium">Il codice commessa è obbligatorio</p>
@@ -1403,7 +1409,7 @@ export default function CommessaDetailPage() {
                     id="edit-nome"
                     value={sectionData.informazioniGenerali.nome_commessa as string}
                     onChange={(e) => updateSectionData('informazioniGenerali', 'nome_commessa', e.target.value)}
-                    className={`bg-white border border-input ${sectionErrors.nome_commessa ? '!border-red-500' : ''}`}
+                    className={`h-11 border-2 border-border bg-white ${sectionErrors.nome_commessa ? '!border-red-500' : ''}`}
                   />
                   {sectionErrors.nome_commessa && (
                     <p className="text-sm text-red-500 font-medium">Il nome commessa è obbligatorio</p>
@@ -1415,7 +1421,7 @@ export default function CommessaDetailPage() {
                     value={sectionData.informazioniGenerali.tipologia_commessa as string}
                     onValueChange={(value) => updateSectionData('informazioniGenerali', 'tipologia_commessa', value)}
                   >
-                    <SelectTrigger id="edit-tipologia" className={`bg-white border border-input h-11 ${sectionErrors.tipologia_commessa ? '!border-red-500' : ''}`}>
+                    <SelectTrigger id="edit-tipologia" className={`h-11 border-2 border-border bg-white ${sectionErrors.tipologia_commessa ? '!border-red-500' : ''}`}>
                       <SelectValue placeholder="Seleziona una tipologia" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1434,7 +1440,7 @@ export default function CommessaDetailPage() {
           </div>
 
           {/* 2. CLIENTE */}
-          <div className="space-y-6 p-6 rounded-xl bg-card shadow-sm">
+          <div className="space-y-6 p-6 rounded-xl bg-card">
             {/* Header */}
             <div className="border-b-2 border-border pb-3 border-l-4 border-l-primary pl-4 flex items-start justify-between">
               <div>
@@ -1504,7 +1510,7 @@ export default function CommessaDetailPage() {
                       value={sectionData.cliente.tipologia_cliente as string}
                       onValueChange={(value) => updateSectionData('cliente', 'tipologia_cliente', value)}
                     >
-                      <SelectTrigger id="edit-tipologia-cliente" className={`bg-white border border-input h-11 ${sectionErrors.tipologia_cliente ? '!border-red-500' : ''}`}>
+                      <SelectTrigger id="edit-tipologia-cliente" className={`h-11 border-2 border-border bg-white ${sectionErrors.tipologia_cliente ? '!border-red-500' : ''}`}>
                         <SelectValue placeholder="Seleziona tipologia cliente" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1522,7 +1528,7 @@ export default function CommessaDetailPage() {
                       value={sectionData.cliente.cliente_commessa as string}
                       onValueChange={(value) => updateSectionData('cliente', 'cliente_commessa', value)}
                     >
-                      <SelectTrigger id="edit-cliente-commessa" className={`bg-white border border-input h-11 ${sectionErrors.cliente_commessa ? '!border-red-500' : ''}`}>
+                      <SelectTrigger id="edit-cliente-commessa" className={`h-11 border-2 border-border bg-white ${sectionErrors.cliente_commessa ? '!border-red-500' : ''}`}>
                         <SelectValue placeholder="Seleziona un cliente">
                           {sectionData.cliente.cliente_commessa
                             ? (() => {
@@ -1566,7 +1572,7 @@ export default function CommessaDetailPage() {
                         value={sectionData.cliente.cig as string}
                         onChange={(e) => updateSectionData('cliente', 'cig', e.target.value)}
                         placeholder="Es. 1234567890"
-                        className={`bg-white border border-input ${sectionErrors.cig ? '!border-red-500' : ''}`}
+                        className={`h-11 border-2 border-border bg-white ${sectionErrors.cig ? '!border-red-500' : ''}`}
                       />
                       {sectionErrors.cig && (
                         <p className="text-sm text-red-500 font-medium">Il CIG è obbligatorio per clienti pubblici</p>
@@ -1579,7 +1585,7 @@ export default function CommessaDetailPage() {
                         value={sectionData.cliente.cup as string}
                         onChange={(e) => updateSectionData('cliente', 'cup', e.target.value)}
                         placeholder="Es. A12B34567890123"
-                        className={`bg-white border border-input ${sectionErrors.cup ? '!border-red-500' : ''}`}
+                        className={`h-11 border-2 border-border bg-white ${sectionErrors.cup ? '!border-red-500' : ''}`}
                       />
                       {sectionErrors.cup && (
                         <p className="text-sm text-red-500 font-medium">Il CUP è obbligatorio per clienti pubblici</p>
@@ -1592,7 +1598,7 @@ export default function CommessaDetailPage() {
           </div>
 
           {/* 3. LUOGO */}
-          <div className="space-y-6 p-6 rounded-xl bg-card shadow-sm">
+          <div className="space-y-6 p-6 rounded-xl bg-card">
             {/* Header */}
             <div className="border-b-2 border-border pb-3 border-l-4 border-l-primary pl-4 flex items-start justify-between">
               <div>
@@ -1659,7 +1665,7 @@ export default function CommessaDetailPage() {
                       value={sectionData.luogo.via as string}
                       onChange={(e) => updateSectionData('luogo', 'via', e.target.value)}
                       placeholder="Es. Via Roma"
-                      className="bg-white border border-input"
+                      className="h-11 border-2 border-border bg-white"
                     />
                   </div>
                   <div className="space-y-2">
@@ -1669,7 +1675,7 @@ export default function CommessaDetailPage() {
                       value={sectionData.luogo.numero_civico as string}
                       onChange={(e) => updateSectionData('luogo', 'numero_civico', e.target.value)}
                       placeholder="Es. 123"
-                      className="bg-white border border-input"
+                      className="h-11 border-2 border-border bg-white"
                     />
                   </div>
                 </div>
@@ -1702,7 +1708,7 @@ export default function CommessaDetailPage() {
                       readOnly
                       disabled
                       placeholder="Auto"
-                      className="uppercase bg-white border border-input opacity-100 cursor-not-allowed"
+                      className="h-11 border-2 border-border bg-white uppercase opacity-100 cursor-not-allowed"
                     />
                   </div>
                   <div className="space-y-2">
@@ -1713,7 +1719,7 @@ export default function CommessaDetailPage() {
                       readOnly
                       disabled
                       placeholder="Auto"
-                      className="bg-white border border-input opacity-100 cursor-not-allowed"
+                      className="h-11 border-2 border-border bg-white opacity-100 cursor-not-allowed"
                     />
                   </div>
                 </div>
@@ -1722,7 +1728,7 @@ export default function CommessaDetailPage() {
           </div>
 
           {/* 4. PIANIFICAZIONE */}
-          <div className="space-y-6 p-6 rounded-xl bg-card shadow-sm">
+          <div className="space-y-6 p-6 rounded-xl bg-card">
             {/* Header */}
             <div className="border-b-2 border-border pb-3 border-l-4 border-l-primary pl-4 flex items-start justify-between">
               <div>
@@ -1789,7 +1795,7 @@ export default function CommessaDetailPage() {
                       type="date"
                       value={sectionData.pianificazione.data_inizio as string}
                       onChange={(e) => updateSectionData('pianificazione', 'data_inizio', e.target.value)}
-                      className="bg-white border border-input"
+                      className="h-11 border-2 border-border bg-white"
                     />
                   </div>
                   <div className="space-y-2">
@@ -1799,7 +1805,7 @@ export default function CommessaDetailPage() {
                       type="date"
                       value={sectionData.pianificazione.data_fine_prevista as string}
                       onChange={(e) => updateSectionData('pianificazione', 'data_fine_prevista', e.target.value)}
-                      className={`bg-white border border-input ${sectionErrors.data_fine_prevista ? '!border-red-500' : ''}`}
+                      className={`h-11 border-2 border-border bg-white ${sectionErrors.data_fine_prevista ? '!border-red-500' : ''}`}
                     />
                     {sectionErrors.data_fine_prevista && (
                       <p className="text-sm text-red-500 font-medium">La data fine non può essere precedente alla data inizio</p>
@@ -1817,7 +1823,7 @@ export default function CommessaDetailPage() {
                       placeholder="0,00"
                       value={formatCurrencyInput(sectionData.pianificazione.importo_commessa as string)}
                       onChange={(e) => handleCurrencyChange('pianificazione', 'importo_commessa', e.target.value)}
-                      className="bg-white border border-input"
+                      className="h-11 border-2 border-border bg-white"
                     />
                   </div>
                   <div className="space-y-2">
@@ -1829,7 +1835,7 @@ export default function CommessaDetailPage() {
                       placeholder="0,00"
                       value={formatCurrencyInput(sectionData.pianificazione.budget_commessa as string)}
                       onChange={(e) => handleCurrencyChange('pianificazione', 'budget_commessa', e.target.value)}
-                      className="bg-white border border-input"
+                      className="h-11 border-2 border-border bg-white"
                     />
                   </div>
                   <div className="space-y-2">
@@ -1841,7 +1847,7 @@ export default function CommessaDetailPage() {
                       placeholder="0,00"
                       value={formatCurrencyInput(sectionData.pianificazione.costo_materiali as string)}
                       onChange={(e) => handleCurrencyChange('pianificazione', 'costo_materiali', e.target.value)}
-                      className="bg-white border border-input"
+                      className="h-11 border-2 border-border bg-white"
                     />
                   </div>
                 </div>
@@ -1850,7 +1856,7 @@ export default function CommessaDetailPage() {
           </div>
 
           {/* 5. DESCRIZIONE */}
-          <div className="space-y-6 p-6 rounded-xl bg-card shadow-sm">
+          <div className="space-y-6 p-6 rounded-xl bg-card">
             {/* Header */}
             <div className="border-b-2 border-border pb-3 border-l-4 border-l-primary pl-4 flex items-start justify-between">
               <div>
@@ -1898,14 +1904,14 @@ export default function CommessaDetailPage() {
                   onChange={(e) => updateSectionData('descrizione', 'descrizione', e.target.value)}
                   rows={6}
                   placeholder="Inserisci una descrizione dettagliata della commessa..."
-                  className="bg-white border border-input"
+                  className="border-2 border-border bg-white resize-none"
                 />
               </div>
             )}
           </div>
 
           {/* 6. TEAM */}
-          <div className="space-y-6 p-6 rounded-xl bg-card shadow-sm">
+          <div className="space-y-6 p-6 rounded-xl bg-card">
             {/* Header */}
             <div className="border-b-2 border-border pb-3 border-l-4 border-l-primary pl-4 flex items-start justify-between">
               <div>
@@ -2029,7 +2035,7 @@ export default function CommessaDetailPage() {
                       placeholder="Cerca dipendente per nome, cognome..."
                       value={searchTeamQuery}
                       onChange={(e) => setSearchTeamQuery(e.target.value)}
-                      className="pl-9 bg-white border border-input"
+                      className="h-11 border-2 border-border bg-white pl-9"
                     />
                   </div>
 
@@ -2092,7 +2098,7 @@ export default function CommessaDetailPage() {
           </div>
 
           {/* 7. GESTIONE AVANZATA */}
-          <div className="space-y-6 p-6 rounded-xl bg-card shadow-sm">
+          <div className="space-y-6 p-6 rounded-xl bg-card">
             {/* Header */}
             <div className="border-b-2 border-border pb-3 border-l-4 border-l-slate-400 pl-4">
               <h3 className="text-lg font-semibold">Gestione Avanzata</h3>

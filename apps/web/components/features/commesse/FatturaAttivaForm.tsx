@@ -344,10 +344,12 @@ export function FatturaAttivaForm({
       if (error) throw error;
 
       toast.success('Fattura aggiunta con successo!');
+      handleReset();
       onSuccess();
     } catch (err) {
+      console.error('Supabase error:', err);
       if (err && typeof err === 'object' && 'code' in err && (err as { code: string }).code === '23505') {
-        toast.error('Numero fattura già esistente');
+        toast.error(`Il numero fattura "${formData.numero_fattura}" esiste già. Usa un numero diverso.`);
       } else {
         toast.error('Errore nell\'aggiunta della fattura');
       }

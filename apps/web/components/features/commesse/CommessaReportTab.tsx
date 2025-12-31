@@ -1,12 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { format } from 'date-fns';
 import { RiepilogoEconomicoChart } from '@/app/(app)/report/components/charts/RiepilogoEconomicoChart';
 import { PeriodFilter, type PeriodType } from '@/app/(app)/report/azienda/components/PeriodFilter';
 import { getDateRangeFromPeriod, type DateRange } from '@/app/(app)/report/azienda/utils/dateFilters';
-import { createClient } from '@/lib/supabase/client';
-import { toast } from 'sonner';
 
 interface RiepilogoEconomicoData {
   fatturatoPrevisto: number;
@@ -19,6 +17,10 @@ interface RiepilogoEconomicoData {
 
 interface CommessaReportTabProps {
   commessaId: string;
+  commessa: any;
+  fattureAttive: any[];
+  fatturePassive: any[];
+  noteSpese: any[];
 }
 
 // Helper ottimizzato per ridurre operazioni di reduce
@@ -49,18 +51,10 @@ const sumImporti = (items: any[] | null): number => {
   return sum;
 };
 
-export function CommessaReportTab({ commessaId }: CommessaReportTabProps) {
+export function CommessaReportTab({ commessaId, commessa, fattureAttive, fatturePassive, noteSpese }: CommessaReportTabProps) {
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>('oggi');
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [dateRange, setDateRange] = useState<DateRange>(() => getDateRangeFromPeriod('oggi'));
-  const [riepilogoData, setRiepilogoData] = useState<RiepilogoEconomicoData>({
-    fatturatoPrevisto: 0,
-    fatturatoEmesso: 0,
-    costiTotali: 0,
-    noteSpesa: 0,
-    utileLordo: 0,
-    saldoIva: 0,
-  });
 
   // Gestione cambio periodo
   const handlePeriodChange = useCallback((period: PeriodType) => {
@@ -82,107 +76,48 @@ export function CommessaReportTab({ commessaId }: CommessaReportTabProps) {
     setDateRange(newRange);
   }, []);
 
-  // Memoizza la funzione di caricamento per evitare ricreazioni
-  const loadRiepilogoEconomico = useCallback(async (range: DateRange) => {
-    try {
-      const supabase = createClient();
+  // Calcolo dati usando useMemo per prestazioni istantanee
+  const riepilogoData = useMemo(() => {
+    // Formatta le date per confronto
+    const dateFrom = format(dateRange.from, 'yyyy-MM-dd');
+    const dateTo = format(dateRange.to, 'yyyy-MM-dd');
 
-      // Get current user's tenant
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error('Utente non autenticato');
-        return;
-      }
+    // Filtra fatture attive per data
+    const fattureAttiveFiltrate = fattureAttive.filter(f => {
+      return f.data_fattura >= dateFrom && f.data_fattura <= dateTo;
+    });
 
-      const { data: userTenant } = await supabase
-        .from('user_tenants')
-        .select('tenant_id')
-        .eq('user_id', user.id)
-        .single();
+    // Filtra fatture passive per data
+    const fatturePassiveFiltrate = fatturePassive.filter(f => {
+      return f.data_fattura >= dateFrom && f.data_fattura <= dateTo;
+    });
 
-      if (!userTenant?.tenant_id) {
-        toast.error('Tenant non trovato');
-        return;
-      }
+    // Filtra note spese per data (solo approvate)
+    const noteSpeseApprovate = noteSpese.filter(n => {
+      return n.stato === 'approvato' && n.data_nota >= dateFrom && n.data_nota <= dateTo;
+    });
 
-      const tenantId = userTenant.tenant_id;
+    // Calcola i totali usando helper ottimizzati
+    const fatturatoPrevisto = commessa?.importo_commessa || commessa?.budget_commessa || 0;
+    const fatturatoEmesso = sumImponibili(fattureAttiveFiltrate);
+    const costiTotali = sumImponibili(fatturePassiveFiltrate);
+    const totaleNoteSpesa = sumImporti(noteSpeseApprovate);
+    const utileLordo = fatturatoEmesso - costiTotali - totaleNoteSpesa;
 
-      // Formatta le date per Supabase
-      const dateFrom = format(range.from, 'yyyy-MM-dd');
-      const dateTo = format(range.to, 'yyyy-MM-dd');
+    // Calcola saldo IVA
+    const ivaFatturePassive = sumIva(fatturePassiveFiltrate);
+    const ivaFattureAttive = sumIva(fattureAttiveFiltrate);
+    const saldoIva = ivaFatturePassive - ivaFattureAttive;
 
-      // Fetch commessa per calcolare fatturato previsto - filtrata per data_inizio
-      const { data: commessa } = await supabase
-        .from('commesse')
-        .select('id, importo_commessa, budget_commessa, data_inizio')
-        .eq('tenant_id', tenantId)
-        .eq('id', commessaId)
-        .gte('data_inizio', dateFrom)
-        .lte('data_inizio', dateTo)
-        .single();
-
-      // Ottimizzazione: esegui tutte le query in parallelo con filtri di data
-      // Note: solo note_spesa hanno sistema approvazione (stato: approvato/da_approvare/rifiutato)
-      const [
-        { data: fattureAttive },
-        { data: fatturePassive },
-        { data: noteSpesa }
-      ] = await Promise.all([
-        supabase
-          .from('fatture_attive')
-          .select('importo_imponibile, importo_iva')
-          .eq('commessa_id', commessaId)
-          .gte('data_fattura', dateFrom)
-          .lte('data_fattura', dateTo),
-        supabase
-          .from('fatture_passive')
-          .select('importo_imponibile, importo_iva')
-          .eq('commessa_id', commessaId)
-          .gte('data_fattura', dateFrom)
-          .lte('data_fattura', dateTo),
-        supabase
-          .from('note_spesa')
-          .select('importo')
-          .eq('commessa_id', commessaId)
-          .eq('stato', 'approvato')
-          .gte('data_nota', dateFrom)
-          .lte('data_nota', dateTo)
-      ]);
-
-      // Calcola i totali usando helper ottimizzati
-      const fatturatoPrevisto = commessa
-        ? (commessa.importo_commessa || commessa.budget_commessa || 0)
-        : 0;
-
-      const fatturatoEmesso = sumImponibili(fattureAttive);
-      const costiTotali = sumImponibili(fatturePassive);
-      const totaleNoteSpesa = sumImporti(noteSpesa);
-
-      const utileLordo = fatturatoEmesso - costiTotali - totaleNoteSpesa;
-
-      // Calcola saldo IVA (riutilizza i dati già fetchati)
-      const ivaFatturePassive = sumIva(fatturePassive);
-      const ivaFattureAttive = sumIva(fattureAttive);
-      const saldoIva = ivaFatturePassive - ivaFattureAttive;
-
-      setRiepilogoData({
-        fatturatoPrevisto,
-        fatturatoEmesso,
-        costiTotali,
-        noteSpesa: totaleNoteSpesa,
-        utileLordo,
-        saldoIva,
-      });
-    } catch (error) {
-      console.error('Error loading riepilogo economico:', error);
-      toast.error('Errore nel caricamento dei dati');
-    }
-  }, [commessaId]);
-
-  // Effetto per ricaricare i dati quando cambia il dateRange
-  useEffect(() => {
-    loadRiepilogoEconomico(dateRange);
-  }, [dateRange, loadRiepilogoEconomico]);
+    return {
+      fatturatoPrevisto,
+      fatturatoEmesso,
+      costiTotali,
+      noteSpesa: totaleNoteSpesa,
+      utileLordo,
+      saldoIva,
+    };
+  }, [dateRange, commessa, fattureAttive, fatturePassive, noteSpese]);
 
   return (
     <div className="space-y-6">
