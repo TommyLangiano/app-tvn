@@ -193,7 +193,7 @@ export default function MobileProfiloPage() {
         Esci
       </Button>
 
-      <p className="text-center text-xs text-gray-400 pb-4">
+      <p className="text-center text-xs text-gray-400">
         AppTVN Mobile v1.0.0
       </p>
     </div>

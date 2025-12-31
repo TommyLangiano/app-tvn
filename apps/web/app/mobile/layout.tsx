@@ -102,18 +102,11 @@ export default function MobileLayout({
 
   return (
     <MobileDataProvider>
-      <div className="min-h-screen flex flex-col bg-white safe-area-top" style={{
-        willChange: 'contents',
-        contain: 'layout style paint',
-        paddingBottom: 'env(safe-area-inset-bottom)',
-      }}>
+      <div className="min-h-screen flex flex-col bg-white safe-area-top">
         <MobileHeader title="AppTVN" showNotifications />
 
         <main className="flex-1 overflow-y-auto" style={{
-          willChange: 'contents',
-          backfaceVisibility: 'hidden',
-          perspective: 1000,
-          paddingBottom: 'calc(100px + env(safe-area-inset-bottom))',
+          paddingBottom: 'calc(90px + env(safe-area-inset-bottom) + 16px)',
         }}>
           {children}
         </main>

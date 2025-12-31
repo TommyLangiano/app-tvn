@@ -160,7 +160,6 @@
     main {
       transform: translateZ(0);
       -webkit-transform: translateZ(0);
-      will-change: contents;
     }
 
     /* Smooth page transitions senza flash */
@@ -174,6 +173,22 @@
       ::view-transition-new(root) {
         animation-duration: 0ms !important;
       }
+    }
+
+    /* Fix per scroll su Safari mobile - prevent bounce oltre contenuto */
+    main {
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior-y: contain;
+    }
+
+    /* Assicura che min-h-screen tenga conto della navbar */
+    .min-h-screen {
+      min-height: 100vh;
+      min-height: -webkit-fill-available;
+    }
+
+    html {
+      height: -webkit-fill-available;
     }
   }
 
