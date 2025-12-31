@@ -637,7 +637,7 @@ export function RapportiniTab({
           <div
             className="overflow-x-auto"
             ref={(el) => {
-              if (el && !loading) {
+              if (el) {
                 // Scroll to current week on mount
                 const today = new Date();
                 if (today.getMonth() === currentMonth && today.getFullYear() === currentYear) {
@@ -649,12 +649,7 @@ export function RapportiniTab({
               }
             }}
           >
-            {loading ? (
-              <div className="text-center py-12 text-muted-foreground">
-                Caricamento...
-              </div>
-            ) : (
-              <table className="w-full border-collapse">
+            <table className="w-full border-collapse">
                 <thead className="bg-background border-b-2 border-border sticky top-0 z-10">
                   <tr>
                     {/* Colonna Dipendenti */}
@@ -865,7 +860,6 @@ export function RapportiniTab({
                   })}
                 </tbody>
               </table>
-            )}
           </div>
         </div>
       )}
