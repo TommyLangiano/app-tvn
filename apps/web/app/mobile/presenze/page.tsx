@@ -393,7 +393,7 @@ export default function MobilePresenzePage() {
         </div>
       </div>
 
-      <div className="px-4 space-y-3 pb-24">
+      <div className="px-4 space-y-3 pb-32">
         {filteredRapportini.length === 0 ? (
           <div className="p-8 text-center">
             <p className="text-gray-500 text-sm">Nessun rapportino trovato</p>
@@ -406,7 +406,9 @@ export default function MobilePresenzePage() {
       </div>
 
       {rapportini.length > 0 && (
-        <div className="fixed bottom-32 left-4 right-4 z-10">
+        <div className="fixed left-4 right-4 z-10" style={{
+          bottom: 'calc(90px + env(safe-area-inset-bottom))'
+        }}>
           <div className="bg-emerald-600 rounded-2xl p-4 shadow-xl">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">

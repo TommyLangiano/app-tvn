@@ -113,7 +113,7 @@ export default function MobileLayout({
           willChange: 'contents',
           backfaceVisibility: 'hidden',
           perspective: 1000,
-          paddingBottom: 'calc(75px + env(safe-area-inset-bottom))',
+          paddingBottom: 'calc(100px + env(safe-area-inset-bottom))',
         }}>
           {children}
         </main>
