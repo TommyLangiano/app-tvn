@@ -54,8 +54,6 @@ export function NoteSpeseTab({
   noteSpeseRifiutate: noteSpeseRifiutateProp,
   onReload
 }: NoteSpeseTabProps) {
-  const [loading, setLoading] = useState(true);
-
   // Data for modals
   const [users, setUsers] = useState<User[]>([]);
   const [commesse, setCommesse] = useState<Commessa[]>([]);
@@ -85,15 +83,7 @@ export function NoteSpeseTab({
   const [selectedNoteSpese, setSelectedNoteSpese] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    const initializeData = async () => {
-      try {
-        setLoading(true);
-        await loadInitialData();
-      } finally {
-        setLoading(false);
-      }
-    };
-    initializeData();
+    loadInitialData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -509,18 +499,6 @@ export function NoteSpeseTab({
       throw error; // Re-throw to let modal handle it
     }
   };
-
-  // Loading state
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-[60vh]">
-        <div className="text-center space-y-4">
-          <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
-          <p className="text-muted-foreground">Caricamento note spese...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-4">
