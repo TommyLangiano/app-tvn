@@ -60,7 +60,7 @@ const FABButton = memo(({ onClick }: { onClick?: () => void }) => (
     onClick={onClick}
     className="fixed z-[60] group"
     style={{
-      bottom: '42px',
+      bottom: 'calc(42px + env(safe-area-inset-bottom))',
       left: '50%',
       transform: 'translateX(-50%)',
     }}
@@ -97,7 +97,9 @@ export const BottomNav = memo(({ items, onFabClick }: BottomNavProps) => {
 
   return (
     <>
-      <nav className="fixed bottom-0 left-0 right-0 z-50">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 safe-area-bottom" style={{
+        paddingBottom: 'env(safe-area-inset-bottom)',
+      }}>
         <svg
           className="absolute top-0 left-0 right-0 w-full"
           style={{ height: '90px' }}
