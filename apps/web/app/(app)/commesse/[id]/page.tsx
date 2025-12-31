@@ -49,6 +49,9 @@ export default function CommessaDetailPage() {
   const [riepilogo, setRiepilogo] = useState<RiepilogoEconomico | null>(null);
   const [fatture, setFatture] = useState<FatturaAttiva[]>([]);
   const [fatturePassive, setFatturePassive] = useState<FatturaPassiva[]>([]);
+  const [noteSpese, setNoteSpese] = useState<any[]>([]);
+  const [noteSpeseDaApprovare, setNoteSpeseDaApprovare] = useState<any[]>([]);
+  const [noteSpeseRifiutate, setNoteSpeseRifiutate] = useState<any[]>([]);
   // const [scontrini, setScontrini] = useState([])  // Tabella eliminata
   const [showFatturaForm, setShowFatturaForm] = useState(false);
   const [showCostoForm, setShowCostoForm] = useState(false);
@@ -256,13 +259,85 @@ export default function CommessaDetailPage() {
 
       setFatturePassive(fatturePassiveData || []);
 
-      // Load scontrini (costi - scontrini) - TABELLA ELIMINATA
-      // const { data: scontriniData } = await supabase
-      //   .from('scontrini')
-      //   .select('*')
-      //   .eq('commessa_id', commessaData.id)
-      //   .order('data_emissione', { ascending: false });
-      // setScontrini(scontriniData || []);
+      // Load note spese
+      const [noteSpeseApprovateRes, noteSpeseDaApprovareRes, noteSpeseRifiutateRes] = await Promise.all([
+        supabase
+          .from('note_spesa')
+          .select(`
+            *,
+            commesse!note_spesa_commessa_id_fkey (
+              titolo,
+              slug
+            ),
+            dipendenti!note_spesa_dipendente_id_fkey (
+              id,
+              nome,
+              cognome,
+              email
+            ),
+            categorie_note_spesa!note_spesa_categoria_fkey (
+              id,
+              nome,
+              colore,
+              icona
+            )
+          `)
+          .eq('commessa_id', commessaData.id)
+          .eq('stato', 'approvato')
+          .order('data_nota', { ascending: false }),
+        supabase
+          .from('note_spesa')
+          .select(`
+            *,
+            commesse!note_spesa_commessa_id_fkey (
+              titolo,
+              slug
+            ),
+            dipendenti!note_spesa_dipendente_id_fkey (
+              id,
+              nome,
+              cognome,
+              email
+            ),
+            categorie_note_spesa!note_spesa_categoria_fkey (
+              id,
+              nome,
+              colore,
+              icona
+            )
+          `)
+          .eq('commessa_id', commessaData.id)
+          .eq('stato', 'da_approvare')
+          .order('data_nota', { ascending: false }),
+        supabase
+          .from('note_spesa')
+          .select(`
+            *,
+            commesse!note_spesa_commessa_id_fkey (
+              titolo,
+              slug
+            ),
+            dipendenti!note_spesa_dipendente_id_fkey (
+              id,
+              nome,
+              cognome,
+              email
+            ),
+            categorie_note_spesa!note_spesa_categoria_fkey (
+              id,
+              nome,
+              colore,
+              icona
+            )
+          `)
+          .eq('commessa_id', commessaData.id)
+          .eq('stato', 'rifiutato')
+          .order('data_nota', { ascending: false })
+      ]);
+
+      setNoteSpese(noteSpeseApprovateRes.data || []);
+      setNoteSpeseDaApprovare(noteSpeseDaApprovareRes.data || []);
+      setNoteSpeseRifiutate(noteSpeseRifiutateRes.data || []);
 
     } catch {
       toast.error('Errore nel caricamento dei dati');
@@ -1161,6 +1236,10 @@ export default function CommessaDetailPage() {
         <NoteSpeseTab
           commessaId={commessa.id}
           commessaNome={commessa.nome_commessa}
+          noteSpese={noteSpese}
+          noteSpeseDaApprovare={noteSpeseDaApprovare}
+          noteSpeseRifiutate={noteSpeseRifiutate}
+          onReload={loadCommessaData}
         />
       )}
 

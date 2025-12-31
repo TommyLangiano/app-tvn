@@ -40,13 +40,21 @@ type TabType = 'da_approvare' | 'approvate' | 'rifiutate';
 interface NoteSpeseTabProps {
   commessaId: string;
   commessaNome: string;
+  noteSpese: NotaSpesa[];
+  noteSpeseDaApprovare: NotaSpesa[];
+  noteSpeseRifiutate: NotaSpesa[];
+  onReload?: () => void;
 }
 
-export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
+export function NoteSpeseTab({
+  commessaId,
+  commessaNome,
+  noteSpese: noteSpeseProp,
+  noteSpeseDaApprovare: noteSpeseDaApprovareProp,
+  noteSpeseRifiutate: noteSpeseRifiutateProp,
+  onReload
+}: NoteSpeseTabProps) {
   const [loading, setLoading] = useState(true);
-  const [noteSpese, setNoteSpese] = useState<NotaSpesa[]>([]);
-  const [noteSpeseDaApprovare, setNoteSpeseDaApprovare] = useState<NotaSpesa[]>([]);
-  const [noteSpeseRifiutate, setNoteSpeseRifiutate] = useState<NotaSpesa[]>([]);
 
   // Data for modals
   const [users, setUsers] = useState<User[]>([]);
@@ -80,12 +88,7 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
     const initializeData = async () => {
       try {
         setLoading(true);
-        await Promise.all([
-          loadInitialData(),
-          loadNoteSpese(),
-          loadNoteSpeseDaApprovare(),
-          loadNoteSpeseRifiutate()
-        ]);
+        await loadInitialData();
       } finally {
         setLoading(false);
       }
@@ -150,147 +153,11 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
     }]);
   };
 
-  const loadNoteSpese = async () => {
-    const supabase = createClient();
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return;
+  // Reload function that calls parent's onReload
+  const reloadNoteSpese = () => {
+    if (onReload) {
+      onReload();
     }
-
-    const { data: userTenants } = await supabase
-      .from('user_tenants')
-      .select('tenant_id')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(1);
-
-    const userTenant = userTenants && userTenants.length > 0 ? userTenants[0] : null;
-    if (!userTenant) {
-      return;
-    }
-
-    const { data: noteSpeseData, error } = await supabase
-      .from('note_spesa')
-      .select(`
-        *,
-        commesse!note_spesa_commessa_id_fkey (
-          titolo,
-          slug
-        ),
-        dipendenti!note_spesa_dipendente_id_fkey (
-          id,
-          nome,
-          cognome,
-          email
-        ),
-        categorie_note_spesa!note_spesa_categoria_fkey (
-          id,
-          nome,
-          colore,
-          icona
-        )
-      `)
-      .eq('tenant_id', userTenant.tenant_id)
-      .eq('commessa_id', commessaId)
-      .eq('stato', 'approvato')
-      .order('data_nota', { ascending: false });
-
-    if (error) {
-      console.error('Error loading note spese:', error);
-      toast.error('Errore nel caricamento delle note spese');
-      return;
-    }
-
-    setNoteSpese(noteSpeseData || []);
-  };
-
-  const loadNoteSpeseDaApprovare = async () => {
-    const supabase = createClient();
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data: userTenants } = await supabase
-      .from('user_tenants')
-      .select('tenant_id')
-      .eq('user_id', user.id)
-      .limit(1);
-
-    const userTenant = userTenants && userTenants.length > 0 ? userTenants[0] : null;
-    if (!userTenant) return;
-
-    const { data } = await supabase
-      .from('note_spesa')
-      .select(`
-        *,
-        commesse!note_spesa_commessa_id_fkey (
-          titolo,
-          slug
-        ),
-        dipendenti!note_spesa_dipendente_id_fkey (
-          id,
-          nome,
-          cognome,
-          email
-        ),
-        categorie_note_spesa!note_spesa_categoria_fkey (
-          id,
-          nome,
-          colore,
-          icona
-        )
-      `)
-      .eq('tenant_id', userTenant.tenant_id)
-      .eq('commessa_id', commessaId)
-      .eq('stato', 'da_approvare')
-      .order('data_nota', { ascending: false });
-
-    setNoteSpeseDaApprovare(data || []);
-  };
-
-  const loadNoteSpeseRifiutate = async () => {
-    const supabase = createClient();
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data: userTenants } = await supabase
-      .from('user_tenants')
-      .select('tenant_id')
-      .eq('user_id', user.id)
-      .limit(1);
-
-    const userTenant = userTenants && userTenants.length > 0 ? userTenants[0] : null;
-    if (!userTenant) return;
-
-    const { data } = await supabase
-      .from('note_spesa')
-      .select(`
-        *,
-        commesse!note_spesa_commessa_id_fkey (
-          titolo,
-          slug
-        ),
-        dipendenti!note_spesa_dipendente_id_fkey (
-          id,
-          nome,
-          cognome,
-          email
-        ),
-        categorie_note_spesa!note_spesa_categoria_fkey (
-          id,
-          nome,
-          colore,
-          icona
-        )
-      `)
-      .eq('tenant_id', userTenant.tenant_id)
-      .eq('commessa_id', commessaId)
-      .eq('stato', 'rifiutato')
-      .order('data_nota', { ascending: false });
-
-    setNoteSpeseRifiutate(data || []);
   };
 
   const getUserDisplayName = (notaSpesa: NotaSpesa) => {
@@ -303,10 +170,10 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
   // Filtri e ordinamento
   const noteSpeseFiltrate = useMemo(() => {
     let filtered = (activeTab as TabType) === 'da_approvare'
-      ? [...noteSpeseDaApprovare]
+      ? [...noteSpeseDaApprovareProp]
       : (activeTab as TabType) === 'rifiutate'
-      ? [...noteSpeseRifiutate]
-      : [...noteSpese];
+      ? [...noteSpeseRifiutateProp]
+      : [...noteSpeseProp];
 
     // Search filter
     if (searchTerm) {
@@ -363,16 +230,16 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
     });
 
     return filtered;
-  }, [noteSpese, noteSpeseDaApprovare, noteSpeseRifiutate, activeTab, searchTerm, filtroUtente, sortField, sortDirection]);
+  }, [noteSpeseProp, noteSpeseDaApprovareProp, noteSpeseRifiutateProp, activeTab, searchTerm, filtroUtente, sortField, sortDirection]);
 
   // Tab counts
   const tabCounts = useMemo(() => {
     return {
-      da_approvare: noteSpeseDaApprovare.length,
-      approvate: noteSpese.length,
-      rifiutate: noteSpeseRifiutate.length,
+      da_approvare: noteSpeseDaApprovareProp.length,
+      approvate: noteSpeseProp.length,
+      rifiutate: noteSpeseRifiutateProp.length,
     };
-  }, [noteSpese, noteSpeseDaApprovare, noteSpeseRifiutate]);
+  }, [noteSpeseProp, noteSpeseDaApprovareProp, noteSpeseRifiutateProp]);
 
   // Paginazione
   const totalPages = Math.ceil(noteSpeseFiltrate.length / itemsPerPage);
@@ -569,15 +436,11 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
 
 
   const handleNotaSpesaUpdated = () => {
-    loadNoteSpese();
-    loadNoteSpeseDaApprovare();
-    loadNoteSpeseRifiutate();
+    reloadNoteSpese();
   };
 
   const handleNotaSpesaDeleted = () => {
-    loadNoteSpese();
-    loadNoteSpeseDaApprovare();
-    loadNoteSpeseRifiutate();
+    reloadNoteSpese();
   };
 
   const handleApprova = (notaSpesa: NotaSpesa) => {
@@ -635,11 +498,7 @@ export function NoteSpeseTab({ commessaId, commessaNome }: NoteSpeseTabProps) {
       }
 
       // Reload all lists
-      await Promise.all([
-        loadNoteSpese(),
-        loadNoteSpeseDaApprovare(),
-        loadNoteSpeseRifiutate()
-      ]);
+      reloadNoteSpese();
 
       // Close modal
       setModalTipo(null);
