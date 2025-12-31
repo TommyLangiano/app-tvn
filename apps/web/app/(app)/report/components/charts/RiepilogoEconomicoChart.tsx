@@ -59,10 +59,9 @@ interface RiepilogoEconomicoData {
 
 interface RiepilogoEconomicoChartProps {
   data: RiepilogoEconomicoData;
-  loading?: boolean;
 }
 
-export const RiepilogoEconomicoChart = memo(({ data, loading = false }: RiepilogoEconomicoChartProps) => {
+export const RiepilogoEconomicoChart = memo(({ data }: RiepilogoEconomicoChartProps) => {
   const chartData = useMemo(() => ({
     labels: [
       'Importo Contratto',
@@ -166,43 +165,15 @@ export const RiepilogoEconomicoChart = memo(({ data, loading = false }: Riepilog
     },
   }), []);
 
-  if (loading) {
-    return (
-      <div className="bg-card rounded-lg border border-border p-6">
-        <div className="h-[450px] bg-muted animate-pulse rounded"></div>
-      </div>
-    );
-  }
-
-  // Controlla se non ci sono dati
-  const hasNoData =
-    data.fatturatoPrevisto === 0 &&
-    data.fatturatoEmesso === 0 &&
-    data.costiTotali === 0 &&
-    data.noteSpesa === 0 &&
-    data.utileLordo === 0 &&
-    data.saldoIva === 0;
-
-  if (hasNoData) {
-    return (
-      <div className="w-full h-[450px] flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-lg font-medium text-muted-foreground">
-            Nessun dato disponibile per il periodo selezionato
-          </p>
-        </div>
-      </div>
-    );
-  }
-
+  // Mostra sempre il grafico, anche durante il loading o con dati a 0
+  // Il grafico mostrerà le barre con altezza 0 se non ci sono dati
   return (
     <div className="w-full h-[450px]">
       <Bar data={chartData} options={options} />
     </div>
   );
 }, (prevProps, nextProps) => {
-  if (prevProps.loading !== nextProps.loading) return false;
-
+  // Memoizza solo se i dati sono identici
   return (
     prevProps.data.fatturatoPrevisto === nextProps.data.fatturatoPrevisto &&
     prevProps.data.fatturatoEmesso === nextProps.data.fatturatoEmesso &&

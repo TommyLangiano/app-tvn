@@ -50,7 +50,6 @@ const sumImporti = (items: any[] | null): number => {
 };
 
 export function CommessaReportTab({ commessaId }: CommessaReportTabProps) {
-  const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>('oggi');
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [dateRange, setDateRange] = useState<DateRange>(() => getDateRangeFromPeriod('oggi'));
@@ -86,7 +85,6 @@ export function CommessaReportTab({ commessaId }: CommessaReportTabProps) {
   // Memoizza la funzione di caricamento per evitare ricreazioni
   const loadRiepilogoEconomico = useCallback(async (range: DateRange) => {
     try {
-      setLoading(true);
       const supabase = createClient();
 
       // Get current user's tenant
@@ -178,8 +176,6 @@ export function CommessaReportTab({ commessaId }: CommessaReportTabProps) {
     } catch (error) {
       console.error('Error loading riepilogo economico:', error);
       toast.error('Errore nel caricamento dei dati');
-    } finally {
-      setLoading(false);
     }
   }, [commessaId]);
 
@@ -212,7 +208,7 @@ export function CommessaReportTab({ commessaId }: CommessaReportTabProps) {
 
         {/* Riepilogo Economico Chart */}
         <div className="p-6">
-          <RiepilogoEconomicoChart data={riepilogoData} loading={loading} />
+          <RiepilogoEconomicoChart data={riepilogoData} />
         </div>
       </div>
     </div>
