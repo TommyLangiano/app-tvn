@@ -1,12 +1,94 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { User, Mail, Phone, LogOut, Shield } from 'lucide-react';
 import { toast } from 'sonner';
+
+const LoadingSpinner = memo(() => (
+  <div className="flex items-center justify-center min-h-[50vh]">
+    <div className="animate-spin h-8 w-8 border-2 border-emerald-600 border-t-transparent rounded-full" />
+  </div>
+));
+
+LoadingSpinner.displayName = 'LoadingSpinner';
+
+const UserAvatar = memo(({ userData }: { userData: any }) => {
+  if (userData?.avatar_url) {
+    return (
+      <img
+        src={userData.avatar_url}
+        alt="Avatar"
+        className="w-24 h-24 rounded-full mx-auto border-4 border-emerald-100"
+      />
+    );
+  }
+
+  return (
+    <div className="w-24 h-24 rounded-full mx-auto bg-emerald-100 flex items-center justify-center border-4 border-emerald-200">
+      <span className="text-3xl font-bold text-emerald-700">
+        {userData?.nome?.[0]}{userData?.cognome?.[0]}
+      </span>
+    </div>
+  );
+});
+
+UserAvatar.displayName = 'UserAvatar';
+
+const InfoCard = memo(({ icon: Icon, label, value, color }: {
+  icon: any;
+  label: string;
+  value: string;
+  color: string;
+}) => (
+  <Card className="p-4 border-2 border-gray-200">
+    <div className="flex items-center gap-3">
+      <div className={`p-2 rounded-lg ${color}`}>
+        <Icon className="w-5 h-5" />
+      </div>
+      <div className="flex-1">
+        <p className="text-xs text-gray-500">{label}</p>
+        <p className="font-medium text-gray-900">{value}</p>
+      </div>
+    </div>
+  </Card>
+));
+
+InfoCard.displayName = 'InfoCard';
+
+const ContractInfo = memo(({ userData }: { userData: any }) => (
+  <div className="space-y-3">
+    <h2 className="text-lg font-bold text-gray-900">Informazioni Contrattuali</h2>
+
+    <Card className="p-4 border-2 border-gray-200 space-y-3">
+      {userData?.tipo_contratto && (
+        <div className="flex justify-between">
+          <span className="text-sm text-gray-500">Tipo Contratto</span>
+          <span className="text-sm font-medium text-gray-900">{userData.tipo_contratto}</span>
+        </div>
+      )}
+      {userData?.data_assunzione && (
+        <div className="flex justify-between">
+          <span className="text-sm text-gray-500">Data Assunzione</span>
+          <span className="text-sm font-medium text-gray-900">
+            {new Date(userData.data_assunzione).toLocaleDateString('it-IT')}
+          </span>
+        </div>
+      )}
+      {userData?.ore_settimanali && (
+        <div className="flex justify-between">
+          <span className="text-sm text-gray-500">Ore Settimanali</span>
+          <span className="text-sm font-medium text-gray-900">{userData.ore_settimanali}h</span>
+        </div>
+      )}
+    </Card>
+  </div>
+));
+
+ContractInfo.displayName = 'ContractInfo';
 
 export default function MobileProfiloPage() {
   const router = useRouter();
@@ -45,7 +127,7 @@ export default function MobileProfiloPage() {
     }
   };
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     try {
       const supabase = createClient();
       await supabase.auth.signOut();
@@ -55,113 +137,53 @@ export default function MobileProfiloPage() {
       console.error('Error logging out:', error);
       toast.error('Errore durante il logout');
     }
-  };
+  }, [router]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="animate-spin h-8 w-8 border-2 border-emerald-600 border-t-transparent rounded-full" />
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return (
     <div className="p-4 space-y-6">
-      {/* Header con Avatar */}
       <div className="text-center">
-        {userData?.avatar_url ? (
-          <img
-            src={userData.avatar_url}
-            alt="Avatar"
-            className="w-24 h-24 rounded-full mx-auto border-4 border-emerald-100"
-          />
-        ) : (
-          <div className="w-24 h-24 rounded-full mx-auto bg-emerald-100 flex items-center justify-center border-4 border-emerald-200">
-            <span className="text-3xl font-bold text-emerald-700">
-              {userData?.nome?.[0]}{userData?.cognome?.[0]}
-            </span>
-          </div>
-        )}
+        <UserAvatar userData={userData} />
         <h1 className="text-2xl font-bold text-gray-900 mt-4">
           {userData?.nome} {userData?.cognome}
         </h1>
         <p className="text-sm text-gray-500 mt-1">{userData?.qualifica || 'Dipendente'}</p>
       </div>
 
-      {/* Info Cards */}
       <div className="space-y-3">
-        <Card className="p-4 border-2 border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-blue-100">
-              <Mail className="w-5 h-5 text-blue-600" />
-            </div>
-            <div className="flex-1">
-              <p className="text-xs text-gray-500">Email</p>
-              <p className="font-medium text-gray-900">{userData?.email || 'Non disponibile'}</p>
-            </div>
-          </div>
-        </Card>
+        <InfoCard
+          icon={Mail}
+          label="Email"
+          value={userData?.email || 'Non disponibile'}
+          color="bg-blue-100 text-blue-600"
+        />
 
         {userData?.telefono && (
-          <Card className="p-4 border-2 border-gray-200">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-green-100">
-                <Phone className="w-5 h-5 text-green-600" />
-              </div>
-              <div className="flex-1">
-                <p className="text-xs text-gray-500">Telefono</p>
-                <p className="font-medium text-gray-900">{userData.telefono}</p>
-              </div>
-            </div>
-          </Card>
+          <InfoCard
+            icon={Phone}
+            label="Telefono"
+            value={userData.telefono}
+            color="bg-green-100 text-green-600"
+          />
         )}
 
         {userData?.matricola && (
-          <Card className="p-4 border-2 border-gray-200">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-purple-100">
-                <Shield className="w-5 h-5 text-purple-600" />
-              </div>
-              <div className="flex-1">
-                <p className="text-xs text-gray-500">Matricola</p>
-                <p className="font-medium text-gray-900">{userData.matricola}</p>
-              </div>
-            </div>
-          </Card>
+          <InfoCard
+            icon={Shield}
+            label="Matricola"
+            value={userData.matricola}
+            color="bg-purple-100 text-purple-600"
+          />
         )}
       </div>
 
-      {/* Informazioni Contrattuali */}
       {(userData?.data_assunzione || userData?.tipo_contratto) && (
-        <div className="space-y-3">
-          <h2 className="text-lg font-bold text-gray-900">Informazioni Contrattuali</h2>
-
-          <Card className="p-4 border-2 border-gray-200 space-y-3">
-            {userData?.tipo_contratto && (
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Tipo Contratto</span>
-                <span className="text-sm font-medium text-gray-900">{userData.tipo_contratto}</span>
-              </div>
-            )}
-            {userData?.data_assunzione && (
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Data Assunzione</span>
-                <span className="text-sm font-medium text-gray-900">
-                  {new Date(userData.data_assunzione).toLocaleDateString('it-IT')}
-                </span>
-              </div>
-            )}
-            {userData?.ore_settimanali && (
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Ore Settimanali</span>
-                <span className="text-sm font-medium text-gray-900">{userData.ore_settimanali}h</span>
-              </div>
-            )}
-          </Card>
-        </div>
+        <ContractInfo userData={userData} />
       )}
 
-      {/* Logout Button */}
       <Button
         onClick={handleLogout}
         variant="outline"
@@ -171,7 +193,6 @@ export default function MobileProfiloPage() {
         Esci
       </Button>
 
-      {/* Version */}
       <p className="text-center text-xs text-gray-400 pb-4">
         AppTVN Mobile v1.0.0
       </p>

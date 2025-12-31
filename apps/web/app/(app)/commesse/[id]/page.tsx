@@ -2164,11 +2164,51 @@ export default function CommessaDetailPage() {
                     <h3 className="text-lg font-semibold">Approvazione Presenze</h3>
                     <Switch
                       checked={approvazionePresenze.abilitato}
-                      onCheckedChange={(checked) => {
+                      onCheckedChange={async (checked) => {
                         setApprovazionePresenze({ ...approvazionePresenze, abilitato: checked });
                         if (!checked) {
+                          // Disattivazione: salva subito nel DB
                           setSelectedApprovatoriPresenze(new Set());
                           setEditingApprovazionePresenze(false);
+
+                          try {
+                            const supabase = createClient();
+                            const { data: { user } } = await supabase.auth.getUser();
+                            if (!user) throw new Error('No authenticated user');
+
+                            const { data: userTenants } = await supabase
+                              .from('user_tenants')
+                              .select('tenant_id')
+                              .eq('user_id', user.id)
+                              .order('created_at', { ascending: false })
+                              .limit(1);
+
+                            if (!userTenants || userTenants.length === 0) {
+                              throw new Error('No tenant found for user');
+                            }
+
+                            const tenantId = userTenants[0].tenant_id;
+
+                            const { error } = await supabase
+                              .from('commesse_impostazioni_approvazione')
+                              .upsert({
+                                commessa_id: commessa?.id,
+                                tenant_id: tenantId,
+                                tipo_approvazione: 'presenze',
+                                abilitato: false,
+                                approvatori: [],
+                                created_by: user.id
+                              }, {
+                                onConflict: 'commessa_id,tipo_approvazione',
+                                ignoreDuplicates: false
+                              });
+
+                            if (error) throw error;
+                            toast.success('Approvazione Presenze disattivata');
+                          } catch (error) {
+                            console.error('Error saving:', error);
+                            toast.error('Errore durante la disattivazione');
+                          }
                         } else {
                           // Se abilito per la prima volta, vado in edit mode
                           setEditingApprovazionePresenze(true);
@@ -2442,11 +2482,51 @@ export default function CommessaDetailPage() {
                     <h3 className="text-lg font-semibold">Approvazione Note Spesa</h3>
                     <Switch
                       checked={approvazioneNoteSpesa.abilitato}
-                      onCheckedChange={(checked) => {
+                      onCheckedChange={async (checked) => {
                         setApprovazioneNoteSpesa({ ...approvazioneNoteSpesa, abilitato: checked });
                         if (!checked) {
+                          // Disattivazione: salva subito nel DB
                           setSelectedApprovatoriNoteSpesa(new Set());
                           setEditingApprovazioneNoteSpesa(false);
+
+                          try {
+                            const supabase = createClient();
+                            const { data: { user } } = await supabase.auth.getUser();
+                            if (!user) throw new Error('No authenticated user');
+
+                            const { data: userTenants } = await supabase
+                              .from('user_tenants')
+                              .select('tenant_id')
+                              .eq('user_id', user.id)
+                              .order('created_at', { ascending: false })
+                              .limit(1);
+
+                            if (!userTenants || userTenants.length === 0) {
+                              throw new Error('No tenant found for user');
+                            }
+
+                            const tenantId = userTenants[0].tenant_id;
+
+                            const { error } = await supabase
+                              .from('commesse_impostazioni_approvazione')
+                              .upsert({
+                                commessa_id: commessa?.id,
+                                tenant_id: tenantId,
+                                tipo_approvazione: 'note_spesa',
+                                abilitato: false,
+                                approvatori: [],
+                                created_by: user.id
+                              }, {
+                                onConflict: 'commessa_id,tipo_approvazione',
+                                ignoreDuplicates: false
+                              });
+
+                            if (error) throw error;
+                            toast.success('Approvazione Note Spesa disattivata');
+                          } catch (error) {
+                            console.error('Error saving:', error);
+                            toast.error('Errore durante la disattivazione');
+                          }
                         } else {
                           // Se abilito per la prima volta, vado in edit mode
                           setEditingApprovazioneNoteSpesa(true);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { ArrowLeft, Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,11 +41,30 @@ const initialFormData = {
   commessa_id: '',
   data_rapportino: new Date().toISOString().split('T')[0],
   ore_lavorate: '',
-  tempo_pausa: '60', // Default: 1 ora
+  tempo_pausa: '60',
   orario_inizio: '',
   orario_fine: '',
   note: '',
 };
+
+const LoadingSpinner = memo(() => (
+  <div className="flex items-center justify-center min-h-screen">
+    <div className="animate-spin h-8 w-8 border-2 border-emerald-600 border-t-transparent rounded-full" />
+  </div>
+));
+
+LoadingSpinner.displayName = 'LoadingSpinner';
+
+const EffectiveHoursDisplay = memo(({ hours }: { hours: string }) => (
+  <div className="bg-emerald-50 border-2 border-emerald-200 p-3 rounded-lg">
+    <div className="flex items-center justify-between">
+      <span className="text-sm font-medium text-gray-900">Ore Effettive</span>
+      <span className="text-2xl font-bold text-emerald-900">{hours}h</span>
+    </div>
+  </div>
+));
+
+EffectiveHoursDisplay.displayName = 'EffectiveHoursDisplay';
 
 export default function NuovoRapportinoMobilePage() {
   const router = useRouter();
@@ -57,14 +76,14 @@ export default function NuovoRapportinoMobilePage() {
   const [dipendenteId, setDipendenteId] = useState<string>('');
   const [tenantId, setTenantId] = useState<string>('');
   const [commesse, setCommesse] = useState<Commessa[]>([]);
-  const [commesseTeam, setCommesseTeam] = useState<Set<string>>(new Set()); // Set of commessa_ids available for this user
+  const [commesseTeam, setCommesseTeam] = useState<Set<string>>(new Set());
   const [loadingData, setLoadingData] = useState(true);
 
   useEffect(() => {
     loadInitialData();
   }, []);
 
-  const loadInitialData = async () => {
+  const loadInitialData = useCallback(async () => {
     try {
       setLoadingData(true);
       const supabase = createClient();
@@ -75,7 +94,6 @@ export default function NuovoRapportinoMobilePage() {
         return;
       }
 
-      // Get dipendente_id for logged in user
       const { data: dipendente } = await supabase
         .from('dipendenti')
         .select('id, tenant_id')
@@ -91,7 +109,6 @@ export default function NuovoRapportinoMobilePage() {
       setDipendenteId(dipendente.id);
       setTenantId(dipendente.tenant_id);
 
-      // Load modalita_calcolo from tenant
       const { data: tenant } = await supabase
         .from('tenants')
         .select('modalita_calcolo_rapportini')
@@ -102,7 +119,6 @@ export default function NuovoRapportinoMobilePage() {
         setModalitaCalcolo(tenant.modalita_calcolo_rapportini || 'ore_totali');
       }
 
-      // Load commesse available for this dipendente (from commesse_team)
       const { data: teamData } = await supabase
         .from('commesse_team')
         .select('commessa_id')
@@ -112,7 +128,6 @@ export default function NuovoRapportinoMobilePage() {
       const availableCommesseIds = new Set(teamData?.map(t => t.commessa_id) || []);
       setCommesseTeam(availableCommesseIds);
 
-      // Load only commesse that this dipendente is part of
       if (availableCommesseIds.size > 0) {
         const { data: commesseData } = await supabase
           .from('commesse')
@@ -133,23 +148,56 @@ export default function NuovoRapportinoMobilePage() {
     } finally {
       setLoadingData(false);
     }
-  };
+  }, [router]);
 
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
     setFormData(initialFormData);
     setCustomPausa('');
-  };
+  }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const calculateEffectiveHours = useMemo(() => {
+    let oreNum = 0;
+
+    if (modalitaCalcolo === 'ore_totali') {
+      oreNum = parseFloat(formData.ore_lavorate) || 0;
+    } else {
+      if (formData.orario_inizio && formData.orario_fine) {
+        const [inizioH, inizioM] = formData.orario_inizio.split(':').map(Number);
+        const [fineH, fineM] = formData.orario_fine.split(':').map(Number);
+
+        if (!isNaN(inizioH) && !isNaN(inizioM) && !isNaN(fineH) && !isNaN(fineM)) {
+          const inizioMinutes = inizioH * 60 + inizioM;
+          let fineMinutes = fineH * 60 + fineM;
+
+          if (fineMinutes < inizioMinutes) {
+            fineMinutes += 24 * 60;
+          }
+
+          const minutiLavorati = fineMinutes - inizioMinutes;
+          oreNum = minutiLavorati / 60;
+        }
+      }
+    }
+
+    let pausaMinutes = 0;
+    if (formData.tempo_pausa === 'custom') {
+      pausaMinutes = parseInt(customPausa) || 0;
+    } else {
+      pausaMinutes = parseInt(formData.tempo_pausa) || 0;
+    }
+
+    const effectiveHours = oreNum - (pausaMinutes / 60);
+    return effectiveHours > 0 ? effectiveHours.toFixed(2) : '0.00';
+  }, [modalitaCalcolo, formData.ore_lavorate, formData.orario_inizio, formData.orario_fine, formData.tempo_pausa, customPausa]);
+
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validazione base
     if (!formData.commessa_id || !formData.data_rapportino) {
       toast.error('Compila tutti i campi obbligatori');
       return;
     }
 
-    // Validazione team: verifica che il dipendente sia nel team della commessa
     if (!commesseTeam.has(formData.commessa_id)) {
       toast.error('Non fai parte del team di questa commessa');
       return;
@@ -157,7 +205,6 @@ export default function NuovoRapportinoMobilePage() {
 
     let oreNum = 0;
 
-    // Calcola ore in base alla modalità
     if (modalitaCalcolo === 'ore_totali') {
       if (!formData.ore_lavorate) {
         toast.error('Inserisci le ore lavorate');
@@ -169,7 +216,6 @@ export default function NuovoRapportinoMobilePage() {
         return;
       }
     } else {
-      // Modalità orari: calcola ore da orario_inizio e orario_fine
       if (!formData.orario_inizio || !formData.orario_fine) {
         toast.error('Inserisci orario di inizio e fine');
         return;
@@ -181,7 +227,6 @@ export default function NuovoRapportinoMobilePage() {
       const inizioMinutes = inizioH * 60 + inizioM;
       let fineMinutes = fineH * 60 + fineM;
 
-      // Se fine è prima di inizio, assume che sia il giorno dopo
       if (fineMinutes < inizioMinutes) {
         fineMinutes += 24 * 60;
       }
@@ -202,15 +247,13 @@ export default function NuovoRapportinoMobilePage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      // Calculate tempo_pausa
-      let tempoPausaMinutes = 60; // Default: 1 ora
+      let tempoPausaMinutes = 60;
       if (formData.tempo_pausa === 'custom') {
         tempoPausaMinutes = parseInt(customPausa) || 0;
       } else {
         tempoPausaMinutes = parseInt(formData.tempo_pausa) || 60;
       }
 
-      // Sottrai la pausa dalle ore totali per ottenere le ore effettive lavorate
       const oreLavorateEffettive = oreNum - (tempoPausaMinutes / 60);
 
       if (oreLavorateEffettive <= 0) {
@@ -218,26 +261,23 @@ export default function NuovoRapportinoMobilePage() {
         return;
       }
 
-      // Get user info
       const user_name = user.user_metadata?.full_name || null;
       const user_email = user.email || null;
 
-      // Insert rapportino data
       const rapportinoData: any = {
         tenant_id: tenantId,
         user_name,
         user_email,
-        dipendente_id: dipendenteId, // CRITICAL: use dipendente_id not user_id
+        dipendente_id: dipendenteId,
         commessa_id: formData.commessa_id,
         data_rapportino: formData.data_rapportino,
         ore_lavorate: oreLavorateEffettive,
         tempo_pausa: tempoPausaMinutes,
         note: formData.note || null,
-        allegato_url: null, // No file upload on mobile
+        allegato_url: null,
         created_by: user.id,
       };
 
-      // Aggiungi orari solo se modalità orari
       if (modalitaCalcolo === 'orari') {
         rapportinoData.orario_inizio = formData.orario_inizio;
         rapportinoData.orario_fine = formData.orario_fine;
@@ -248,7 +288,6 @@ export default function NuovoRapportinoMobilePage() {
         .insert(rapportinoData);
 
       if (error) {
-        // Check if it's a duplicate key error
         if (error.code === '23505') {
           toast.error('Hai già inserito un rapportino per questa commessa in questa data');
           return;
@@ -265,59 +304,18 @@ export default function NuovoRapportinoMobilePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [formData, commesseTeam, modalitaCalcolo, customPausa, tenantId, dipendenteId, router]);
 
-  // Calculate effective hours (ore lavorate - pausa)
-  const calculateEffectiveHours = () => {
-    let oreNum = 0;
-
-    // Calcola ore in base alla modalità
-    if (modalitaCalcolo === 'ore_totali') {
-      oreNum = parseFloat(formData.ore_lavorate) || 0;
-    } else {
-      // Modalità orari: calcola ore da orario_inizio e orario_fine
-      if (formData.orario_inizio && formData.orario_fine) {
-        const [inizioH, inizioM] = formData.orario_inizio.split(':').map(Number);
-        const [fineH, fineM] = formData.orario_fine.split(':').map(Number);
-
-        if (!isNaN(inizioH) && !isNaN(inizioM) && !isNaN(fineH) && !isNaN(fineM)) {
-          const inizioMinutes = inizioH * 60 + inizioM;
-          let fineMinutes = fineH * 60 + fineM;
-
-          // Se fine è prima di inizio, assume che sia il giorno dopo
-          if (fineMinutes < inizioMinutes) {
-            fineMinutes += 24 * 60;
-          }
-
-          const minutiLavorati = fineMinutes - inizioMinutes;
-          oreNum = minutiLavorati / 60;
-        }
-      }
-    }
-
-    // Sottrai pausa
-    let pausaMinutes = 0;
-    if (formData.tempo_pausa === 'custom') {
-      pausaMinutes = parseInt(customPausa) || 0;
-    } else {
-      pausaMinutes = parseInt(formData.tempo_pausa) || 0;
-    }
-
-    const effectiveHours = oreNum - (pausaMinutes / 60);
-    return effectiveHours > 0 ? effectiveHours.toFixed(2) : '0.00';
-  };
+  const handleFieldChange = useCallback((field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  }, []);
 
   if (loadingData) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin h-8 w-8 border-2 border-emerald-600 border-t-transparent rounded-full" />
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <div className="bg-white border-b">
         <div className="p-4 flex items-center gap-3">
           <Button
@@ -332,9 +330,7 @@ export default function NuovoRapportinoMobilePage() {
         </div>
       </div>
 
-      {/* Form */}
       <form onSubmit={handleSubmit} className="p-4 space-y-4">
-        {/* Commessa */}
         <div>
           <Label className="text-sm font-medium text-gray-900 mb-2 block">
             Commessa <span className="text-red-600">*</span>
@@ -369,7 +365,7 @@ export default function NuovoRapportinoMobilePage() {
                         key={commessa.id}
                         value={commessa.nome_commessa}
                         onSelect={() => {
-                          setFormData({ ...formData, commessa_id: commessa.id });
+                          handleFieldChange('commessa_id', commessa.id);
                           setOpenCommessaCombobox(false);
                         }}
                       >
@@ -387,18 +383,8 @@ export default function NuovoRapportinoMobilePage() {
               </Command>
             </PopoverContent>
           </Popover>
-          {formData.commessa_id && (
-            <button
-              type="button"
-              onClick={() => setFormData({ ...formData, commessa_id: '' })}
-              className="absolute right-10 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-900"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
         </div>
 
-        {/* Data */}
         <div>
           <Label htmlFor="data_rapportino" className="text-sm font-medium text-gray-900 mb-2 block">
             Data Rapportino <span className="text-red-600">*</span>
@@ -407,13 +393,12 @@ export default function NuovoRapportinoMobilePage() {
             id="data_rapportino"
             type="date"
             value={formData.data_rapportino}
-            onChange={(e) => setFormData({ ...formData, data_rapportino: e.target.value })}
+            onChange={(e) => handleFieldChange('data_rapportino', e.target.value)}
             className="bg-white border border-input h-11"
             required
           />
         </div>
 
-        {/* Ore Lavorate O Orari */}
         {modalitaCalcolo === 'ore_totali' ? (
           <div>
             <Label htmlFor="ore_lavorate" className="text-sm font-medium text-gray-900 mb-2 block">
@@ -427,7 +412,7 @@ export default function NuovoRapportinoMobilePage() {
               max="24"
               placeholder="8"
               value={formData.ore_lavorate}
-              onChange={(e) => setFormData({ ...formData, ore_lavorate: e.target.value })}
+              onChange={(e) => handleFieldChange('ore_lavorate', e.target.value)}
               className="bg-white border border-input h-11"
               required
             />
@@ -442,7 +427,7 @@ export default function NuovoRapportinoMobilePage() {
                 id="orario_inizio"
                 type="time"
                 value={formData.orario_inizio || ''}
-                onChange={(e) => setFormData({ ...formData, orario_inizio: e.target.value })}
+                onChange={(e) => handleFieldChange('orario_inizio', e.target.value)}
                 className="bg-white border border-input h-11"
                 required
               />
@@ -456,7 +441,7 @@ export default function NuovoRapportinoMobilePage() {
                 id="orario_fine"
                 type="time"
                 value={formData.orario_fine || ''}
-                onChange={(e) => setFormData({ ...formData, orario_fine: e.target.value })}
+                onChange={(e) => handleFieldChange('orario_fine', e.target.value)}
                 className="bg-white border border-input h-11"
                 required
               />
@@ -464,14 +449,13 @@ export default function NuovoRapportinoMobilePage() {
           </div>
         )}
 
-        {/* Pausa - Select Dropdown */}
         <div>
           <Label className="text-sm font-medium text-gray-900 mb-2 block">
             Pausa
           </Label>
           <Select
             value={formData.tempo_pausa}
-            onValueChange={(value) => setFormData({ ...formData, tempo_pausa: value })}
+            onValueChange={(value) => handleFieldChange('tempo_pausa', value)}
           >
             <SelectTrigger className="bg-white border border-input h-11">
               <SelectValue />
@@ -494,28 +478,20 @@ export default function NuovoRapportinoMobilePage() {
           )}
         </div>
 
-        {/* Ore Calcolate */}
-        <div className="bg-emerald-50 border-2 border-emerald-200 p-3 rounded-lg">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-900">Ore Effettive</span>
-            <span className="text-2xl font-bold text-emerald-900">{calculateEffectiveHours()}h</span>
-          </div>
-        </div>
+        <EffectiveHoursDisplay hours={calculateEffectiveHours} />
 
-        {/* Note */}
         <div>
           <Label htmlFor="note" className="text-sm font-medium text-gray-900 mb-2 block">Note</Label>
           <Textarea
             id="note"
             placeholder="Eventuali note sul rapportino..."
             value={formData.note}
-            onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+            onChange={(e) => handleFieldChange('note', e.target.value)}
             className="bg-white border border-input resize-none"
             rows={4}
           />
         </div>
 
-        {/* Footer Actions */}
         <div className="space-y-3 pt-2">
           <Button
             type="submit"

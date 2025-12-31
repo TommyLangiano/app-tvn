@@ -1,13 +1,25 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback, memo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Home, Calendar, FileText, User } from 'lucide-react';
 import { BottomNav } from '@/components/mobile/BottomNav';
 import { FABMenu } from '@/components/mobile/FABMenu';
 import { MobileHeader } from '@/components/mobile/MobileHeader';
+import { MobileDataProvider } from '@/contexts/MobileDataContext';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
+
+const LoadingScreen = memo(() => (
+  <div className="min-h-screen flex items-center justify-center bg-white">
+    <div className="text-center">
+      <div className="animate-spin h-8 w-8 border-2 border-emerald-600 border-t-transparent rounded-full mx-auto mb-4" />
+      <p className="text-sm text-gray-500">Caricamento...</p>
+    </div>
+  </div>
+));
+
+LoadingScreen.displayName = 'LoadingScreen';
 
 export default function MobileLayout({
   children,
@@ -32,28 +44,29 @@ export default function MobileLayout({
         return;
       }
 
-      // Get user role
-      const { data: userTenant } = await supabase
+      // Get user role in single query using join
+      const { data: userRole } = await supabase
         .from('user_tenants')
-        .select('custom_role_id')
+        .select(`
+          custom_role_id,
+          custom_roles!inner (
+            system_role_key
+          )
+        `)
         .eq('user_id', user.id)
         .single();
 
-      if (!userTenant?.custom_role_id) {
+      if (!userRole?.custom_role_id) {
         toast.error('Accesso non autorizzato');
         router.push('/dashboard');
         return;
       }
 
-      // Get role details
-      const { data: role } = await supabase
-        .from('custom_roles')
-        .select('system_role_key')
-        .eq('id', userTenant.custom_role_id)
-        .single();
+      // Type assertion for nested data
+      const roleData = userRole.custom_roles as any;
 
       // Only allow dipendente role
-      if (role?.system_role_key !== 'dipendente') {
+      if (roleData?.system_role_key !== 'dipendente') {
         toast.error('Questa area è riservata ai dipendenti');
         router.push('/dashboard');
         return;
@@ -66,40 +79,47 @@ export default function MobileLayout({
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="text-center">
-          <div className="animate-spin h-8 w-8 border-2 border-emerald-600 border-t-transparent rounded-full mx-auto mb-4" />
-          <p className="text-sm text-gray-500">Caricamento...</p>
-        </div>
-      </div>
-    );
-  }
-
-  const navItems = [
+  // Memoize nav items to prevent recreation
+  const navItems = useMemo(() => [
     { icon: Home, label: 'Home', href: '/mobile/home' },
     { icon: Calendar, label: 'Presenze', href: '/mobile/presenze' },
-    { icon: User, label: 'Placeholder', href: '#' }, // Placeholder per FAB
+    { icon: User, label: 'Placeholder', href: '#' },
     { icon: FileText, label: 'Richieste', href: '/mobile/richieste' },
     { icon: User, label: 'Profilo', href: '/mobile/profilo' },
-  ];
+  ], []);
+
+  const handleFabClick = useCallback(() => {
+    setFabOpen(true);
+  }, []);
+
+  const handleFabClose = useCallback(() => {
+    setFabOpen(false);
+  }, []);
+
+  if (loading) {
+    return <LoadingScreen />;
+  }
 
   return (
-    <div className="min-h-screen flex flex-col bg-white">
-      {/* Header */}
-      <MobileHeader title="AppTVN" showNotifications />
+    <MobileDataProvider>
+      <div className="min-h-screen flex flex-col bg-white" style={{
+        willChange: 'contents',
+        contain: 'layout style paint'
+      }}>
+        <MobileHeader title="AppTVN" showNotifications />
 
-      {/* Main Content - with bottom padding for nav */}
-      <main className="flex-1 overflow-y-auto pb-20">
-        {children}
-      </main>
+        <main className="flex-1 overflow-y-auto pb-20" style={{
+          willChange: 'contents',
+          backfaceVisibility: 'hidden',
+          perspective: 1000,
+        }}>
+          {children}
+        </main>
 
-      {/* Bottom Navigation */}
-      <BottomNav items={navItems} onFabClick={() => setFabOpen(true)} />
+        <BottomNav items={navItems} onFabClick={handleFabClick} />
 
-      {/* FAB Menu */}
-      <FABMenu isOpen={fabOpen} onClose={() => setFabOpen(false)} />
-    </div>
+        <FABMenu isOpen={fabOpen} onClose={handleFabClose} />
+      </div>
+    </MobileDataProvider>
   );
 }

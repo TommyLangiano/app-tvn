@@ -149,6 +149,34 @@
     letter-spacing: -0.02em;
   }
 
+  /* Mobile app - eliminare flash/rendering tra pagine */
+  @media (max-width: 768px) {
+    * {
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+    }
+
+    /* GPU acceleration per performance */
+    main {
+      transform: translateZ(0);
+      -webkit-transform: translateZ(0);
+      will-change: contents;
+    }
+
+    /* Smooth page transitions senza flash */
+    body {
+      view-transition-name: root;
+    }
+
+    /* Disable default page transition flash */
+    @supports (view-transition-name: root) {
+      ::view-transition-old(root),
+      ::view-transition-new(root) {
+        animation-duration: 0ms !important;
+      }
+    }
+  }
+
   /* Apply rounded-sm to all inputs, selects, textareas, and buttons */
   input:not([type="checkbox"]):not([type="radio"]),
   select,

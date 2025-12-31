@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { useState, useMemo, memo, useCallback } from 'react';
+import { useMobileData } from '@/contexts/MobileDataContext';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Clock, CheckCircle, AlertCircle, XCircle, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -36,373 +36,388 @@ interface Rapportino {
   } | null;
 }
 
+const getStatoIcon = (stato: string) => {
+  switch (stato) {
+    case 'approvato':
+      return <CheckCircle className="w-5 h-5 text-green-600" />;
+    case 'da_approvare':
+      return <AlertCircle className="w-5 h-5 text-amber-600" />;
+    case 'rifiutato':
+      return <XCircle className="w-5 h-5 text-red-600" />;
+    default:
+      return <Clock className="w-5 h-5 text-gray-400" />;
+  }
+};
+
+const getStatoBadge = (stato: string) => {
+  const styles = {
+    approvato: 'bg-green-100 text-green-700 border-green-200',
+    da_approvare: 'bg-amber-100 text-amber-700 border-amber-200',
+    rifiutato: 'bg-red-100 text-red-700 border-red-200',
+  };
+
+  const labels = {
+    approvato: 'Approvato',
+    da_approvare: 'Da approvare',
+    rifiutato: 'Rifiutato',
+  };
+
+  return (
+    <span className={`px-2 py-1 rounded-full text-xs font-medium border ${styles[stato as keyof typeof styles]}`}>
+      {labels[stato as keyof typeof labels]}
+    </span>
+  );
+};
+
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString);
+  return new Intl.DateTimeFormat('it-IT', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  }).format(date);
+};
+
+const RapportinoCard = memo(({ rapportino }: { rapportino: Rapportino }) => (
+  <div className="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm">
+    <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start gap-3 flex-1 min-w-0">
+        <div className="mt-0.5">
+          {getStatoIcon(rapportino.stato)}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-sm text-gray-900 truncate">
+            {rapportino.commesse?.nome_commessa || 'Commessa non disponibile'}
+          </p>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {formatDate(rapportino.data_rapportino)}
+          </p>
+          <div className="mt-2">
+            {getStatoBadge(rapportino.stato)}
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-shrink-0 text-right">
+        <span className="text-lg font-bold text-emerald-600">
+          {rapportino.ore_lavorate}h
+        </span>
+      </div>
+    </div>
+  </div>
+));
+
+RapportinoCard.displayName = 'RapportinoCard';
+
+const FilterButton = memo(({
+  active,
+  onClick,
+  children,
+  color = 'emerald'
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+  color?: string;
+}) => (
+  <button
+    onClick={onClick}
+    className={`px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+      active
+        ? `bg-${color}-600 text-white shadow-md`
+        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+    }`}
+  >
+    {children}
+  </button>
+));
+
+FilterButton.displayName = 'FilterButton';
+
+const MonthNavigator = memo(({
+  currentMonth,
+  currentYear,
+  onPrevious,
+  onNext,
+  onMonthYearSelect
+}: {
+  currentMonth: number;
+  currentYear: number;
+  onPrevious: () => void;
+  onNext: () => void;
+  onMonthYearSelect: () => void;
+}) => {
+  const monthName = useMemo(() => `${MESI[currentMonth]} ${currentYear}`, [currentMonth, currentYear]);
+
+  return (
+    <div className="flex items-center rounded-xl bg-gray-50 overflow-hidden border border-gray-200">
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onPrevious}
+        className="h-11 w-11 p-0 rounded-none border-0 hover:bg-gray-100"
+      >
+        <ChevronLeft className="h-5 w-5" />
+      </Button>
+
+      <div className="w-px h-7 bg-gray-200" />
+
+      <button
+        className="h-11 px-4 font-bold text-lg flex-1 hover:text-emerald-600 transition-colors"
+        onClick={onMonthYearSelect}
+      >
+        {monthName}
+      </button>
+
+      <div className="w-px h-7 bg-gray-200" />
+
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onNext}
+        className="h-11 w-11 p-0 rounded-none border-0 hover:bg-gray-100"
+      >
+        <ChevronRight className="h-5 w-5" />
+      </Button>
+    </div>
+  );
+});
+
+MonthNavigator.displayName = 'MonthNavigator';
+
 export default function MobilePresenzePage() {
-  const [loading, setLoading] = useState(true);
-  const [rapportini, setRapportini] = useState<Rapportino[]>([]);
+  const { rapportini: allRapportini } = useMobileData();
   const [filter, setFilter] = useState<'tutti' | 'approvato' | 'da_approvare' | 'rifiutato'>('tutti');
 
-  // Month navigation
-  const now = new Date();
+  const now = useMemo(() => new Date(), []);
   const [currentMonth, setCurrentMonth] = useState(now.getMonth());
   const [currentYear, setCurrentYear] = useState(now.getFullYear());
 
-  // Popover state
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
 
-  // Generate years (current year ± 5 years)
-  const years = Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i);
+  const years = useMemo(() =>
+    Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i),
+    []
+  );
 
-  useEffect(() => {
-    loadRapportini();
-  }, [currentMonth, currentYear]);
+  const rapportini = useMemo(() => {
+    const firstDay = new Date(currentYear, currentMonth, 1);
+    const lastDay = new Date(currentYear, currentMonth + 1, 0);
 
-  const loadRapportini = async () => {
-    try {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
+    return allRapportini.filter(r => {
+      const date = new Date(r.data_rapportino);
+      return date >= firstDay && date <= lastDay;
+    });
+  }, [allRapportini, currentMonth, currentYear]);
 
-      if (!user) return;
-
-      // Get dipendente
-      const { data: dipendente } = await supabase
-        .from('dipendenti')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (!dipendente) return;
-
-      // Get first and last day of selected month
-      const firstDay = new Date(currentYear, currentMonth, 1);
-      const lastDay = new Date(currentYear, currentMonth + 1, 0);
-
-      // Get rapportini for selected month
-      const { data } = await supabase
-        .from('rapportini')
-        .select(`
-          id,
-          data_rapportino,
-          ore_lavorate,
-          note,
-          stato,
-          commesse!inner (
-            nome_commessa,
-            cliente_commessa
-          )
-        `)
-        .eq('dipendente_id', dipendente.id)
-        .gte('data_rapportino', firstDay.toISOString().split('T')[0])
-        .lte('data_rapportino', lastDay.toISOString().split('T')[0])
-        .order('data_rapportino', { ascending: false });
-
-      // Map data to correct format (Supabase returns commesse as array, we need object)
-      const mappedData: Rapportino[] = (data || []).map((item: any) => ({
-        ...item,
-        commesse: Array.isArray(item.commesse) ? item.commesse[0] : item.commesse,
-      }));
-
-      setRapportini(mappedData);
-      setLoading(false);
-    } catch (error) {
-      console.error('Error loading rapportini:', error);
-      setLoading(false);
-    }
-  };
-
-  const getStatoIcon = (stato: string) => {
-    switch (stato) {
-      case 'approvato':
-        return <CheckCircle className="w-5 h-5 text-green-600" />;
-      case 'da_approvare':
-        return <AlertCircle className="w-5 h-5 text-amber-600" />;
-      case 'rifiutato':
-        return <XCircle className="w-5 h-5 text-red-600" />;
-      default:
-        return <Clock className="w-5 h-5 text-gray-400" />;
-    }
-  };
-
-  const getStatoBadge = (stato: string) => {
-    const styles = {
-      approvato: 'bg-green-100 text-green-700 border-green-200',
-      da_approvare: 'bg-amber-100 text-amber-700 border-amber-200',
-      rifiutato: 'bg-red-100 text-red-700 border-red-200',
-    };
-
-    const labels = {
-      approvato: 'Approvato',
-      da_approvare: 'Da approvare',
-      rifiutato: 'Rifiutato',
-    };
-
-    return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium border ${styles[stato as keyof typeof styles]}`}>
-        {labels[stato as keyof typeof labels]}
-      </span>
-    );
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('it-IT', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-    }).format(date);
-  };
-
-  const previousMonth = () => {
+  const previousMonth = useCallback(() => {
     if (currentMonth === 0) {
       setCurrentMonth(11);
       setCurrentYear(currentYear - 1);
     } else {
       setCurrentMonth(currentMonth - 1);
     }
-  };
+  }, [currentMonth, currentYear]);
 
-  const nextMonth = () => {
+  const nextMonth = useCallback(() => {
     if (currentMonth === 11) {
       setCurrentMonth(0);
       setCurrentYear(currentYear + 1);
     } else {
       setCurrentMonth(currentMonth + 1);
     }
-  };
+  }, [currentMonth, currentYear]);
 
-  const getMonthName = () => {
-    return `${MESI[currentMonth]} ${currentYear}`;
-  };
+  const handleMonthYearSelect = useCallback(() => {
+    setSelectedMonth(currentMonth);
+    setSelectedYear(currentYear);
+    setShowMonthPicker(true);
+  }, [currentMonth, currentYear]);
 
-  const applyMonthYearSelection = () => {
+  const applyMonthYearSelection = useCallback(() => {
     setCurrentMonth(selectedMonth);
     setCurrentYear(selectedYear);
     setShowMonthPicker(false);
-  };
+  }, [selectedMonth, selectedYear]);
 
-  const filteredRapportini = filter === 'tutti'
-    ? rapportini
-    : rapportini.filter(r => r.stato === filter);
+  const filteredRapportini = useMemo(() =>
+    filter === 'tutti' ? rapportini : rapportini.filter(r => r.stato === filter),
+    [filter, rapportini]
+  );
 
-  const stats = {
+  const stats = useMemo(() => ({
     totale: rapportini.length,
     approvati: rapportini.filter(r => r.stato === 'approvato').length,
     daApprovare: rapportini.filter(r => r.stato === 'da_approvare').length,
     rifiutati: rapportini.filter(r => r.stato === 'rifiutato').length,
-  };
+  }), [rapportini]);
 
-  // Calculate total hours for the month
-  const totaleOreMese = rapportini.reduce((sum, r) => sum + (Number(r.ore_lavorate) || 0), 0);
+  const totaleOreMese = useMemo(() =>
+    rapportini.reduce((sum, r) => sum + (Number(r.ore_lavorate) || 0), 0),
+    [rapportini]
+  );
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="animate-spin h-8 w-8 border-2 border-emerald-600 border-t-transparent rounded-full" />
-      </div>
-    );
-  }
+  const monthName = useMemo(() => `${MESI[currentMonth]} ${currentYear}`, [currentMonth, currentYear]);
 
   return (
-    <div className="p-4 space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Registro Presenze</h1>
-        <Link href="/mobile/presenze/nuovo">
-          <Button className="bg-emerald-600 hover:bg-emerald-700 h-10 w-10 p-0">
-            <Plus className="w-5 h-5" />
-          </Button>
-        </Link>
-      </div>
-
-      {/* Month Navigator */}
-      <div className="flex items-center rounded-lg bg-card overflow-hidden">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={previousMonth}
-          className="h-11 w-11 p-0 rounded-none border-0"
-        >
-          <ChevronLeft className="h-6 w-6" />
-        </Button>
-
-        <div className="w-px h-7 bg-border" />
-
-        <Popover open={showMonthPicker} onOpenChange={setShowMonthPicker}>
-          <PopoverTrigger asChild>
+    <div className="space-y-6">
+      <div className="bg-emerald-600 px-6 py-8 text-white">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-xl font-bold">Registro Presenze</h1>
+          <Link href="/mobile/presenze/nuovo" prefetch={true}>
             <button
-              className="h-11 px-6 font-bold text-2xl flex-1 hover:text-primary transition-colors"
-              onClick={() => {
-                setSelectedMonth(currentMonth);
-                setSelectedYear(currentYear);
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '40px',
+                height: '40px',
+                borderRadius: '50%',
+                background: 'rgba(255, 255, 255, 0.2)',
+                backdropFilter: 'blur(8px)',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
               }}
             >
-              {getMonthName()}
+              <Plus className="text-white" style={{ width: '20px', height: '20px' }} strokeWidth={2.5} />
             </button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-4" align="center">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Anno</label>
-                <Select
-                  value={String(selectedYear)}
-                  onValueChange={(value) => setSelectedYear(Number(value))}
-                >
-                  <SelectTrigger className="w-full border-2 border-border bg-card">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {years.map(year => (
-                      <SelectItem key={year} value={String(year)}>
-                        {year}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+          </Link>
+        </div>
+      </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Mese</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {MESI.map((mese, index) => (
-                    <Button
-                      key={index}
-                      variant={selectedMonth === index ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setSelectedMonth(index)}
-                      className="text-xs"
-                    >
-                      {mese.substring(0, 3)}
-                    </Button>
-                  ))}
+      <div className="relative z-10" style={{ marginTop: '-40px', paddingLeft: '16px', paddingRight: '16px' }}>
+        <div className="bg-white rounded-3xl shadow-xl p-5 border border-gray-100 space-y-4">
+          <MonthNavigator
+            currentMonth={currentMonth}
+            currentYear={currentYear}
+            onPrevious={previousMonth}
+            onNext={nextMonth}
+            onMonthYearSelect={handleMonthYearSelect}
+          />
+
+          <Popover open={showMonthPicker} onOpenChange={setShowMonthPicker}>
+            <PopoverTrigger asChild>
+              <div style={{ display: 'none' }} />
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-4" align="center">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Anno</label>
+                  <Select
+                    value={String(selectedYear)}
+                    onValueChange={(value) => setSelectedYear(Number(value))}
+                  >
+                    <SelectTrigger className="w-full border-2 border-border bg-card">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {years.map(year => (
+                        <SelectItem key={year} value={String(year)}>
+                          {year}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              </div>
 
-              <hr className="border-border" />
-
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowMonthPicker(false)}
-                >
-                  Annulla
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={applyMonthYearSelection}
-                >
-                  Applica
-                </Button>
-              </div>
-            </div>
-          </PopoverContent>
-        </Popover>
-
-        <div className="w-px h-7 bg-border" />
-
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={nextMonth}
-          className="h-11 w-11 p-0 rounded-none border-0"
-        >
-          <ChevronRight className="h-6 w-6" />
-        </Button>
-      </div>
-
-      {/* Filters */}
-      <div className="grid grid-cols-2 gap-2">
-        <button
-          onClick={() => setFilter('tutti')}
-          className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-            filter === 'tutti'
-              ? 'bg-emerald-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          Tutti ({stats.totale})
-        </button>
-        <button
-          onClick={() => setFilter('approvato')}
-          className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-            filter === 'approvato'
-              ? 'bg-green-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          Approvati ({stats.approvati})
-        </button>
-        <button
-          onClick={() => setFilter('da_approvare')}
-          className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-            filter === 'da_approvare'
-              ? 'bg-amber-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          Da approvare ({stats.daApprovare})
-        </button>
-        <button
-          onClick={() => setFilter('rifiutato')}
-          className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-            filter === 'rifiutato'
-              ? 'bg-red-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          Rifiutati ({stats.rifiutati})
-        </button>
-      </div>
-
-      {/* Rapportini List - Scrollable */}
-      <div className="space-y-2 pb-24">
-        {filteredRapportini.length === 0 ? (
-          <Card className="p-6 text-center">
-            <p className="text-gray-500 text-sm">Nessun rapportino trovato</p>
-          </Card>
-        ) : (
-          filteredRapportini.map((rapportino) => (
-            <Card key={rapportino.id} className="p-3 border-2 border-gray-200">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                  {getStatoIcon(rapportino.stato)}
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm text-gray-900 truncate">
-                      {rapportino.commesse?.nome_commessa || 'Commessa non disponibile'}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {formatDate(rapportino.data_rapportino)}
-                    </p>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Mese</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {MESI.map((mese, index) => (
+                      <Button
+                        key={index}
+                        variant={selectedMonth === index ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setSelectedMonth(index)}
+                        className="text-xs"
+                      >
+                        {mese.substring(0, 3)}
+                      </Button>
+                    ))}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <span className="text-base font-bold text-gray-900">
-                    {rapportino.ore_lavorate}h
-                  </span>
-                  {getStatoBadge(rapportino.stato)}
+                <hr className="border-border" />
+
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowMonthPicker(false)}
+                  >
+                    Annulla
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={applyMonthYearSelection}
+                  >
+                    Applica
+                  </Button>
                 </div>
               </div>
-            </Card>
+            </PopoverContent>
+          </Popover>
+
+          <div className="grid grid-cols-2 gap-2">
+            <FilterButton
+              active={filter === 'tutti'}
+              onClick={() => setFilter('tutti')}
+            >
+              Tutti ({stats.totale})
+            </FilterButton>
+            <FilterButton
+              active={filter === 'approvato'}
+              onClick={() => setFilter('approvato')}
+              color="green"
+            >
+              Approvati ({stats.approvati})
+            </FilterButton>
+            <FilterButton
+              active={filter === 'da_approvare'}
+              onClick={() => setFilter('da_approvare')}
+              color="amber"
+            >
+              Da approvare ({stats.daApprovare})
+            </FilterButton>
+            <FilterButton
+              active={filter === 'rifiutato'}
+              onClick={() => setFilter('rifiutato')}
+              color="red"
+            >
+              Rifiutati ({stats.rifiutati})
+            </FilterButton>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-4 space-y-3 pb-24">
+        {filteredRapportini.length === 0 ? (
+          <div className="p-8 text-center">
+            <p className="text-gray-500 text-sm">Nessun rapportino trovato</p>
+          </div>
+        ) : (
+          filteredRapportini.map((rapportino) => (
+            <RapportinoCard key={rapportino.id} rapportino={rapportino} />
           ))
         )}
       </div>
 
-      {/* Total Hours Summary - Fixed at bottom */}
       {rapportini.length > 0 && (
         <div className="fixed bottom-32 left-4 right-4 z-10">
-          <Card className="p-4 border-2 border-emerald-200 bg-emerald-50 shadow-lg">
+          <div className="bg-emerald-600 rounded-2xl p-4 shadow-xl">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Clock className="w-5 h-5 text-emerald-600" />
-                <span className="font-semibold text-gray-900">Totale ore {getMonthName()}</span>
+                <Clock className="w-5 h-5 text-white" />
+                <span className="font-semibold text-white">Totale ore {monthName}</span>
               </div>
-              <span className="text-2xl font-bold text-emerald-900">
+              <span className="text-2xl font-bold text-white">
                 {totaleOreMese}h
               </span>
             </div>
-          </Card>
+          </div>
         </div>
       )}
     </div>
