@@ -261,7 +261,6 @@ export default function ReportPage() {
               utileLordo: 0,
               saldoIva: 0,
             }}
-            loading={loading}
           />
         </div>
 
