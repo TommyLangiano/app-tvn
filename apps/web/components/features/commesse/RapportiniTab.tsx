@@ -42,13 +42,20 @@ type TabType = 'approvate' | 'da_approvare' | 'rifiutate';
 interface RapportiniTabProps {
   commessaId: string;
   commessaNome: string;
+  rapportini: Rapportino[];
+  rapportiniDaApprovare: Rapportino[];
+  rapportiniRifiutati: Rapportino[];
+  onReload?: () => void;
 }
 
-export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) {
-  const [loading, setLoading] = useState(true);
-  const [rapportini, setRapportini] = useState<Rapportino[]>([]);
-  const [rapportiniDaApprovare, setRapportiniDaApprovare] = useState<Rapportino[]>([]);
-  const [rapportiniRifiutati, setRapportiniRifiutati] = useState<Rapportino[]>([]);
+export function RapportiniTab({
+  commessaId,
+  commessaNome,
+  rapportini: rapportiniProp,
+  rapportiniDaApprovare: rapportiniDaApprovareProp,
+  rapportiniRifiutati: rapportiniRifiutatiProp,
+  onReload
+}: RapportiniTabProps) {
 
   // Data for modals
   const [users, setUsers] = useState<User[]>([]);
@@ -93,29 +100,9 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
   const [selectedRapportiniForInfo, setSelectedRapportiniForInfo] = useState<Rapportino[]>([]);
 
   useEffect(() => {
-    const initializeData = async () => {
-      try {
-        setLoading(true);
-        await Promise.all([
-          loadInitialData(),
-          loadRapportini(),
-          loadRapportiniDaApprovare(),
-          loadRapportiniRifiutati()
-        ]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    initializeData();
+    loadInitialData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(() => {
-    if (!loading) {
-      loadRapportini();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentMonth, currentYear]);
 
   const loadInitialData = async () => {
     const supabase = createClient();
@@ -185,134 +172,11 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
     }]);
   };
 
-  const loadRapportini = async () => {
-    const supabase = createClient();
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return;
+  // Reload function that calls parent's onReload
+  const reloadRapportini = () => {
+    if (onReload) {
+      onReload();
     }
-
-    const { data: userTenants } = await supabase
-      .from('user_tenants')
-      .select('tenant_id')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(1);
-
-    const userTenant = userTenants && userTenants.length > 0 ? userTenants[0] : null;
-    if (!userTenant) {
-      return;
-    }
-
-    // Calculate date range for the selected month
-    const startDate = new Date(currentYear, currentMonth, 1);
-    const endDate = new Date(currentYear, currentMonth + 1, 0);
-    const startDateStr = startDate.toISOString().split('T')[0];
-    const endDateStr = endDate.toISOString().split('T')[0];
-
-    // FILTRO PER COMMESSA
-    const { data: rapportiniData, error } = await supabase
-      .from('rapportini')
-      .select(`
-        *,
-        dipendenti!rapportini_dipendente_id_fkey (
-          id,
-          nome,
-          cognome
-        ),
-        commesse!rapportini_commessa_id_fkey (
-          id,
-          nome_commessa
-        )
-      `)
-      .eq('tenant_id', userTenant.tenant_id)
-      .eq('commessa_id', commessaId)
-      .gte('data_rapportino', startDateStr)
-      .lte('data_rapportino', endDateStr)
-      .order('data_rapportino', { ascending: false });
-
-    if (error) {
-      console.error('Error loading rapportini:', error);
-      toast.error('Errore nel caricamento dei rapportini');
-      return;
-    }
-
-    setRapportini(rapportiniData || []);
-  };
-
-  const loadRapportiniDaApprovare = async () => {
-    const supabase = createClient();
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data: userTenants } = await supabase
-      .from('user_tenants')
-      .select('tenant_id')
-      .eq('user_id', user.id)
-      .limit(1);
-
-    const userTenant = userTenants && userTenants.length > 0 ? userTenants[0] : null;
-    if (!userTenant) return;
-
-    const { data } = await supabase
-      .from('rapportini')
-      .select(`
-        *,
-        dipendenti!rapportini_dipendente_id_fkey (
-          id,
-          nome,
-          cognome
-        ),
-        commesse!rapportini_commessa_id_fkey (
-          id,
-          nome_commessa
-        )
-      `)
-      .eq('tenant_id', userTenant.tenant_id)
-      .eq('commessa_id', commessaId)
-      .eq('stato', 'da_approvare')
-      .order('data_rapportino', { ascending: false });
-
-    setRapportiniDaApprovare(data || []);
-  };
-
-  const loadRapportiniRifiutati = async () => {
-    const supabase = createClient();
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data: userTenants } = await supabase
-      .from('user_tenants')
-      .select('tenant_id')
-      .eq('user_id', user.id)
-      .limit(1);
-
-    const userTenant = userTenants && userTenants.length > 0 ? userTenants[0] : null;
-    if (!userTenant) return;
-
-    const { data } = await supabase
-      .from('rapportini')
-      .select(`
-        *,
-        dipendenti!rapportini_dipendente_id_fkey (
-          id,
-          nome,
-          cognome
-        ),
-        commesse!rapportini_commessa_id_fkey (
-          id,
-          nome_commessa
-        )
-      `)
-      .eq('tenant_id', userTenant.tenant_id)
-      .eq('commessa_id', commessaId)
-      .eq('stato', 'rifiutato')
-      .order('data_rapportino', { ascending: false });
-
-    setRapportiniRifiutati(data || []);
   };
 
   const handleMonthChange = (month: number, year: number) => {
@@ -328,11 +192,24 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
 
   // Filtri e ordinamento
   const rapportiniFiltrati = useMemo(() => {
+    // Seleziona la lista base
     let filtered = (activeRapportiniTab as TabType) === 'da_approvare'
-      ? [...rapportiniDaApprovare]
+      ? [...rapportiniDaApprovareProp]
       : (activeRapportiniTab as TabType) === 'rifiutate'
-      ? [...rapportiniRifiutati]
-      : [...rapportini.filter(r => !r.stato || r.stato === 'approvato')];
+      ? [...rapportiniRifiutatiProp]
+      : [...rapportiniProp];
+
+    // Filtro per mese (solo per tab approvate)
+    if ((activeRapportiniTab as TabType) === 'approvate') {
+      const startDate = new Date(currentYear, currentMonth, 1);
+      const endDate = new Date(currentYear, currentMonth + 1, 0);
+      const startDateStr = startDate.toISOString().split('T')[0];
+      const endDateStr = endDate.toISOString().split('T')[0];
+
+      filtered = filtered.filter(r => {
+        return r.data_rapportino >= startDateStr && r.data_rapportino <= endDateStr;
+      });
+    }
 
     // Search filter
     if (searchTerm) {
@@ -384,16 +261,16 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
     });
 
     return filtered;
-  }, [rapportini, rapportiniDaApprovare, rapportiniRifiutati, activeRapportiniTab, searchTerm, filtroUtente, sortField, sortDirection]);
+  }, [rapportiniProp, rapportiniDaApprovareProp, rapportiniRifiutatiProp, activeRapportiniTab, searchTerm, filtroUtente, sortField, sortDirection, currentMonth, currentYear]);
 
   // Tab counts
   const tabCounts = useMemo(() => {
     return {
-      approvate: rapportini.filter(r => !r.stato || r.stato === 'approvato').length,
-      da_approvare: rapportiniDaApprovare.length,
-      rifiutate: rapportiniRifiutati.length,
+      approvate: rapportiniProp.length,
+      da_approvare: rapportiniDaApprovareProp.length,
+      rifiutate: rapportiniRifiutatiProp.length,
     };
-  }, [rapportini, rapportiniDaApprovare, rapportiniRifiutati]);
+  }, [rapportiniProp, rapportiniDaApprovareProp, rapportiniRifiutatiProp]);
 
   // Paginazione
   const totalPages = Math.ceil(rapportiniFiltrati.length / itemsPerPage);
@@ -435,11 +312,7 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
       toast.success('Rapportino approvato');
 
       // Reload all lists
-      await Promise.all([
-        loadRapportini(),
-        loadRapportiniDaApprovare(),
-        loadRapportiniRifiutati()
-      ]);
+      reloadRapportini();
     } catch (error) {
       toast.error('Errore nell\'approvazione');
       console.error(error);
@@ -460,11 +333,7 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
       toast.success('Rapportino rifiutato');
 
       // Reload all lists
-      await Promise.all([
-        loadRapportini(),
-        loadRapportiniDaApprovare(),
-        loadRapportiniRifiutati()
-      ]);
+      reloadRapportini();
     } catch (error) {
       toast.error('Errore nel rifiuto');
       console.error(error);
@@ -578,34 +447,16 @@ export function RapportiniTab({ commessaId, commessaNome }: RapportiniTabProps) 
   };
 
   const handleRapportinoCreated = () => {
-    loadRapportini();
-    loadRapportiniDaApprovare();
-    loadRapportiniRifiutati();
+    reloadRapportini();
   };
 
   const handleRapportinoUpdated = () => {
-    loadRapportini();
-    loadRapportiniDaApprovare();
-    loadRapportiniRifiutati();
+    reloadRapportini();
   };
 
   const handleRapportinoDeleted = () => {
-    loadRapportini();
-    loadRapportiniDaApprovare();
-    loadRapportiniRifiutati();
+    reloadRapportini();
   };
-
-  // Loading state
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-[60vh]">
-        <div className="text-center space-y-4">
-          <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
-          <p className="text-muted-foreground">Caricamento rapportini...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-4">

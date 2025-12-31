@@ -52,6 +52,9 @@ export default function CommessaDetailPage() {
   const [noteSpese, setNoteSpese] = useState<any[]>([]);
   const [noteSpeseDaApprovare, setNoteSpeseDaApprovare] = useState<any[]>([]);
   const [noteSpeseRifiutate, setNoteSpeseRifiutate] = useState<any[]>([]);
+  const [rapportini, setRapportini] = useState<any[]>([]);
+  const [rapportiniDaApprovare, setRapportiniDaApprovare] = useState<any[]>([]);
+  const [rapportiniRifiutati, setRapportiniRifiutati] = useState<any[]>([]);
   // const [scontrini, setScontrini] = useState([])  // Tabella eliminata
   const [showFatturaForm, setShowFatturaForm] = useState(false);
   const [showCostoForm, setShowCostoForm] = useState(false);
@@ -338,6 +341,65 @@ export default function CommessaDetailPage() {
       setNoteSpese(noteSpeseApprovateRes.data || []);
       setNoteSpeseDaApprovare(noteSpeseDaApprovareRes.data || []);
       setNoteSpeseRifiutate(noteSpeseRifiutateRes.data || []);
+
+      // Load rapportini (presenze)
+      const [rapportiniApprovatiRes, rapportiniDaApprovareRes, rapportiniRifiutatiRes] = await Promise.all([
+        supabase
+          .from('rapportini')
+          .select(`
+            *,
+            dipendenti!rapportini_dipendente_id_fkey (
+              id,
+              nome,
+              cognome
+            ),
+            commesse!rapportini_commessa_id_fkey (
+              id,
+              nome_commessa
+            )
+          `)
+          .eq('commessa_id', commessaData.id)
+          .eq('stato', 'approvato')
+          .order('data_rapportino', { ascending: false }),
+        supabase
+          .from('rapportini')
+          .select(`
+            *,
+            dipendenti!rapportini_dipendente_id_fkey (
+              id,
+              nome,
+              cognome
+            ),
+            commesse!rapportini_commessa_id_fkey (
+              id,
+              nome_commessa
+            )
+          `)
+          .eq('commessa_id', commessaData.id)
+          .eq('stato', 'da_approvare')
+          .order('data_rapportino', { ascending: false }),
+        supabase
+          .from('rapportini')
+          .select(`
+            *,
+            dipendenti!rapportini_dipendente_id_fkey (
+              id,
+              nome,
+              cognome
+            ),
+            commesse!rapportini_commessa_id_fkey (
+              id,
+              nome_commessa
+            )
+          `)
+          .eq('commessa_id', commessaData.id)
+          .eq('stato', 'rifiutato')
+          .order('data_rapportino', { ascending: false })
+      ]);
+
+      setRapportini(rapportiniApprovatiRes.data || []);
+      setRapportiniDaApprovare(rapportiniDaApprovareRes.data || []);
+      setRapportiniRifiutati(rapportiniRifiutatiRes.data || []);
 
     } catch {
       toast.error('Errore nel caricamento dei dati');
@@ -1248,6 +1310,10 @@ export default function CommessaDetailPage() {
         <RapportiniTab
           commessaId={commessa.id}
           commessaNome={commessa.nome_commessa}
+          rapportini={rapportini}
+          rapportiniDaApprovare={rapportiniDaApprovare}
+          rapportiniRifiutati={rapportiniRifiutati}
+          onReload={loadCommessaData}
         />
       )}
 
