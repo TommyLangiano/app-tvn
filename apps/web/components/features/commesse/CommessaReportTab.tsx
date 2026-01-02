@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { format } from 'date-fns';
 import { RiepilogoEconomicoChart } from '@/app/(app)/report/components/charts/RiepilogoEconomicoChart';
 import { PeriodFilter, type PeriodType } from '@/app/(app)/report/azienda/components/PeriodFilter';
@@ -118,6 +118,26 @@ export function CommessaReportTab({ commessaId, commessa, fattureAttive, fatture
       saldoIva,
     };
   }, [dateRange, commessa, fattureAttive, fatturePassive, noteSpese]);
+
+  // Effetto per aggiornare automaticamente il dateRange quando cambia l'anno corrente
+  useEffect(() => {
+    // Solo se siamo su "anno corrente"
+    if (selectedPeriod === 'oggi' && selectedYear === new Date().getFullYear()) {
+      // Controlla ogni ora se la data è cambiata
+      const interval = setInterval(() => {
+        const currentYear = new Date().getFullYear();
+
+        // Se l'anno è cambiato, aggiorna il range
+        if (currentYear !== selectedYear) {
+          setSelectedYear(currentYear);
+          const newRange = getDateRangeFromPeriod('oggi');
+          setDateRange(newRange);
+        }
+      }, 60 * 60 * 1000); // Controlla ogni ora
+
+      return () => clearInterval(interval);
+    }
+  }, [selectedPeriod, selectedYear]);
 
   return (
     <div className="space-y-6">

@@ -184,6 +184,26 @@ export default function ReportAziendaPage() {
     }
   }, []); // Nessuna dipendenza esterna, funzione stabile
 
+  // Effetto per aggiornare automaticamente il dateRange quando cambia l'anno corrente
+  useEffect(() => {
+    // Solo se siamo su "anno corrente"
+    if (selectedPeriod === 'oggi' && selectedYear === new Date().getFullYear()) {
+      // Controlla ogni ora se la data è cambiata
+      const interval = setInterval(() => {
+        const currentYear = new Date().getFullYear();
+
+        // Se l'anno è cambiato, aggiorna il range
+        if (currentYear !== selectedYear) {
+          setSelectedYear(currentYear);
+          const newRange = getDateRangeFromPeriod('oggi');
+          setDateRange(newRange);
+        }
+      }, 60 * 60 * 1000); // Controlla ogni ora
+
+      return () => clearInterval(interval);
+    }
+  }, [selectedPeriod, selectedYear]);
+
   // Effetto per ricaricare i dati quando cambia il dateRange
   useEffect(() => {
     loadRiepilogoEconomico(dateRange);
