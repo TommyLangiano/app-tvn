@@ -658,12 +658,13 @@ export function MovimentiTab({ commessaId, fattureAttive, fatturePassive, riepil
                       ? 'text-red-600'
                       : 'text-green-600'
                   }`}>
-                    {(riepilogo.saldo_iva || 0) === 0
-                      ? formatCurrency(0)
-                      : (riepilogo.saldo_iva || 0) > 0
-                      ? formatCurrency(-(riepilogo.saldo_iva || 0))
-                      : formatCurrency(-(riepilogo.saldo_iva || 0))
-                    }
+                    {formatCurrency(
+                      (riepilogo.saldo_iva || 0) === 0
+                        ? 0
+                        : (riepilogo.saldo_iva || 0) > 0
+                        ? -(riepilogo.saldo_iva || 0)
+                        : -(riepilogo.saldo_iva || 0)
+                    )}
                   </div>
                   <div className={`text-sm font-medium ${
                     (riepilogo.saldo_iva || 0) === 0

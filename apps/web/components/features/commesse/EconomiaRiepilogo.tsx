@@ -223,12 +223,13 @@ export function EconomiaRiepilogo({
                 ? 'text-red-600'
                 : 'text-green-600'
             }`}>
-              {riepilogo.saldo_iva === 0
-                ? formatCurrency(0)
-                : riepilogo.saldo_iva > 0
-                ? `${formatCurrency(-riepilogo.saldo_iva)}`
-                : formatCurrency(-riepilogo.saldo_iva)
-              }
+              {formatCurrency(
+                riepilogo.saldo_iva === 0
+                  ? 0
+                  : riepilogo.saldo_iva > 0
+                  ? -riepilogo.saldo_iva
+                  : -riepilogo.saldo_iva
+              )}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
               {riepilogo.saldo_iva === 0 ? 'Neutra' : riepilogo.saldo_iva > 0 ? 'IVA a debito' : 'IVA a credito'}
