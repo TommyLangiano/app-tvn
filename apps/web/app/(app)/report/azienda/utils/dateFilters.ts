@@ -9,7 +9,12 @@ export interface DateRange {
 /**
  * Calcola il range di date basato sul tipo di periodo selezionato
  */
-export function getDateRangeFromPeriod(period: PeriodType, selectedYear?: number): DateRange {
+export function getDateRangeFromPeriod(
+  period: PeriodType,
+  selectedYear?: number,
+  customFrom?: string,
+  customTo?: string
+): DateRange {
   const now = new Date();
 
   switch (period) {
@@ -36,6 +41,20 @@ export function getDateRangeFromPeriod(period: PeriodType, selectedYear?: number
       return {
         from: startOfDay(subMonths(now, 9)),
         to: endOfDay(now),
+      };
+
+    case 'custom':
+      // Intervallo personalizzato
+      if (customFrom && customTo) {
+        return {
+          from: startOfDay(new Date(customFrom)),
+          to: endOfDay(new Date(customTo)),
+        };
+      }
+      // Fallback ad anno corrente se date non valide
+      return {
+        from: startOfYear(now),
+        to: endOfYear(now),
       };
 
     default:

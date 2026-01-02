@@ -10,13 +10,16 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-export type PeriodType = 'oggi' | 'ultimi-3-mesi' | 'ultimi-6-mesi' | 'ultimi-9-mesi';
+export type PeriodType = 'oggi' | 'ultimi-3-mesi' | 'ultimi-6-mesi' | 'ultimi-9-mesi' | 'custom';
 
 interface PeriodFilterProps {
   selectedPeriod: PeriodType;
   selectedYear?: number;
+  customDateFrom?: string;
+  customDateTo?: string;
   onPeriodChange: (period: PeriodType) => void;
   onYearChange: (year: number) => void;
+  onCustomDateChange?: (from: string, to: string) => void;
 }
 
 const PERIOD_OPTIONS: Array<{ value: PeriodType; label: string }> = [
@@ -39,14 +42,18 @@ const generateYears = (): number[] => {
 export const PeriodFilter = memo(({
   selectedPeriod,
   selectedYear,
+  customDateFrom,
+  customDateTo,
   onPeriodChange,
   onYearChange,
+  onCustomDateChange,
 }: PeriodFilterProps) => {
   const years = generateYears();
 
   const currentYear = new Date().getFullYear();
   const isCurrentYear = selectedYear === currentYear;
   const isYearFilterActive = !isCurrentYear;
+  const isCustomActive = selectedPeriod === 'custom';
 
   return (
     <div className="flex flex-wrap gap-1 items-center">
@@ -88,6 +95,31 @@ export const PeriodFilter = memo(({
             </option>
           ))}
         </select>
+      </div>
+
+      {/* Intervallo Date Personalizzato */}
+      <div className="flex items-center gap-2 px-4 py-3">
+        <button
+          onClick={() => onPeriodChange('custom')}
+          className={`text-sm font-medium ${isCustomActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+        >
+          Intervallo:
+        </button>
+        <input
+          type="date"
+          value={customDateFrom || ''}
+          onChange={(e) => onCustomDateChange?.(e.target.value, customDateTo || '')}
+          className={`px-2 py-1 text-sm border rounded ${isCustomActive ? 'border-primary' : 'border-border'}`}
+          placeholder="Da"
+        />
+        <span className="text-muted-foreground">-</span>
+        <input
+          type="date"
+          value={customDateTo || ''}
+          onChange={(e) => onCustomDateChange?.(customDateFrom || '', e.target.value)}
+          className={`px-2 py-1 text-sm border rounded ${isCustomActive ? 'border-primary' : 'border-border'}`}
+          placeholder="A"
+        />
       </div>
 
       {/* Separatore */}

@@ -55,15 +55,17 @@ const sumImporti = (items: any[] | null): number => {
 export function CommessaReportTab({ commessaId, commessa, fattureAttive, fatturePassive, noteSpese }: CommessaReportTabProps) {
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>('oggi');
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [customDateFrom, setCustomDateFrom] = useState<string>('');
+  const [customDateTo, setCustomDateTo] = useState<string>('');
   const [dateRange, setDateRange] = useState<DateRange>(() => getDateRangeFromPeriod('oggi'));
 
   // Gestione cambio periodo
   const handlePeriodChange = useCallback((period: PeriodType) => {
     setSelectedPeriod(period);
     setSelectedYear(new Date().getFullYear()); // Reset anno corrente
-    const newRange = getDateRangeFromPeriod(period);
+    const newRange = getDateRangeFromPeriod(period, undefined, customDateFrom, customDateTo);
     setDateRange(newRange);
-  }, []);
+  }, [customDateFrom, customDateTo]);
 
   // Gestione cambio anno - mostra tutto l'anno selezionato
   const handleYearChange = useCallback((year: number) => {
@@ -75,6 +77,18 @@ export function CommessaReportTab({ commessaId, commessa, fattureAttive, fatture
       to: new Date(year, 11, 31, 23, 59, 59), // 31 dicembre
     };
     setDateRange(newRange);
+  }, []);
+
+  // Gestione cambio date personalizzate
+  const handleCustomDateChange = useCallback((from: string, to: string) => {
+    setCustomDateFrom(from);
+    setCustomDateTo(to);
+    setSelectedPeriod('custom');
+
+    if (from && to) {
+      const newRange = getDateRangeFromPeriod('custom', undefined, from, to);
+      setDateRange(newRange);
+    }
   }, []);
 
   // Calcolo dati usando useMemo per prestazioni istantanee
@@ -183,8 +197,11 @@ export function CommessaReportTab({ commessaId, commessa, fattureAttive, fatture
             <PeriodFilter
               selectedPeriod={selectedPeriod}
               selectedYear={selectedYear}
+              customDateFrom={customDateFrom}
+              customDateTo={customDateTo}
               onPeriodChange={handlePeriodChange}
               onYearChange={handleYearChange}
+              onCustomDateChange={handleCustomDateChange}
             />
           </div>
         </div>
@@ -208,7 +225,7 @@ export function CommessaReportTab({ commessaId, commessa, fattureAttive, fatture
                     ? 'text-green-600'
                     : 'text-red-600'
                 }`}>
-                  {riepilogoData.percentualeUtileLordo.toFixed(3)}%
+                  {(Math.floor(riepilogoData.percentualeUtileLordo * 10) / 10).toFixed(1)}%
                 </p>
               </div>
             </div>
