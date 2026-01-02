@@ -187,38 +187,24 @@ export function CommessaReportTab({ commessaId, commessa, fattureAttive, fatture
         {/* Linea divisoria */}
         <div className="border-b border-border"></div>
 
-        {/* Riepilogo Economico Chart con KPI */}
-        <div className="p-6">
-          <div className="flex gap-6">
-            {/* Grafico */}
-            <div className="flex-1">
-              <RiepilogoEconomicoChart data={riepilogoData} />
-            </div>
+        {/* Riepilogo Economico Chart con KPI in sovraimpressione */}
+        <div className="p-6 relative">
+          <RiepilogoEconomicoChart data={riepilogoData} />
 
-            {/* Card % Utile Lordo */}
-            <div className="w-64 flex-shrink-0">
-              <div className={`rounded-xl border-2 p-6 h-full flex flex-col justify-center ${
-                riepilogoData.percentualeUtileLordo === 0
-                  ? 'border-blue-200 bg-blue-50'
-                  : riepilogoData.percentualeUtileLordo > 0
-                  ? 'border-green-200 bg-green-50'
-                  : 'border-red-200 bg-red-50'
-              }`}>
-                <div className="text-center">
-                  <p className="text-sm font-medium text-muted-foreground mb-2">% Utile Lordo</p>
-                  <p className={`text-4xl font-bold mb-2 ${
-                    riepilogoData.percentualeUtileLordo === 0
-                      ? 'text-blue-600'
-                      : riepilogoData.percentualeUtileLordo > 0
-                      ? 'text-green-600'
-                      : 'text-red-600'
-                  }`}>
-                    {riepilogoData.percentualeUtileLordo.toFixed(3)}%
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    (Utile Lordo / Fatturato) × 100
-                  </p>
-                </div>
+          {/* Card % Utile Lordo in sovraimpressione in alto a destra */}
+          <div className="absolute top-8 right-8">
+            <div className="bg-white border border-border rounded-lg shadow-lg p-4 min-w-[160px]">
+              <div className="text-center">
+                <p className="text-xs font-medium text-muted-foreground mb-1">% Utile Lordo</p>
+                <p className={`text-2xl font-bold ${
+                  riepilogoData.percentualeUtileLordo === 0
+                    ? 'text-slate-600'
+                    : riepilogoData.percentualeUtileLordo > 0
+                    ? 'text-green-600'
+                    : 'text-red-600'
+                }`}>
+                  {riepilogoData.percentualeUtileLordo.toFixed(3)}%
+                </p>
               </div>
             </div>
           </div>
