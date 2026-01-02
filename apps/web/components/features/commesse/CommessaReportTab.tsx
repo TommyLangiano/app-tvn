@@ -13,6 +13,7 @@ interface RiepilogoEconomicoData {
   noteSpesa: number;
   utileLordo: number;
   saldoIva: number;
+  percentualeUtileLordo: number;
 }
 
 interface CommessaReportTabProps {
@@ -128,6 +129,11 @@ export function CommessaReportTab({ commessaId, commessa, fattureAttive, fatture
     console.log('💰 IVA Fatture Passive:', ivaFatturePassive);
     console.log('💰 SALDO IVA (Attive - Passive):', saldoIva);
 
+    // Calcola percentuale utile lordo: (100 x Utile Lordo) / Fatturato Emesso
+    const percentualeUtileLordo = fatturatoEmesso > 0
+      ? (100 * utileLordo) / fatturatoEmesso
+      : 0;
+
     return {
       fatturatoPrevisto,
       fatturatoEmesso,
@@ -135,6 +141,7 @@ export function CommessaReportTab({ commessaId, commessa, fattureAttive, fatture
       noteSpesa: totaleNoteSpesa,
       utileLordo,
       saldoIva,
+      percentualeUtileLordo,
     };
   }, [dateRange, commessa, fattureAttive, fatturePassive, noteSpese]);
 
@@ -180,9 +187,41 @@ export function CommessaReportTab({ commessaId, commessa, fattureAttive, fatture
         {/* Linea divisoria */}
         <div className="border-b border-border"></div>
 
-        {/* Riepilogo Economico Chart */}
+        {/* Riepilogo Economico Chart con KPI */}
         <div className="p-6">
-          <RiepilogoEconomicoChart data={riepilogoData} />
+          <div className="flex gap-6">
+            {/* Grafico */}
+            <div className="flex-1">
+              <RiepilogoEconomicoChart data={riepilogoData} />
+            </div>
+
+            {/* Card % Utile Lordo */}
+            <div className="w-64 flex-shrink-0">
+              <div className={`rounded-xl border-2 p-6 h-full flex flex-col justify-center ${
+                riepilogoData.percentualeUtileLordo === 0
+                  ? 'border-blue-200 bg-blue-50'
+                  : riepilogoData.percentualeUtileLordo > 0
+                  ? 'border-green-200 bg-green-50'
+                  : 'border-red-200 bg-red-50'
+              }`}>
+                <div className="text-center">
+                  <p className="text-sm font-medium text-muted-foreground mb-2">% Utile Lordo</p>
+                  <p className={`text-4xl font-bold mb-2 ${
+                    riepilogoData.percentualeUtileLordo === 0
+                      ? 'text-blue-600'
+                      : riepilogoData.percentualeUtileLordo > 0
+                      ? 'text-green-600'
+                      : 'text-red-600'
+                  }`}>
+                    {riepilogoData.percentualeUtileLordo.toFixed(3)}%
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    (Utile Lordo / Fatturato) × 100
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
