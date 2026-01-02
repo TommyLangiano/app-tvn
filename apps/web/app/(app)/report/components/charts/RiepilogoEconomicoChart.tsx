@@ -80,7 +80,7 @@ export const RiepilogoEconomicoChart = memo(({ data }: RiepilogoEconomicoChartPr
           data.costiTotali,
           data.noteSpesa,
           data.utileLordo,
-          data.saldoIva
+          -data.saldoIva // Inverti segno: debito (positivo) → negativo, credito (negativo) → positivo
         ],
         backgroundColor: 'rgb(5, 150, 105)', // emerald-600 (primary)
         borderColor: 'rgb(5, 150, 105)',
