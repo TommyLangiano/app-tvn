@@ -388,23 +388,26 @@ export default function NuovaEmessaPage() {
                     <CommandInput placeholder="Cerca cliente..." />
                     <CommandEmpty>Nessun cliente trovato.</CommandEmpty>
                     <CommandGroup className="max-h-64 overflow-auto">
-                      {clienti.map((cliente) => (
-                        <CommandItem
-                          key={cliente.id}
-                          value={cliente.id}
-                          onSelect={() => handleClienteSelect(cliente.id)}
-                        >
-                          <Check
-                            className={cn(
-                              "mr-2 h-4 w-4",
-                              selectedClienteId === cliente.id ? "opacity-100" : "opacity-0"
-                            )}
-                          />
-                          {cliente.forma_giuridica === 'persona_fisica'
-                            ? `${cliente.cognome} ${cliente.nome}`
-                            : cliente.ragione_sociale}
-                        </CommandItem>
-                      ))}
+                      {clienti.map((cliente) => {
+                        const displayName = cliente.forma_giuridica === 'persona_fisica'
+                          ? `${cliente.cognome} ${cliente.nome}`
+                          : cliente.ragione_sociale;
+                        return (
+                          <CommandItem
+                            key={cliente.id}
+                            value={displayName}
+                            onSelect={() => handleClienteSelect(cliente.id)}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedClienteId === cliente.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {displayName}
+                          </CommandItem>
+                        );
+                      })}
                     </CommandGroup>
                   </Command>
                 </PopoverContent>

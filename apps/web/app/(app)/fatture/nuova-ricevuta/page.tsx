@@ -387,23 +387,26 @@ export default function NuovaRicevutaPage() {
                     <CommandInput placeholder="Cerca fornitore..." />
                     <CommandEmpty>Nessun fornitore trovato.</CommandEmpty>
                     <CommandGroup className="max-h-64 overflow-auto">
-                      {fornitori.map((fornitore) => (
-                        <CommandItem
-                          key={fornitore.id}
-                          value={fornitore.id}
-                          onSelect={() => handleFornitoreSelect(fornitore.id)}
-                        >
-                          <Check
-                            className={cn(
-                              "mr-2 h-4 w-4",
-                              selectedFornitoreId === fornitore.id ? "opacity-100" : "opacity-0"
-                            )}
-                          />
-                          {fornitore.forma_giuridica === 'persona_fisica'
-                            ? `${fornitore.cognome} ${fornitore.nome}`
-                            : fornitore.ragione_sociale}
-                        </CommandItem>
-                      ))}
+                      {fornitori.map((fornitore) => {
+                        const displayName = fornitore.forma_giuridica === 'persona_fisica'
+                          ? `${fornitore.cognome} ${fornitore.nome}`
+                          : fornitore.ragione_sociale;
+                        return (
+                          <CommandItem
+                            key={fornitore.id}
+                            value={displayName}
+                            onSelect={() => handleFornitoreSelect(fornitore.id)}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedFornitoreId === fornitore.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {displayName}
+                          </CommandItem>
+                        );
+                      })}
                     </CommandGroup>
                   </Command>
                 </PopoverContent>
