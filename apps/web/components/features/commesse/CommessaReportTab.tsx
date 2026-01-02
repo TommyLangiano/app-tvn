@@ -130,9 +130,14 @@ export function CommessaReportTab({ commessaId, commessa, fattureAttive, fatture
     console.log('💰 SALDO IVA (Attive - Passive):', saldoIva);
 
     // Calcola percentuale utile lordo: (100 x Utile Lordo) / Fatturato Emesso
-    const percentualeUtileLordo = fatturatoEmesso > 0
+    // Nota: permette valori negativi se l'utile è negativo (perdita)
+    const percentualeUtileLordo = fatturatoEmesso !== 0
       ? (100 * utileLordo) / fatturatoEmesso
       : 0;
+
+    console.log('📊 Utile Lordo:', utileLordo);
+    console.log('📊 Fatturato Emesso:', fatturatoEmesso);
+    console.log('📊 % Utile Lordo:', percentualeUtileLordo);
 
     return {
       fatturatoPrevisto,
