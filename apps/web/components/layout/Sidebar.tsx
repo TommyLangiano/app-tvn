@@ -128,11 +128,10 @@ const menuStructure = [
     type: 'category',
     label: 'Paghe e Contributi',
     icon: Wallet,
-    disabled: true,
     items: [
-      { href: '/buste-paga', label: 'Buste Paga', icon: Banknote, disabled: true },
-      { href: '/f24', label: 'F24', icon: BadgeEuro, disabled: true },
-      { href: '/cedolini', label: 'Cedolini', icon: FileSpreadsheet, disabled: true },
+      { href: '/buste-paga', label: 'Buste Paga', icon: Banknote },
+      { href: '/f24', label: 'F24', icon: BadgeEuro },
+      { href: '/cedolini', label: 'Cedolini', icon: FileSpreadsheet },
     ]
   },
   {
