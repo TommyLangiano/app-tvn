@@ -104,10 +104,10 @@ export function CommessaReportTab({ commessaId, commessa, fattureAttive, fatture
     const totaleNoteSpesa = sumImporti(noteSpeseApprovate);
     const utileLordo = fatturatoEmesso - costiTotali - totaleNoteSpesa;
 
-    // Calcola saldo IVA
+    // Calcola saldo IVA (IVA ricavi - IVA costi)
     const ivaFatturePassive = sumIva(fatturePassiveFiltrate);
     const ivaFattureAttive = sumIva(fattureAttiveFiltrate);
-    const saldoIva = ivaFatturePassive - ivaFattureAttive;
+    const saldoIva = ivaFattureAttive - ivaFatturePassive;
 
     return {
       fatturatoPrevisto,

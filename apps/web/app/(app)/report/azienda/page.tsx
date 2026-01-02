@@ -163,10 +163,10 @@ export default function ReportAziendaPage() {
 
       const utileLordo = fatturatoEmesso - costiTotali - totaleNoteSpesa;
 
-      // Calcola saldo IVA (riutilizza i dati già fetchati)
+      // Calcola saldo IVA (IVA ricavi - IVA costi)
       const ivaFatturePassive = sumIva(fatturePassive);
       const ivaFattureAttive = sumIva(fattureAttive);
-      const saldoIva = ivaFatturePassive - ivaFattureAttive;
+      const saldoIva = ivaFattureAttive - ivaFatturePassive;
 
       setRiepilogoData({
         fatturatoPrevisto,
