@@ -406,8 +406,7 @@ export function FatturaDetailSheet({ fattura, onClose, onOpenFile, onDelete, onU
         const cliente = clienti.find(c => c.id === selectedClienteId);
         updateData.cliente = cliente ? getClienteDisplayName(cliente) : ((editedData as Partial<FatturaAttiva>).cliente || '');
       } else {
-        // Se selectedFornitoreId è una stringa vuota, usa null invece
-        updateData.fornitore_id = selectedFornitoreId || null;
+        // Fatture passive NON hanno fornitore_id, solo fornitore (text)
         const fornitore = fornitori.find(f => f.id === selectedFornitoreId);
         updateData.fornitore = fornitore ? getFornitoreDisplayName(fornitore) : ((editedData as Partial<FatturaPassiva>).fornitore || '');
         updateData.banca_emissione = (editedData as Partial<FatturaPassiva>).banca_emissione;
