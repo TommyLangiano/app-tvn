@@ -625,19 +625,54 @@ export function MovimentiTab({ commessaId, fattureAttive, fatturePassive, riepil
               </div>
 
               {/* Card Saldo IVA */}
-              <div className={`rounded-xl border-2 bg-card p-6 ${(riepilogo.saldo_iva || 0) > 0 ? 'border-red-300 bg-red-50/30' : 'border-green-300 bg-green-50/30'}`}>
+              <div className={`rounded-xl border-2 bg-card p-6 ${
+                (riepilogo.saldo_iva || 0) === 0
+                  ? 'border-green-300 bg-green-50/30'
+                  : (riepilogo.saldo_iva || 0) > 0
+                  ? 'border-red-300 bg-red-50/30'
+                  : 'border-green-300 bg-green-50/30'
+              }`}>
                 <div className="flex items-center gap-2 mb-4">
-                  <div className={`p-2 rounded-lg ${(riepilogo.saldo_iva || 0) > 0 ? 'bg-red-100' : 'bg-green-100'}`}>
-                    <FileText className={`h-5 w-5 ${(riepilogo.saldo_iva || 0) > 0 ? 'text-red-600' : 'text-green-600'}`} />
+                  <div className={`p-2 rounded-lg ${
+                    (riepilogo.saldo_iva || 0) === 0
+                      ? 'bg-green-100'
+                      : (riepilogo.saldo_iva || 0) > 0
+                      ? 'bg-red-100'
+                      : 'bg-green-100'
+                  }`}>
+                    <FileText className={`h-5 w-5 ${
+                      (riepilogo.saldo_iva || 0) === 0
+                        ? 'text-green-600'
+                        : (riepilogo.saldo_iva || 0) > 0
+                        ? 'text-red-600'
+                        : 'text-green-600'
+                    }`} />
                   </div>
                   <span className="font-semibold text-base">Saldo IVA</span>
                 </div>
                 <div className="space-y-2">
-                  <div className={`text-3xl font-bold ${(riepilogo.saldo_iva || 0) > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                    {formatCurrency(riepilogo.saldo_iva || 0)}
+                  <div className={`text-3xl font-bold ${
+                    (riepilogo.saldo_iva || 0) === 0
+                      ? 'text-green-600'
+                      : (riepilogo.saldo_iva || 0) > 0
+                      ? 'text-red-600'
+                      : 'text-green-600'
+                  }`}>
+                    {(riepilogo.saldo_iva || 0) === 0
+                      ? formatCurrency(0)
+                      : (riepilogo.saldo_iva || 0) > 0
+                      ? formatCurrency(-(riepilogo.saldo_iva || 0))
+                      : formatCurrency(-(riepilogo.saldo_iva || 0))
+                    }
                   </div>
-                  <div className={`text-sm font-medium ${(riepilogo.saldo_iva || 0) > 0 ? 'text-red-700' : 'text-green-700'}`}>
-                    {(riepilogo.saldo_iva || 0) > 0 ? 'IVA a credito' : 'IVA a debito'}
+                  <div className={`text-sm font-medium ${
+                    (riepilogo.saldo_iva || 0) === 0
+                      ? 'text-green-700'
+                      : (riepilogo.saldo_iva || 0) > 0
+                      ? 'text-red-700'
+                      : 'text-green-700'
+                  }`}>
+                    {(riepilogo.saldo_iva || 0) === 0 ? 'Neutra' : (riepilogo.saldo_iva || 0) > 0 ? 'IVA a debito' : 'IVA a credito'}
                   </div>
                   <div className="text-xs text-muted-foreground mt-2">
                     IVA ricavi - IVA costi
