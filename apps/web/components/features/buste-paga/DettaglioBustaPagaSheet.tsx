@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FileText, Trash2, X } from 'lucide-react';
+import { FileText, Trash2, X, ChevronDown, ChevronRight } from 'lucide-react';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { getSignedUrl } from '@/lib/utils/storage';
@@ -33,6 +33,7 @@ export function DettaglioBustaPagaSheet({
   const [allegatoUrl, setAllegatoUrl] = useState<string | null>(null);
   const [dettagli, setDettagli] = useState<BustaPagaDettaglio[]>([]);
   const [loadingDettagli, setLoadingDettagli] = useState(true);
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (bustaPaga.allegato_url) {
@@ -43,6 +44,8 @@ export function DettaglioBustaPagaSheet({
   useEffect(() => {
     if (isOpen) {
       loadDettagli();
+      // Espandi tutti gli items di default
+      setExpandedItems(new Set());
     }
   }, [isOpen, bustaPaga.id]);
 
@@ -119,6 +122,16 @@ export function DettaglioBustaPagaSheet({
       hour: '2-digit',
       minute: '2-digit',
     });
+  };
+
+  const toggleExpand = (id: string) => {
+    const newExpanded = new Set(expandedItems);
+    if (newExpanded.has(id)) {
+      newExpanded.delete(id);
+    } else {
+      newExpanded.add(id);
+    }
+    setExpandedItems(newExpanded);
   };
 
   return (
@@ -206,51 +219,86 @@ export function DettaglioBustaPagaSheet({
               </div>
             ) : (
               <div className="space-y-3">
-                {dettagli.map((dettaglio) => (
-                  <div
-                    key={dettaglio.id}
-                    className="bg-white border border-border rounded-lg p-4 hover:shadow-sm transition-shadow"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-foreground">
-                          {(dettaglio.commesse as any)?.nome_commessa || 'Commessa sconosciuta'}
-                        </h4>
-                        {(dettaglio.commesse as any)?.codice_commessa && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Codice: {(dettaglio.commesse as any).codice_commessa}
+                {dettagli.map((dettaglio) => {
+                  const isExpanded = expandedItems.has(dettaglio.id);
+                  return (
+                    <div
+                      key={dettaglio.id}
+                      className="bg-white border border-border rounded-lg overflow-hidden transition-shadow hover:shadow-sm"
+                    >
+                      {/* Header - Sempre visibile e cliccabile */}
+                      <div
+                        onClick={() => toggleExpand(dettaglio.id)}
+                        className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex items-center gap-3 flex-1">
+                          <button
+                            className="text-muted-foreground hover:text-foreground transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleExpand(dettaglio.id);
+                            }}
+                          >
+                            {isExpanded ? (
+                              <ChevronDown className="h-5 w-5" />
+                            ) : (
+                              <ChevronRight className="h-5 w-5" />
+                            )}
+                          </button>
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-foreground">
+                              {(dettaglio.commesse as any)?.nome_commessa || 'Commessa sconosciuta'}
+                            </h4>
+                            {(dettaglio.commesse as any)?.codice_commessa && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Codice: {(dettaglio.commesse as any).codice_commessa}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-bold text-primary">
+                            {Number(dettaglio.ore_commessa).toFixed(2)} h
                           </p>
-                        )}
+                          <p className="text-sm text-muted-foreground">
+                            {formatCurrency(Number(dettaglio.importo_commessa))}
+                          </p>
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-1">Ore Lavorate</p>
-                        <p className="text-lg font-bold text-primary">
-                          {Number(dettaglio.ore_commessa).toFixed(2)} h
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-1">Importo</p>
-                        <p className="text-lg font-bold text-foreground">
-                          {formatCurrency(Number(dettaglio.importo_commessa))}
-                        </p>
-                      </div>
-                    </div>
+                      {/* Dettagli espandibili */}
+                      {isExpanded && (
+                        <div className="px-4 pb-4 pt-2 border-t border-border bg-gray-50/50">
+                          <div className="grid grid-cols-2 gap-4 mb-3">
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-1">Ore Lavorate</p>
+                              <p className="text-lg font-bold text-primary">
+                                {Number(dettaglio.ore_commessa).toFixed(2)} h
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-1">Importo</p>
+                              <p className="text-lg font-bold text-foreground">
+                                {formatCurrency(Number(dettaglio.importo_commessa))}
+                              </p>
+                            </div>
+                          </div>
 
-                    <div className="mt-3 pt-3 border-t border-border">
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>Percentuale sul totale:</span>
-                        <span className="font-semibold">
-                          {bustaPaga.ore_totali > 0
-                            ? ((Number(dettaglio.ore_commessa) / Number(bustaPaga.ore_totali)) * 100).toFixed(1)
-                            : 0}%
-                        </span>
-                      </div>
+                          <div className="pt-3 border-t border-border">
+                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                              <span>Percentuale sul totale:</span>
+                              <span className="font-semibold">
+                                {bustaPaga.ore_totali > 0
+                                  ? ((Number(dettaglio.ore_commessa) / Number(bustaPaga.ore_totali)) * 100).toFixed(1)
+                                  : 0}%
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

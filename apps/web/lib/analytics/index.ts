@@ -137,6 +137,7 @@ export interface AnalyticsData {
     fatturatoPrevisto: number;
     fatturatoEmesso: number;
     costiTotali: number;
+    costiBustePaga: number;
     noteSpesa: number;
     utileLordo: number;
     saldoIva: number;
@@ -212,6 +213,7 @@ function getEmptyAnalyticsData(): AnalyticsData {
       fatturatoPrevisto: 0,
       fatturatoEmesso: 0,
       costiTotali: 0,
+      costiBustePaga: 0,
       noteSpesa: 0,
       utileLordo: 0,
       saldoIva: 0,
@@ -288,6 +290,40 @@ export async function getAnalyticsData(filters: AnalyticsFilters): Promise<Analy
       .gte('data_nota', format(filters.dateFrom, 'yyyy-MM-dd'))
       .lte('data_nota', format(filters.dateTo, 'yyyy-MM-dd'));
 
+    // Fetch buste paga dettaglio (costi del personale)
+    // Filtrare per mese/anno in base al range di date
+    const fromMonth = filters.dateFrom.getMonth() + 1;
+    const fromYear = filters.dateFrom.getFullYear();
+    const toMonth = filters.dateTo.getMonth() + 1;
+    const toYear = filters.dateTo.getFullYear();
+
+    const { data: bustePagaDettaglio } = await supabase
+      .from('buste_paga_dettaglio')
+      .select(`
+        id,
+        commessa_id,
+        importo_commessa,
+        ore_commessa,
+        buste_paga!inner(mese, anno)
+      `)
+      .in('commessa_id', commessaIds);
+
+    // Filtra client-side per mese/anno nel range
+    const bustePagaFiltered = bustePagaDettaglio?.filter((bp: any) => {
+      const bpYear = bp.buste_paga.anno;
+      const bpMonth = bp.buste_paga.mese;
+
+      if (fromYear === toYear) {
+        return bpYear === fromYear && bpMonth >= fromMonth && bpMonth <= toMonth;
+      } else {
+        return (
+          (bpYear === fromYear && bpMonth >= fromMonth) ||
+          (bpYear === toYear && bpMonth <= toMonth) ||
+          (bpYear > fromYear && bpYear < toYear)
+        );
+      }
+    }) || [];
+
     // Fetch scontrini (costs with categories)
     const { data: scontrini } = await supabase
       .from('scontrini')
@@ -343,6 +379,7 @@ export async function getAnalyticsData(filters: AnalyticsFilters): Promise<Analy
       fatturePassive: fatturePassive || [],
       scontrini: scontrini || [],
       noteSpesa: noteSpesa || [],
+      bustePaga: bustePagaFiltered,
       clienti: clientiData,
       rapportini: rapportini || [],
       dipendenti: dipendentiData,
@@ -362,12 +399,13 @@ function buildAnalyticsData(params: {
   fatturePassive: any[];
   scontrini: any[];
   noteSpesa: any[];
+  bustePaga: any[];
   clienti: any[];
   rapportini: any[];
   dipendenti: any[];
   filters: AnalyticsFilters;
 }): AnalyticsData {
-  const { commesse, fatture, fatturePassive, scontrini, noteSpesa, clienti, rapportini, dipendenti, filters } = params;
+  const { commesse, fatture, fatturePassive, scontrini, noteSpesa, bustePaga, clienti, rapportini, dipendenti, filters } = params;
 
   // Calculate total revenue
   const totalRevenue = (fatture || []).reduce((sum, f) => sum + (f.importo_totale || 0), 0);
@@ -429,7 +467,7 @@ function buildAnalyticsData(params: {
   const alerts = generateEnhancedAlerts(kpis, marginByProject, cashFlowForecast, agingReport, budgetVsActual);
 
   // Riepilogo Economico
-  const riepilogoEconomico = calculateRiepilogoEconomico(commesse, fatture, fatturePassive, noteSpesa);
+  const riepilogoEconomico = calculateRiepilogoEconomico(commesse, fatture, fatturePassive, noteSpesa, bustePaga);
 
   return {
     kpis,
@@ -608,7 +646,8 @@ function calculateRiepilogoEconomico(
   commesse: any[],
   fatture: any[],
   fatturePassive: any[],
-  noteSpesa: any[]
+  noteSpesa: any[],
+  bustePaga: any[]
 ) {
   // 1. Fatturato Totale Previsto: somma degli importo_commessa di tutte le commesse
   const fatturatoPrevisto = commesse.reduce((sum, c) => {
@@ -625,13 +664,18 @@ function calculateRiepilogoEconomico(
     return sum + (f.importo_imponibile || 0);
   }, 0);
 
+  // 3b. Costi Buste Paga: somma di tutti gli importi delle buste paga
+  const costiBustePaga = bustePaga.reduce((sum, bp) => {
+    return sum + (bp.importo_commessa || 0);
+  }, 0);
+
   // 4. Note spesa: somma di tutte le note spesa
   const totaleNoteSpesa = noteSpesa.reduce((sum, n) => {
     return sum + (n.importo || 0);
   }, 0);
 
-  // 5. Utile Lordo: Fatturato Emesso - Costi Totali - Note spesa
-  const utileLordo = fatturatoEmesso - costiTotali - totaleNoteSpesa;
+  // 5. Utile Lordo: Fatturato Emesso - Costi Totali - Costi Buste Paga - Note spesa
+  const utileLordo = fatturatoEmesso - costiTotali - costiBustePaga - totaleNoteSpesa;
 
   // 6. Saldo IVA: IVA fatture passive (IVA a credito) - IVA fatture attive (IVA a debito)
   const ivaFatturePassive = fatturePassive.reduce((sum, f) => {
@@ -648,6 +692,7 @@ function calculateRiepilogoEconomico(
     fatturatoPrevisto,
     fatturatoEmesso,
     costiTotali,
+    costiBustePaga,
     noteSpesa: totaleNoteSpesa,
     utileLordo,
     saldoIva,

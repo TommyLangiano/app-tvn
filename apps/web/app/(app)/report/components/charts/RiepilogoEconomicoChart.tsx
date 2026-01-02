@@ -52,6 +52,7 @@ interface RiepilogoEconomicoData {
   fatturatoPrevisto: number;
   fatturatoEmesso: number;
   costiTotali: number;
+  costiBustePaga: number;
   noteSpesa: number;
   utileLordo: number;
   saldoIva: number;
@@ -73,23 +74,63 @@ export const RiepilogoEconomicoChart = memo(({ data }: RiepilogoEconomicoChartPr
     ],
     datasets: [
       {
-        label: 'Importo (€)',
+        label: 'Costi Fatture',
+        data: [
+          0, // Importo Contratto
+          0, // Fatturato
+          data.costiTotali, // Solo costi fatture
+          0, // Note Spesa
+          0, // Utile Lordo
+          0  // Saldo IVA
+        ],
+        backgroundColor: 'rgb(5, 150, 105)', // emerald-600 (verde)
+        borderColor: 'rgb(5, 150, 105)',
+        borderWidth: 0,
+        borderRadius: 6,
+        borderSkipped: 'bottom' as const,
+        maxBarThickness: 60,
+        barPercentage: 0.6,
+        categoryPercentage: 0.7,
+        stack: 'costi' as const,
+      },
+      {
+        label: 'Costi Buste Paga',
+        data: [
+          0, // Importo Contratto
+          0, // Fatturato
+          data.costiBustePaga, // Solo costi buste paga
+          0, // Note Spesa
+          0, // Utile Lordo
+          0  // Saldo IVA
+        ],
+        backgroundColor: 'rgb(234, 179, 8)', // yellow-600 (giallo)
+        borderColor: 'rgb(234, 179, 8)',
+        borderWidth: 0,
+        borderRadius: 6,
+        borderSkipped: 'bottom' as const,
+        maxBarThickness: 60,
+        barPercentage: 0.6,
+        categoryPercentage: 0.7,
+        stack: 'costi' as const,
+      },
+      {
+        label: 'Altri Valori',
         data: [
           data.fatturatoPrevisto,
           data.fatturatoEmesso,
-          data.costiTotali,
+          0, // Costi sono stacked
           data.noteSpesa,
           data.utileLordo,
-          -data.saldoIva // Inverti segno: debito (positivo) → negativo, credito (negativo) → positivo
+          -data.saldoIva // Inverti segno
         ],
         backgroundColor: 'rgb(5, 150, 105)', // emerald-600 (primary)
         borderColor: 'rgb(5, 150, 105)',
         borderWidth: 0,
         borderRadius: 6,
         borderSkipped: 'bottom' as const,
-        maxBarThickness: 60, // Larghezza massima barra
-        barPercentage: 0.6, // Riduce larghezza barra
-        categoryPercentage: 0.7, // Aumenta spazio tra categorie
+        maxBarThickness: 60,
+        barPercentage: 0.6,
+        categoryPercentage: 0.7,
       }
     ]
   }), [data]);
@@ -106,10 +147,9 @@ export const RiepilogoEconomicoChart = memo(({ data }: RiepilogoEconomicoChartPr
         backgroundColor: 'rgba(255, 255, 255, 0.98)',
         titleColor: '#1f2937',
         bodyColor: '#1f2937',
-        borderColor: 'rgb(5, 150, 105)',
         borderWidth: 2,
         padding: 16,
-        displayColors: false,
+        displayColors: true,
         cornerRadius: 8,
         titleFont: {
           size: 14,
@@ -121,13 +161,36 @@ export const RiepilogoEconomicoChart = memo(({ data }: RiepilogoEconomicoChartPr
         },
         callbacks: {
           label: function(context: any) {
-            return formatCurrencyExact(context.parsed.y);
+            const label = context.dataset.label || '';
+            const value = context.parsed.y;
+
+            if (value === 0) return null; // Non mostrare valori a 0
+
+            // Per la colonna "Tot. Imp. Costi" mostra il dettaglio
+            if (context.dataIndex === 2) {
+              if (label === 'Costi Fatture') {
+                return `Costi Fatture: ${formatCurrencyExact(value)}`;
+              } else if (label === 'Costi Buste Paga') {
+                return `Costi Buste Paga: ${formatCurrencyExact(value)}`;
+              }
+            }
+
+            return formatCurrencyExact(value);
+          },
+          afterBody: function(context: any) {
+            // Per la colonna "Tot. Imp. Costi" mostra il totale
+            if (context[0]?.dataIndex === 2) {
+              const totale = data.costiTotali + data.costiBustePaga;
+              return `\nTotale Costi: ${formatCurrencyExact(totale)}`;
+            }
+            return '';
           }
         }
       }
     },
     scales: {
       y: {
+        stacked: true,
         beginAtZero: true,
         grid: {
           color: 'rgba(0, 0, 0, 0.05)',
@@ -145,6 +208,7 @@ export const RiepilogoEconomicoChart = memo(({ data }: RiepilogoEconomicoChartPr
         }
       },
       x: {
+        stacked: true,
         grid: {
           display: false,
         },
@@ -163,7 +227,7 @@ export const RiepilogoEconomicoChart = memo(({ data }: RiepilogoEconomicoChartPr
       mode: 'index' as const,
       intersect: false,
     },
-  }), []);
+  }), [data]);
 
   // Mostra sempre il grafico, anche durante il loading o con dati a 0
   // Il grafico mostrerà le barre con altezza 0 se non ci sono dati
@@ -178,6 +242,7 @@ export const RiepilogoEconomicoChart = memo(({ data }: RiepilogoEconomicoChartPr
     prevProps.data.fatturatoPrevisto === nextProps.data.fatturatoPrevisto &&
     prevProps.data.fatturatoEmesso === nextProps.data.fatturatoEmesso &&
     prevProps.data.costiTotali === nextProps.data.costiTotali &&
+    prevProps.data.costiBustePaga === nextProps.data.costiBustePaga &&
     prevProps.data.noteSpesa === nextProps.data.noteSpesa &&
     prevProps.data.utileLordo === nextProps.data.utileLordo &&
     prevProps.data.saldoIva === nextProps.data.saldoIva

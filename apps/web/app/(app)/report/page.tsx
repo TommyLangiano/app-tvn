@@ -257,6 +257,7 @@ export default function ReportPage() {
               fatturatoPrevisto: 0,
               fatturatoEmesso: 0,
               costiTotali: 0,
+              costiBustePaga: 0,
               noteSpesa: 0,
               utileLordo: 0,
               saldoIva: 0,
