@@ -73,61 +73,58 @@ export const RiepilogoEconomicoChart = memo(({ data }: RiepilogoEconomicoChartPr
       'Saldo IVA'
     ],
     datasets: [
+      // Prima parte della barra costi (verde - fatture)
       {
         label: 'Costi Fatture',
         data: [
-          0, // Importo Contratto
-          0, // Fatturato
-          data.costiTotali, // Solo costi fatture
-          0, // Note Spesa
-          0, // Utile Lordo
-          0  // Saldo IVA
+          0,
+          0,
+          data.costiTotali,
+          0,
+          0,
+          0
         ],
         backgroundColor: 'rgb(5, 150, 105)', // emerald-600 (verde)
-        borderColor: 'rgb(5, 150, 105)',
         borderWidth: 0,
-        borderRadius: 6,
-        borderSkipped: 'bottom' as const,
+        borderRadius: { topLeft: 0, topRight: 0, bottomLeft: 6, bottomRight: 6 },
         maxBarThickness: 60,
         barPercentage: 0.6,
         categoryPercentage: 0.7,
-        stack: 'costi' as const,
+        stack: 'costi',
       },
+      // Seconda parte della barra costi (giallo - buste paga)
       {
         label: 'Costi Buste Paga',
         data: [
-          0, // Importo Contratto
-          0, // Fatturato
-          data.costiBustePaga, // Solo costi buste paga
-          0, // Note Spesa
-          0, // Utile Lordo
-          0  // Saldo IVA
+          0,
+          0,
+          data.costiBustePaga,
+          0,
+          0,
+          0
         ],
         backgroundColor: 'rgb(234, 179, 8)', // yellow-600 (giallo)
-        borderColor: 'rgb(234, 179, 8)',
         borderWidth: 0,
-        borderRadius: 6,
-        borderSkipped: 'bottom' as const,
+        borderRadius: { topLeft: 6, topRight: 6, bottomLeft: 0, bottomRight: 0 },
         maxBarThickness: 60,
         barPercentage: 0.6,
         categoryPercentage: 0.7,
-        stack: 'costi' as const,
+        stack: 'costi',
       },
+      // Tutte le altre colonne (verde)
       {
-        label: 'Altri Valori',
+        label: 'Valori',
         data: [
           data.fatturatoPrevisto,
           data.fatturatoEmesso,
-          0, // Costi sono stacked
+          0, // Costi mostrati con stack
           data.noteSpesa,
           data.utileLordo,
-          -data.saldoIva // Inverti segno
+          -data.saldoIva
         ],
         backgroundColor: 'rgb(5, 150, 105)', // emerald-600 (primary)
-        borderColor: 'rgb(5, 150, 105)',
         borderWidth: 0,
         borderRadius: 6,
-        borderSkipped: 'bottom' as const,
         maxBarThickness: 60,
         barPercentage: 0.6,
         categoryPercentage: 0.7,
@@ -164,7 +161,7 @@ export const RiepilogoEconomicoChart = memo(({ data }: RiepilogoEconomicoChartPr
             const label = context.dataset.label || '';
             const value = context.parsed.y;
 
-            if (value === 0) return null; // Non mostrare valori a 0
+            if (value === 0) return null;
 
             // Per la colonna "Tot. Imp. Costi" mostra il dettaglio
             if (context.dataIndex === 2) {
@@ -177,11 +174,11 @@ export const RiepilogoEconomicoChart = memo(({ data }: RiepilogoEconomicoChartPr
 
             return formatCurrencyExact(value);
           },
-          afterBody: function(context: any) {
+          footer: function(context: any) {
             // Per la colonna "Tot. Imp. Costi" mostra il totale
             if (context[0]?.dataIndex === 2) {
               const totale = data.costiTotali + data.costiBustePaga;
-              return `\nTotale Costi: ${formatCurrencyExact(totale)}`;
+              return `Totale: ${formatCurrencyExact(totale)}`;
             }
             return '';
           }
@@ -229,15 +226,12 @@ export const RiepilogoEconomicoChart = memo(({ data }: RiepilogoEconomicoChartPr
     },
   }), [data]);
 
-  // Mostra sempre il grafico, anche durante il loading o con dati a 0
-  // Il grafico mostrerà le barre con altezza 0 se non ci sono dati
   return (
     <div className="w-full h-[450px]">
       <Bar data={chartData} options={options} />
     </div>
   );
 }, (prevProps, nextProps) => {
-  // Memoizza solo se i dati sono identici
   return (
     prevProps.data.fatturatoPrevisto === nextProps.data.fatturatoPrevisto &&
     prevProps.data.fatturatoEmesso === nextProps.data.fatturatoEmesso &&

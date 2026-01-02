@@ -297,21 +297,34 @@ export async function getAnalyticsData(filters: AnalyticsFilters): Promise<Analy
     const toMonth = filters.dateTo.getMonth() + 1;
     const toYear = filters.dateTo.getFullYear();
 
-    const { data: bustePagaDettaglio } = await supabase
+    const { data: bustePagaDettaglio, error: bustePagaError } = await supabase
       .from('buste_paga_dettaglio')
       .select(`
         id,
         commessa_id,
         importo_commessa,
         ore_commessa,
-        buste_paga!inner(mese, anno)
+        buste_paga!inner(
+          mese,
+          anno,
+          tenant_id
+        )
       `)
+      .eq('buste_paga.tenant_id', tenantId)
       .in('commessa_id', commessaIds);
+
+    if (bustePagaError) {
+      console.error('Error fetching buste paga:', bustePagaError);
+    }
+
+    console.log('🔍 Buste paga raw data:', bustePagaDettaglio);
 
     // Filtra client-side per mese/anno nel range
     const bustePagaFiltered = bustePagaDettaglio?.filter((bp: any) => {
-      const bpYear = bp.buste_paga.anno;
-      const bpMonth = bp.buste_paga.mese;
+      const bpYear = bp.buste_paga?.anno;
+      const bpMonth = bp.buste_paga?.mese;
+
+      if (!bpYear || !bpMonth) return false;
 
       if (fromYear === toYear) {
         return bpYear === fromYear && bpMonth >= fromMonth && bpMonth <= toMonth;
@@ -323,6 +336,9 @@ export async function getAnalyticsData(filters: AnalyticsFilters): Promise<Analy
         );
       }
     }) || [];
+
+    console.log('🎯 Buste paga filtered:', bustePagaFiltered);
+    console.log('💰 Total costi buste paga:', bustePagaFiltered.reduce((sum, bp) => sum + (bp.importo_commessa || 0), 0));
 
     // Fetch scontrini (costs with categories)
     const { data: scontrini } = await supabase
