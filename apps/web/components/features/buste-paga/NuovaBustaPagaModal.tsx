@@ -114,27 +114,43 @@ export function NuovaBustaPagaModal({
     try {
       const supabase = createClient();
 
+      // 1. Ottieni il dipendente con il suo user_id (se esiste)
+      const { data: dipendente, error: dipendenteError } = await supabase
+        .from('dipendenti')
+        .select('id, user_id')
+        .eq('id', selectedDipendenteId)
+        .single();
+
+      if (dipendenteError) {
+        console.error('Error loading dipendente:', dipendenteError);
+        toast.error('Errore nel caricamento del dipendente');
+        return;
+      }
+
       // Calcola le date di inizio e fine del mese
       const dataInizio = new Date(anno, mese - 1, 1);
       const dataFine = new Date(anno, mese, 0);
 
-      // Query rapportini del dipendente per quel mese
-      const { data: rapportini, error } = await supabase
+      // 2. Query rapportini - cerca sia per dipendente_id che per user_id
+      let query = supabase
         .from('rapportini')
         .select(`
           id,
           ore_lavorate,
           commessa_id,
+          dipendente_id,
+          user_id,
           commesse (
             nome_commessa,
             codice_commessa
           )
         `)
         .eq('tenant_id', tenantId)
-        .eq('dipendente_id', selectedDipendenteId)
         .gte('data_rapportino', dataInizio.toISOString().split('T')[0])
         .lte('data_rapportino', dataFine.toISOString().split('T')[0])
-        .eq('stato', 'approvato'); // Solo rapportini approvati
+        .eq('stato', 'approvato');
+
+      const { data: rapportini, error } = await query;
 
       if (error) {
         console.error('Error loading rapportini:', error);
@@ -142,13 +158,32 @@ export function NuovaBustaPagaModal({
         return;
       }
 
-      // Calcola ore totali e suddivisione per commessa
-      const oreTotali = rapportini?.reduce((sum, r) => sum + Number(r.ore_lavorate), 0) || 0;
+      // 3. Filtra i rapportini che appartengono al dipendente
+      // Un rapportino appartiene al dipendente se:
+      // - dipendente_id corrisponde, OPPURE
+      // - user_id corrisponde al user_id del dipendente
+      const rapportiniDipendente = rapportini?.filter(r => {
+        if (r.dipendente_id === selectedDipendenteId) return true;
+        if (dipendente.user_id && r.user_id === dipendente.user_id) return true;
+        return false;
+      }) || [];
+
+      console.log('🔍 Debug Calcolo Ore:', {
+        dipendenteId: selectedDipendenteId,
+        userId: dipendente.user_id,
+        mese,
+        anno,
+        totaleRapportini: rapportini?.length || 0,
+        rapportiniFiltrati: rapportiniDipendente.length,
+      });
+
+      // 4. Calcola ore totali e suddivisione per commessa usando i rapportini filtrati
+      const oreTotali = rapportiniDipendente.reduce((sum, r) => sum + Number(r.ore_lavorate), 0);
 
       // Raggruppa per commessa
       const commesseMap = new Map<string, { nome: string; codice?: string; ore: number }>();
 
-      rapportini?.forEach(r => {
+      rapportiniDipendente.forEach(r => {
         const existing = commesseMap.get(r.commessa_id);
         if (existing) {
           existing.ore += Number(r.ore_lavorate);
