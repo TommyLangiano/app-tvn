@@ -236,6 +236,7 @@ export default function CommessaDetailPage() {
         costi_imponibile: 0,
         costi_iva: 0,
         costi_totali: 0,
+        costi_buste_paga: 0,
         margine_lordo: 0,
         saldo_iva: 0,
         totale_movimenti: 0,

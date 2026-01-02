@@ -587,17 +587,23 @@ export function MovimentiTab({ commessaId, fattureAttive, fatturePassive, riepil
                   <div className="p-2 rounded-lg bg-red-100">
                     <TrendingDown className="h-5 w-5 text-red-600" />
                   </div>
-                  <span className="font-semibold text-base">Fatture Ricevute</span>
+                  <span className="font-semibold text-base">Totale Costi</span>
                 </div>
                 <div className="space-y-3">
                   <div className="text-3xl font-bold text-red-600">
-                    {formatCurrency(riepilogo.costi_totali)}
+                    {formatCurrency((riepilogo.costi_totali || 0) + (riepilogo.costi_buste_paga || 0))}
                   </div>
                   <div className="space-y-2 pt-2 border-t border-border">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Imponibile:</span>
+                      <span className="text-sm text-muted-foreground">Fatture:</span>
                       <span className="text-sm font-semibold">{formatCurrency(riepilogo.costi_imponibile)}</span>
                     </div>
+                    {riepilogo.costi_buste_paga > 0 && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Buste Paga:</span>
+                        <span className="text-sm font-semibold text-yellow-600">{formatCurrency(riepilogo.costi_buste_paga)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">IVA:</span>
                       <span className="text-sm font-semibold">{formatCurrency(riepilogo.costi_iva)}</span>
@@ -766,20 +772,29 @@ export function MovimentiTab({ commessaId, fattureAttive, fatturePassive, riepil
                 </div>
               </div>
 
-              {/* Card Imponibile */}
+              {/* Card Totale Costi */}
               <div className="rounded-xl border-2 border-border bg-card p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <div className="p-2 rounded-lg bg-gray-100">
                     <FileText className="h-5 w-5 text-gray-600" />
                   </div>
-                  <span className="font-semibold text-base">Imponibile</span>
+                  <span className="font-semibold text-base">Totale Costi</span>
                 </div>
                 <div className="space-y-2">
                   <div className="text-3xl font-bold text-gray-700">
-                    {formatCurrency(riepilogo.costi_imponibile)}
+                    {formatCurrency((riepilogo.costi_imponibile || 0) + (riepilogo.costi_buste_paga || 0))}
                   </div>
-                  <div className="text-xs text-muted-foreground mt-2">
-                    Totale imponibile fatture ricevute
+                  <div className="space-y-1 mt-2 pt-2 border-t border-border">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-muted-foreground">Fatture:</span>
+                      <span className="font-semibold">{formatCurrency(riepilogo.costi_imponibile)}</span>
+                    </div>
+                    {riepilogo.costi_buste_paga > 0 && (
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-muted-foreground">Buste Paga:</span>
+                        <span className="font-semibold text-yellow-600">{formatCurrency(riepilogo.costi_buste_paga)}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
