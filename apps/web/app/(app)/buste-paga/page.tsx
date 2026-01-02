@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Wallet, Plus, FileText, Trash2, Eye } from 'lucide-react';
+import { Wallet, Plus, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MonthNavigator } from '@/components/ui/month-navigator';
 import { NuovaBustaPagaModal } from '@/components/features/buste-paga/NuovaBustaPagaModal';
+import { DettaglioBustaPagaSheet } from '@/components/features/buste-paga/DettaglioBustaPagaSheet';
 import { DataTable, DataTableColumn } from '@/components/ui/data-table';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
@@ -31,7 +32,11 @@ export default function BustePagaPage() {
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(30);
+  const [pageSize, setPageSize] = useState(30);
+
+  // Dettaglio sheet state
+  const [selectedBustaPaga, setSelectedBustaPaga] = useState<BustaPaga | null>(null);
+  const [showDettaglioSheet, setShowDettaglioSheet] = useState(false);
 
   useEffect(() => {
     setNavbarActionsContainer(document.getElementById('navbar-actions'));
@@ -101,35 +106,15 @@ export default function BustePagaPage() {
     loadBustePaga();
   };
 
-  const handleDelete = async (bustaPaga: BustaPaga) => {
-    if (!confirm(`Sei sicuro di voler eliminare la busta paga di ${bustaPaga.dipendenti?.cognome} ${bustaPaga.dipendenti?.nome}?`)) {
-      return;
-    }
+  const handleRowClick = (bustaPaga: BustaPaga) => {
+    setSelectedBustaPaga(bustaPaga);
+    setShowDettaglioSheet(true);
+  };
 
-    try {
-      const supabase = createClient();
-
-      // Elimina prima il file se esiste
-      if (bustaPaga.allegato_url) {
-        await supabase.storage
-          .from('app-storage')
-          .remove([bustaPaga.allegato_url]);
-      }
-
-      // Elimina la busta paga (i dettagli verranno eliminati in cascade)
-      const { error } = await supabase
-        .from('buste_paga')
-        .delete()
-        .eq('id', bustaPaga.id);
-
-      if (error) throw error;
-
-      toast.success('Busta paga eliminata con successo');
-      loadBustePaga();
-    } catch (error) {
-      console.error('Error deleting busta paga:', error);
-      toast.error('Errore nell\'eliminazione della busta paga');
-    }
+  const handleDeleteFromSheet = () => {
+    setShowDettaglioSheet(false);
+    setSelectedBustaPaga(null);
+    loadBustePaga();
   };
 
   const columns: DataTableColumn<BustaPaga>[] = [
@@ -202,34 +187,6 @@ export default function BustePagaPage() {
         </>
       ),
     },
-    {
-      key: 'actions',
-      label: 'Azioni',
-      sortable: false,
-      render: (busta) => (
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              // TODO: Implementare visualizzazione dettaglio
-              toast.info('Dettaglio in arrivo...');
-            }}
-            className="h-8 w-8 p-0"
-          >
-            <Eye className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleDelete(busta)}
-            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      ),
-    },
   ];
 
   return (
@@ -273,9 +230,11 @@ export default function BustePagaPage() {
           data={bustePaga}
           columns={columns}
           currentPage={currentPage}
-          itemsPerPage={itemsPerPage}
+          pageSize={pageSize}
+          totalItems={bustePaga.length}
           onPageChange={setCurrentPage}
-          onItemsPerPageChange={setItemsPerPage}
+          onPageSizeChange={setPageSize}
+          onRowClick={handleRowClick}
         />
       )}
 
@@ -288,6 +247,17 @@ export default function BustePagaPage() {
           tenantId={tenantId}
           preselectedMonth={currentMonth + 1}
           preselectedYear={currentYear}
+        />
+      )}
+
+      {/* Dettaglio Busta Paga Sheet */}
+      {selectedBustaPaga && (
+        <DettaglioBustaPagaSheet
+          bustaPaga={selectedBustaPaga}
+          isOpen={showDettaglioSheet}
+          onOpenChange={setShowDettaglioSheet}
+          onUpdate={loadBustePaga}
+          onDelete={handleDeleteFromSheet}
         />
       )}
     </div>
