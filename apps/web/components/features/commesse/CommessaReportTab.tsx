@@ -82,15 +82,30 @@ export function CommessaReportTab({ commessaId, commessa, fattureAttive, fatture
     const dateFrom = format(dateRange.from, 'yyyy-MM-dd');
     const dateTo = format(dateRange.to, 'yyyy-MM-dd');
 
+    console.log('🔍 DEBUG Report - Range date:', { dateFrom, dateTo });
+    console.log('🔍 DEBUG Report - Totale fatture attive:', fattureAttive.length);
+    console.log('🔍 DEBUG Report - Totale fatture passive:', fatturePassive.length);
+
     // Filtra fatture attive per data
     const fattureAttiveFiltrate = fattureAttive.filter(f => {
-      return f.data_fattura >= dateFrom && f.data_fattura <= dateTo;
+      const inRange = f.data_fattura >= dateFrom && f.data_fattura <= dateTo;
+      if (!inRange) {
+        console.log('❌ Fattura attiva esclusa:', f.numero_fattura, 'data:', f.data_fattura);
+      }
+      return inRange;
     });
 
     // Filtra fatture passive per data
     const fatturePassiveFiltrate = fatturePassive.filter(f => {
-      return f.data_fattura >= dateFrom && f.data_fattura <= dateTo;
+      const inRange = f.data_fattura >= dateFrom && f.data_fattura <= dateTo;
+      if (!inRange) {
+        console.log('❌ Fattura passiva esclusa:', f.numero_fattura, 'data:', f.data_fattura);
+      }
+      return inRange;
     });
+
+    console.log('✅ Fatture attive filtrate:', fattureAttiveFiltrate.length);
+    console.log('✅ Fatture passive filtrate:', fatturePassiveFiltrate.length);
 
     // Filtra note spese per data (solo approvate)
     const noteSpeseApprovate = noteSpese.filter(n => {
@@ -108,6 +123,10 @@ export function CommessaReportTab({ commessaId, commessa, fattureAttive, fatture
     const ivaFatturePassive = sumIva(fatturePassiveFiltrate);
     const ivaFattureAttive = sumIva(fattureAttiveFiltrate);
     const saldoIva = ivaFattureAttive - ivaFatturePassive;
+
+    console.log('💰 IVA Fatture Attive:', ivaFattureAttive);
+    console.log('💰 IVA Fatture Passive:', ivaFatturePassive);
+    console.log('💰 SALDO IVA (Attive - Passive):', saldoIva);
 
     return {
       fatturatoPrevisto,
