@@ -210,7 +210,7 @@ export function EconomiaRiepilogo({
           {/* Saldo IVA */}
           <div className={`rounded-lg border-2 p-3 sm:p-4 ${
             riepilogo.saldo_iva === 0
-              ? 'border-blue-200 bg-blue-50'
+              ? 'border-green-200 bg-green-50'
               : riepilogo.saldo_iva > 0
               ? 'border-red-200 bg-red-50'
               : 'border-green-200 bg-green-50'
@@ -218,15 +218,20 @@ export function EconomiaRiepilogo({
             <p className="text-xs sm:text-sm text-muted-foreground mb-1">Saldo IVA</p>
             <p className={`text-xl sm:text-2xl font-bold break-words ${
               riepilogo.saldo_iva === 0
-                ? 'text-blue-600'
+                ? 'text-green-600'
                 : riepilogo.saldo_iva > 0
                 ? 'text-red-600'
                 : 'text-green-600'
             }`}>
-              {formatCurrency(riepilogo.saldo_iva)}
+              {riepilogo.saldo_iva === 0
+                ? formatCurrency(0)
+                : riepilogo.saldo_iva > 0
+                ? `${formatCurrency(-riepilogo.saldo_iva)}`
+                : formatCurrency(-riepilogo.saldo_iva)
+              }
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              {riepilogo.saldo_iva === 0 ? 'Neutra' : riepilogo.saldo_iva > 0 ? 'IVA a credito' : 'IVA a debito'}
+              {riepilogo.saldo_iva === 0 ? 'Neutra' : riepilogo.saldo_iva > 0 ? 'IVA a debito' : 'IVA a credito'}
             </p>
           </div>
         </div>
