@@ -213,16 +213,16 @@ export function F24DetailView({ f24, dettaglio, onEdit, onUpdate }: Props) {
             </tbody>
             <tfoot>
               <tr className="bg-gray-100 border-t-2 border-border">
-                <td className="px-4 py-6 text-left text-sm font-bold text-foreground">
+                <td className="px-4 py-6 text-left text-lg font-bold text-foreground">
                   TOTALE
                 </td>
-                <td className="px-4 py-6 text-left text-sm font-bold text-foreground">
+                <td className="px-4 py-6 text-left text-lg font-bold text-foreground">
                   {formatHours(totaleOre)}
                 </td>
-                <td className="px-4 py-6 text-left text-sm font-bold text-foreground">
+                <td className="px-4 py-6 text-left text-lg font-bold text-foreground">
                   {f24.numero_dipendenti}
                 </td>
-                <td className="px-4 py-6 text-left text-sm font-bold text-primary">
+                <td className="px-4 py-6 text-left text-lg font-bold text-primary">
                   {formatCurrency(totaleF24)}
                 </td>
               </tr>
