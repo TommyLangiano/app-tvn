@@ -41,7 +41,7 @@ export const DateRangePicker = memo(({
     });
   }, [from, to]);
 
-  const handleDateSelect = (range: { from: Date | undefined; to: Date | undefined } | undefined) => {
+  const handleDateSelect = (range: any) => {
     if (!range) return;
 
     // Se from e to sono uguali, significa che è stato cliccato un solo giorno
