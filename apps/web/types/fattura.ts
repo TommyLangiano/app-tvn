@@ -86,6 +86,7 @@ export interface RiepilogoEconomico {
   costi_iva: number;
   costi_totali: number;
   costi_buste_paga: number; // Aggiunti costi buste paga
+  costi_f24: number; // Aggiunti costi F24
   costi_imponibile_totali?: number; // Totale costi incluse buste paga
   costi_totali_completi?: number; // Costi totali incluse buste paga
   margine_lordo: number;
