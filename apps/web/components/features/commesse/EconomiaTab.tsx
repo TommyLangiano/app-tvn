@@ -241,12 +241,16 @@ export function EconomiaTab({
                   </div>
                   <div className="space-y-2 pt-2 border-t border-border">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Imponibile:</span>
-                      <span className="text-sm font-semibold">{formatCurrency(riepilogoFiltrato.ricavi_imponibile)}</span>
+                      <span className="text-sm text-muted-foreground">Fatture:</span>
+                      <span className="text-sm font-semibold">{formatCurrency(riepilogoFiltrato.ricavi_totali)}</span>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">IVA:</span>
-                      <span className="text-sm font-semibold">{formatCurrency(riepilogoFiltrato.ricavi_iva)}</span>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-muted-foreground ml-2">• Imponibile:</span>
+                      <span className="font-medium">{formatCurrency(riepilogoFiltrato.ricavi_imponibile)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-muted-foreground ml-2">• IVA:</span>
+                      <span className="font-medium">{formatCurrency(riepilogoFiltrato.ricavi_iva)}</span>
                     </div>
                   </div>
                 </div>
