@@ -199,9 +199,6 @@ export default function BustePagaPage() {
 
   return (
     <div className="space-y-6">
-      {/* Titolo Pagina */}
-      <h1 className="text-3xl font-bold mb-6">Ripartizione Buste Paga</h1>
-
       {/* Portal: Pulsante nella Navbar */}
       {navbarActionsContainer && createPortal(
         <div className="flex items-center gap-2">
