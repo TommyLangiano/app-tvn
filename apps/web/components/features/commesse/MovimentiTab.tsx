@@ -896,7 +896,7 @@ export function MovimentiTab({ commessaId, fattureAttive, fatturePassive, riepil
           )}
 
           {/* TAB "RICEVUTE" - 3 card specifiche per fatture ricevute */}
-          {activeTab === 'ricevute' && (
+          {activeTab === 'ricevute' && riepilogo && (
             <>
               {/* Card Totale Costi */}
               <div className="rounded-xl border-2 border-border bg-card p-6">
