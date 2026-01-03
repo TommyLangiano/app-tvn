@@ -138,6 +138,7 @@ export interface AnalyticsData {
     fatturatoEmesso: number;
     costiTotali: number;
     costiBustePaga: number;
+    costiF24: number;
     noteSpesa: number;
     utileLordo: number;
     saldoIva: number;
@@ -214,6 +215,7 @@ function getEmptyAnalyticsData(): AnalyticsData {
       fatturatoEmesso: 0,
       costiTotali: 0,
       costiBustePaga: 0,
+      costiF24: 0,
       noteSpesa: 0,
       utileLordo: 0,
       saldoIva: 0,
