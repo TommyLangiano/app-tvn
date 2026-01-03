@@ -129,18 +129,12 @@ export function EconomiaTab({
               : 'border-border bg-card hover:border-green-300 hover:bg-green-50/30'
           }`}
         >
-          <div className="flex items-center gap-3">
-            <div className={`p-2.5 rounded-lg transition-colors ${
+          <div className="flex flex-col items-center justify-center gap-3">
+            <Receipt className={`h-6 w-6 ${
               activeSubTab === 'fatture'
-                ? 'bg-green-500'
-                : 'bg-muted'
-            }`}>
-              <Receipt className={`h-5 w-5 ${
-                activeSubTab === 'fatture'
-                  ? 'text-white'
-                  : 'text-muted-foreground'
-              }`} />
-            </div>
+                ? 'text-green-600'
+                : 'text-muted-foreground'
+            }`} />
             <span className={`font-semibold text-base ${
               activeSubTab === 'fatture'
                 ? 'text-green-700'
@@ -160,18 +154,12 @@ export function EconomiaTab({
               : 'border-border bg-card hover:border-green-300 hover:bg-green-50/30'
           }`}
         >
-          <div className="flex items-center gap-3">
-            <div className={`p-2.5 rounded-lg transition-colors ${
+          <div className="flex flex-col items-center justify-center gap-3">
+            <Banknote className={`h-6 w-6 ${
               activeSubTab === 'personale'
-                ? 'bg-green-500'
-                : 'bg-muted'
-            }`}>
-              <Banknote className={`h-5 w-5 ${
-                activeSubTab === 'personale'
-                  ? 'text-white'
-                  : 'text-muted-foreground'
-              }`} />
-            </div>
+                ? 'text-green-600'
+                : 'text-muted-foreground'
+            }`} />
             <span className={`font-semibold text-base ${
               activeSubTab === 'personale'
                 ? 'text-green-700'
@@ -191,18 +179,12 @@ export function EconomiaTab({
               : 'border-border bg-card hover:border-green-300 hover:bg-green-50/30'
           }`}
         >
-          <div className="flex items-center gap-3">
-            <div className={`p-2.5 rounded-lg transition-colors ${
+          <div className="flex flex-col items-center justify-center gap-3">
+            <FileStack className={`h-6 w-6 ${
               activeSubTab === 'altro'
-                ? 'bg-green-500'
-                : 'bg-muted'
-            }`}>
-              <FileStack className={`h-5 w-5 ${
-                activeSubTab === 'altro'
-                  ? 'text-white'
-                  : 'text-muted-foreground'
-              }`} />
-            </div>
+                ? 'text-green-600'
+                : 'text-muted-foreground'
+            }`} />
             <span className={`font-semibold text-base ${
               activeSubTab === 'altro'
                 ? 'text-green-700'
