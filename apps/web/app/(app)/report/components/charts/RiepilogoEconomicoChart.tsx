@@ -191,7 +191,7 @@ export const RiepilogoEconomicoChart = memo(({ data }: RiepilogoEconomicoChartPr
             const label = context.dataset.label || '';
             const value = context.parsed.y;
 
-            if (value === 0) return null;
+            if (value === 0) return;
 
             // Per la colonna "Tot. Imp. Costi" mostra il dettaglio
             if (context.dataIndex === 2) {
