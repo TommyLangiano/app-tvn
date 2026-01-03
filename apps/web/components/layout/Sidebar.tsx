@@ -131,7 +131,7 @@ const menuStructure = [
     items: [
       { href: '/buste-paga', label: 'Ripartizione Buste Paga', icon: Banknote },
       { href: '/f24', label: 'Ripartizione F24', icon: BadgeEuro },
-      { href: '/cedolini', label: 'Cedolini', icon: FileSpreadsheet },
+      { href: '/cedolini', label: 'Cedolini', icon: FileSpreadsheet, disabled: true },
     ]
   },
   {
