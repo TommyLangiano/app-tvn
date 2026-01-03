@@ -349,7 +349,8 @@ export default function FatturePage() {
 
   // Funzione per resettare i filtri avanzati
   const resetAdvancedFilters = () => {
-    setDateRangeScadenza(undefined);
+    setDateFromScadenza('');
+    setDateToScadenza('');
     setMetodoPagamento('tutti');
     setAnnoFiscale('tutti');
     setImportoDa('');
