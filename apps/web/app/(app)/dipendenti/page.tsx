@@ -7,7 +7,6 @@ import { Users, Plus, Download, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
-import { DateRange } from 'react-day-picker';
 import { DataTable, DataTableColumn } from '@/components/ui/data-table';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
@@ -59,7 +58,8 @@ export default function DipendentiPage() {
   const [mansioneFilter, setMansioneFilter] = useState('tutti');
   const [accountFilter, setAccountFilter] = useState('tutti');
   const [ruoloFilter, setRuoloFilter] = useState('tutti');
-  const [dateRangeAssunzione, setDateRangeAssunzione] = useState<DateRange | undefined>();
+  const [dateFromAssunzione, setDateFromAssunzione] = useState<string>('');
+  const [dateToAssunzione, setDateToAssunzione] = useState<string>('');
 
   // Sorting
   const [sortField, setSortField] = useState<SortField>('nome');
@@ -229,15 +229,15 @@ export default function DipendentiPage() {
       result = result.filter(d => d.role_name === ruoloFilter);
     }
 
-    if (dateRangeAssunzione?.from) {
+    if (dateFromAssunzione) {
       result = result.filter(d =>
-        d.data_assunzione && new Date(d.data_assunzione) >= dateRangeAssunzione.from!
+        d.data_assunzione && d.data_assunzione >= dateFromAssunzione
       );
     }
 
-    if (dateRangeAssunzione?.to) {
+    if (dateToAssunzione) {
       result = result.filter(d =>
-        d.data_assunzione && new Date(d.data_assunzione) <= dateRangeAssunzione.to!
+        d.data_assunzione && d.data_assunzione <= dateToAssunzione
       );
     }
 
@@ -291,7 +291,8 @@ export default function DipendentiPage() {
     mansioneFilter,
     accountFilter,
     ruoloFilter,
-    dateRangeAssunzione,
+    dateFromAssunzione,
+    dateToAssunzione,
     sortField,
     sortDirection,
   ]);
@@ -358,8 +359,8 @@ export default function DipendentiPage() {
     mansioneFilter !== 'tutti' ||
     accountFilter !== 'tutti' ||
     ruoloFilter !== 'tutti' ||
-    dateRangeAssunzione?.from !== undefined ||
-    dateRangeAssunzione?.to !== undefined;
+    dateFromAssunzione !== '' ||
+    dateToAssunzione !== '';
 
   // ===== DATATABLE COLUMNS =====
 
@@ -586,8 +587,12 @@ export default function DipendentiPage() {
               </Select>
 
               <DateRangePicker
-                date={dateRangeAssunzione}
-                onDateChange={setDateRangeAssunzione}
+                from={dateFromAssunzione}
+                to={dateToAssunzione}
+                onRangeChange={(from, to) => {
+                  setDateFromAssunzione(from);
+                  setDateToAssunzione(to);
+                }}
                 placeholder="Data Assunzione"
                 className="h-11 border-2 border-border rounded-sm bg-white"
               />
