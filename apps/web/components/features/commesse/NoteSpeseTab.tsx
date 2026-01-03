@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Search, Receipt, CheckCircle, XCircle, ChevronRight, FileText, Clock } from 'lucide-react';
+import { Search, Receipt, CheckCircle, XCircle, ChevronRight, FileText, Clock, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -266,7 +266,30 @@ export function NoteSpeseTab({
     setFiltroUtente('');
   };
 
-  // Calcola totale importo
+  // Calcola totali note spesa
+  const riepilogoNoteSpesa = useMemo(() => {
+    const approvate = noteSpeseProp.reduce((sum, n) => sum + n.importo, 0);
+    const daApprovare = noteSpeseDaApprovareProp.reduce((sum, n) => sum + n.importo, 0);
+    const rifiutate = noteSpeseRifiutateProp.reduce((sum, n) => sum + n.importo, 0);
+    const totale = approvate + daApprovare;
+
+    // Conta dipendenti unici per ogni categoria
+    const dipendentiApprovati = new Set(noteSpeseProp.map(n => n.dipendente_id)).size;
+    const dipendentiDaApprovare = new Set(noteSpeseDaApprovareProp.map(n => n.dipendente_id)).size;
+    const dipendentiRifiutati = new Set(noteSpeseRifiutateProp.map(n => n.dipendente_id)).size;
+
+    return {
+      approvate,
+      daApprovare,
+      rifiutate,
+      totale,
+      dipendentiApprovati,
+      dipendentiDaApprovare,
+      dipendentiRifiutati,
+    };
+  }, [noteSpeseProp, noteSpeseDaApprovareProp, noteSpeseRifiutateProp]);
+
+  // Calcola totale importo filtrato (per la tabella)
   const totaleImporto = noteSpeseFiltrate.reduce((sum, n) => sum + n.importo, 0);
 
   // DataTable columns - Stile uguale a fatture
@@ -514,7 +537,110 @@ export function NoteSpeseTab({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* Card Riepilogo Note Spesa */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card Note Spesa Approvate */}
+        <div className="rounded-xl border-2 border-border bg-card p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="p-2 rounded-lg bg-green-100">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+            </div>
+            <span className="font-semibold text-base">Approvate</span>
+          </div>
+          <div className="space-y-3">
+            <div className="text-3xl font-bold text-green-600">
+              {formatCurrency(riepilogoNoteSpesa.approvate)}
+            </div>
+            <div className="space-y-2 pt-2 border-t border-border">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Dipendenti:</span>
+                <span className="text-sm font-semibold">{riepilogoNoteSpesa.dipendentiApprovati}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Voci:</span>
+                <span className="text-sm font-semibold">{tabCounts.approvate}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Card Note Spesa Da Approvare */}
+        <div className="rounded-xl border-2 border-border bg-card p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="p-2 rounded-lg bg-yellow-100">
+              <Clock className="h-5 w-5 text-yellow-600" />
+            </div>
+            <span className="font-semibold text-base">Da Approvare</span>
+          </div>
+          <div className="space-y-3">
+            <div className="text-3xl font-bold text-yellow-600">
+              {formatCurrency(riepilogoNoteSpesa.daApprovare)}
+            </div>
+            <div className="space-y-2 pt-2 border-t border-border">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Dipendenti:</span>
+                <span className="text-sm font-semibold">{riepilogoNoteSpesa.dipendentiDaApprovare}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Voci:</span>
+                <span className="text-sm font-semibold">{tabCounts.da_approvare}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Card Note Spesa Rifiutate */}
+        <div className="rounded-xl border-2 border-border bg-card p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="p-2 rounded-lg bg-red-100">
+              <XCircle className="h-5 w-5 text-red-600" />
+            </div>
+            <span className="font-semibold text-base">Rifiutate</span>
+          </div>
+          <div className="space-y-3">
+            <div className="text-3xl font-bold text-red-600">
+              {formatCurrency(riepilogoNoteSpesa.rifiutate)}
+            </div>
+            <div className="space-y-2 pt-2 border-t border-border">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Dipendenti:</span>
+                <span className="text-sm font-semibold">{riepilogoNoteSpesa.dipendentiRifiutati}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Voci:</span>
+                <span className="text-sm font-semibold">{tabCounts.rifiutate}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Card Totale Note Spesa */}
+        <div className="rounded-xl border-2 border-border bg-card p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="p-2 rounded-lg bg-green-100">
+              <Wallet className="h-5 w-5 text-green-600" />
+            </div>
+            <span className="font-semibold text-base">Totale</span>
+          </div>
+          <div className="space-y-3">
+            <div className="text-3xl font-bold text-green-600">
+              {formatCurrency(riepilogoNoteSpesa.totale)}
+            </div>
+            <div className="space-y-2 pt-2 border-t border-border">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Approvate:</span>
+                <span className="text-sm font-semibold text-green-600">{formatCurrency(riepilogoNoteSpesa.approvate)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Da Approvare:</span>
+                <span className="text-sm font-semibold text-yellow-600">{formatCurrency(riepilogoNoteSpesa.daApprovare)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Tabs + Search and Filters sulla stessa riga */}
       <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
         {/* Tabs - Inline style */}

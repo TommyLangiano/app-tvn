@@ -41,7 +41,7 @@ export default function CommessaDetailPage() {
   const params = useParams();
   const slug = params.id as string;
 
-  type TabValue = 'panoramica' | 'economia' | 'note-spesa' | 'rapportini' | 'report' | 'documenti' | 'dettagli' | 'impostazioni';
+  type TabValue = 'panoramica' | 'economia' | 'rapportini' | 'report' | 'documenti' | 'dettagli' | 'impostazioni';
 
   const [activeTab, setActiveTab] = useState<TabValue>('panoramica');
   const [loading, setLoading] = useState(true);
@@ -472,6 +472,114 @@ export default function CommessaDetailPage() {
       if (riepilogoRes.data) setRiepilogo(riepilogoRes.data);
     } catch (error) {
       console.error('Error refreshing fatture:', error);
+    }
+  };
+
+  const refreshEconomiaData = async () => {
+    try {
+      if (!commessa?.id) return;
+
+      const supabase = createClient();
+
+      // Ricarica fatture, note spesa, buste paga, F24 e riepilogo SENZA ricaricare tutta la pagina
+      const [fattureAttiveRes, fatturePassiveRes, riepilogoRes, noteSpeseApprovateRes, noteSpeseDaApprovareRes, noteSpeseRifiutateRes] = await Promise.all([
+        supabase
+          .from('fatture_attive')
+          .select('*')
+          .eq('commessa_id', commessa.id)
+          .order('data_fattura', { ascending: false }),
+        supabase
+          .from('fatture_passive')
+          .select('*')
+          .eq('commessa_id', commessa.id)
+          .order('data_fattura', { ascending: false }),
+        supabase
+          .from('riepilogo_economico_commessa')
+          .select('*')
+          .eq('commessa_id', commessa.id)
+          .single(),
+        supabase
+          .from('note_spesa')
+          .select(`
+            *,
+            commesse!note_spesa_commessa_id_fkey (
+              titolo,
+              slug
+            ),
+            dipendenti!note_spesa_dipendente_id_fkey (
+              id,
+              nome,
+              cognome,
+              email
+            ),
+            categorie_note_spesa!note_spesa_categoria_fkey (
+              id,
+              nome,
+              colore,
+              icona
+            )
+          `)
+          .eq('commessa_id', commessa.id)
+          .eq('stato', 'approvato')
+          .order('data_nota', { ascending: false }),
+        supabase
+          .from('note_spesa')
+          .select(`
+            *,
+            commesse!note_spesa_commessa_id_fkey (
+              titolo,
+              slug
+            ),
+            dipendenti!note_spesa_dipendente_id_fkey (
+              id,
+              nome,
+              cognome,
+              email
+            ),
+            categorie_note_spesa!note_spesa_categoria_fkey (
+              id,
+              nome,
+              colore,
+              icona
+            )
+          `)
+          .eq('commessa_id', commessa.id)
+          .eq('stato', 'da_approvare')
+          .order('data_nota', { ascending: false }),
+        supabase
+          .from('note_spesa')
+          .select(`
+            *,
+            commesse!note_spesa_commessa_id_fkey (
+              titolo,
+              slug
+            ),
+            dipendenti!note_spesa_dipendente_id_fkey (
+              id,
+              nome,
+              cognome,
+              email
+            ),
+            categorie_note_spesa!note_spesa_categoria_fkey (
+              id,
+              nome,
+              colore,
+              icona
+            )
+          `)
+          .eq('commessa_id', commessa.id)
+          .eq('stato', 'rifiutato')
+          .order('data_nota', { ascending: false })
+      ]);
+
+      if (fattureAttiveRes.data) setFatture(fattureAttiveRes.data);
+      if (fatturePassiveRes.data) setFatturePassive(fatturePassiveRes.data);
+      if (riepilogoRes.data) setRiepilogo(riepilogoRes.data);
+      if (noteSpeseApprovateRes.data) setNoteSpese(noteSpeseApprovateRes.data);
+      if (noteSpeseDaApprovareRes.data) setNoteSpeseDaApprovare(noteSpeseDaApprovareRes.data);
+      if (noteSpeseRifiutateRes.data) setNoteSpeseRifiutate(noteSpeseRifiutateRes.data);
+    } catch (error) {
+      console.error('Error refreshing economia data:', error);
     }
   };
 
@@ -1296,7 +1404,6 @@ export default function CommessaDetailPage() {
             label: 'Economia',
             icon: Receipt
           },
-          { value: 'note-spesa', label: 'Note Spesa', icon: FileText },
           { value: 'rapportini', label: 'Registro Presenze', icon: Users },
           { value: 'report', label: 'Report', icon: BarChart3 },
           { value: 'documenti', label: 'Documenti', icon: FolderOpen },
@@ -1316,27 +1423,19 @@ export default function CommessaDetailPage() {
       )}
 
       {/* TAB: Economia */}
-      {activeTab === 'economia' && (
+      {activeTab === 'economia' && commessa && (
         <EconomiaTab
-          commessaId={commessa?.id || ''}
+          commessaId={commessa.id}
+          commessaNome={commessa.nome_commessa}
           fattureAttive={fatture}
           fatturePassive={fatturePassive}
           riepilogo={riepilogo}
           bustePagaDettaglio={bustePagaDettaglio}
           f24Dettaglio={f24Dettaglio}
-          onReload={refreshFattureData}
-        />
-      )}
-
-      {/* TAB: Note Spesa */}
-      {activeTab === 'note-spesa' && commessa && (
-        <NoteSpeseTab
-          commessaId={commessa.id}
-          commessaNome={commessa.nome_commessa}
           noteSpese={noteSpese}
           noteSpeseDaApprovare={noteSpeseDaApprovare}
           noteSpeseRifiutate={noteSpeseRifiutate}
-          onReload={loadCommessaData}
+          onReload={refreshEconomiaData}
         />
       )}
 

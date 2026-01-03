@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Receipt, TrendingUp, TrendingDown, FileText, Banknote, FileStack, LayoutGrid } from 'lucide-react';
+import { Receipt, TrendingUp, TrendingDown, FileText, Banknote, LayoutGrid } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils/currency';
 import { format } from 'date-fns';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { EconomiaPersonaleTab } from './EconomiaPersonaleTab';
 import { FattureTab } from './FattureTab';
+import { NoteSpeseTab } from './NoteSpeseTab';
+import type { NotaSpesa } from '@/types/nota-spesa';
 
 interface RiepilogoEconomico {
   ricavi_imponibile: number;
@@ -23,23 +25,31 @@ interface RiepilogoEconomico {
 
 interface EconomiaTabProps {
   commessaId: string;
+  commessaNome: string;
   fattureAttive: any[];
   fatturePassive: any[];
   riepilogo?: RiepilogoEconomico | null;
   bustePagaDettaglio: any[];
   f24Dettaglio: any[];
+  noteSpese: NotaSpesa[];
+  noteSpeseDaApprovare: NotaSpesa[];
+  noteSpeseRifiutate: NotaSpesa[];
   onReload?: () => void;
 }
 
-type SubTab = 'tutto' | 'fatture' | 'personale' | 'altro';
+type SubTab = 'tutto' | 'fatture' | 'personale' | 'note_spesa';
 
 export function EconomiaTab({
   commessaId,
+  commessaNome,
   fattureAttive,
   fatturePassive,
   riepilogo,
   bustePagaDettaglio,
   f24Dettaglio,
+  noteSpese,
+  noteSpeseDaApprovare,
+  noteSpeseRifiutate,
   onReload
 }: EconomiaTabProps) {
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('tutto');
@@ -78,6 +88,15 @@ export function EconomiaTab({
         })
       : f24Dettaglio;
 
+    // Filtra note spese per date (solo approvate e da approvare)
+    const noteSpeseApprovate = dateFrom && dateTo
+      ? noteSpese.filter(n => n.data_nota >= dateFrom && n.data_nota <= dateTo)
+      : noteSpese;
+
+    const noteSpeseDaApprovareFiltrate = dateFrom && dateTo
+      ? noteSpeseDaApprovare.filter(n => n.data_nota >= dateFrom && n.data_nota <= dateTo)
+      : noteSpeseDaApprovare;
+
     // Calcola totali sempre basandosi sulle fatture filtrate
     const ricavi_imponibile = fattureAttiveFiltrate.reduce((sum, f) => sum + (f.importo_imponibile || 0), 0);
     const ricavi_iva = fattureAttiveFiltrate.reduce((sum, f) => sum + (f.importo_iva || 0), 0);
@@ -89,10 +108,13 @@ export function EconomiaTab({
 
     const costi_buste_paga = bustePagaFiltrate.reduce((sum, d) => sum + (Number(d.importo_commessa) || 0), 0);
     const costi_f24 = f24Filtrate.reduce((sum, d) => sum + (Number(d.valore_f24_commessa) || 0), 0);
+    const costi_note_spesa_approvate = noteSpeseApprovate.reduce((sum, n) => sum + n.importo, 0);
+    const costi_note_spesa_da_approvare = noteSpeseDaApprovareFiltrate.reduce((sum, n) => sum + n.importo, 0);
+    const costi_note_spesa = costi_note_spesa_approvate + costi_note_spesa_da_approvare;
 
     const costiPersonale = costi_buste_paga + costi_f24;
-    const totaleCosti = costi_imponibile + costiPersonale;
-    const margine_lordo = ricavi_imponibile - costi_imponibile - costiPersonale;
+    const totaleCosti = costi_imponibile + costiPersonale + costi_note_spesa;
+    const margine_lordo = ricavi_imponibile - costi_imponibile - costiPersonale - costi_note_spesa;
     const saldo_iva = ricavi_iva - costi_iva;
 
     return {
@@ -104,12 +126,15 @@ export function EconomiaTab({
       costi_totali,
       costi_buste_paga,
       costi_f24,
+      costi_note_spesa,
+      costi_note_spesa_approvate,
+      costi_note_spesa_da_approvare,
       costiPersonale,
       totaleCosti,
       margine_lordo,
       saldo_iva,
     };
-  }, [fattureAttive, fatturePassive, bustePagaDettaglio, f24Dettaglio, dateFrom, dateTo]);
+  }, [fattureAttive, fatturePassive, bustePagaDettaglio, f24Dettaglio, noteSpese, noteSpeseDaApprovare, dateFrom, dateTo]);
 
   const handleDateRangeChange = (from: string, to: string) => {
     setDateFrom(from);
@@ -195,27 +220,27 @@ export function EconomiaTab({
           </div>
         </button>
 
-        {/* Card Altro */}
+        {/* Card Note Spesa */}
         <button
-          onClick={() => setActiveSubTab('altro')}
+          onClick={() => setActiveSubTab('note_spesa')}
           className={`rounded-xl border-2 p-6 transition-all duration-200 ${
-            activeSubTab === 'altro'
+            activeSubTab === 'note_spesa'
               ? 'border-green-500 bg-green-50/50 shadow-sm'
               : 'border-border bg-card hover:border-green-300 hover:bg-green-50/30'
           }`}
         >
           <div className="flex items-center justify-center gap-3">
-            <FileStack className={`h-6 w-6 ${
-              activeSubTab === 'altro'
+            <Receipt className={`h-6 w-6 ${
+              activeSubTab === 'note_spesa'
                 ? 'text-green-600'
                 : 'text-muted-foreground'
             }`} />
             <span className={`font-semibold text-base ${
-              activeSubTab === 'altro'
+              activeSubTab === 'note_spesa'
                 ? 'text-green-700'
                 : 'text-foreground'
             }`}>
-              Altro
+              Note Spesa
             </span>
           </div>
         </button>
@@ -224,151 +249,169 @@ export function EconomiaTab({
       {/* Contenuto Sub-tabs */}
       <div className="mt-6">
         {activeSubTab === 'tutto' && (
-          <div className="space-y-6">
-            {/* Card Riepilogo */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Card Ricavi Totali */}
-              <div className="rounded-xl border-2 border-border bg-card p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="p-2 rounded-lg bg-green-100">
-                    <TrendingUp className="h-5 w-5 text-green-600" />
-                  </div>
-                  <span className="font-semibold text-base">Ricavi Totali</span>
+          <div className="grid grid-cols-2 gap-4">
+            {/* Card Margine Lordo */}
+            <div className={`rounded-xl border-2 p-6 ${
+              riepilogoFiltrato.margine_lordo >= 0
+                ? 'border-green-300 bg-green-50/30'
+                : 'border-red-300 bg-red-50/30'
+            }`}>
+              <div className="flex items-center gap-2 mb-4">
+                <div className={`p-2 rounded-lg ${riepilogoFiltrato.margine_lordo >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
+                  <FileText className={`h-5 w-5 ${riepilogoFiltrato.margine_lordo >= 0 ? 'text-emerald-600' : 'text-red-600'}`} />
                 </div>
-                <div className="space-y-3">
-                  <div className="text-3xl font-bold text-green-600">
-                    {formatCurrency(riepilogoFiltrato.ricavi_totali)}
-                  </div>
-                  <div className="space-y-2 pt-2 border-t border-border">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Fatture:</span>
-                      <span className="text-sm font-semibold">{formatCurrency(riepilogoFiltrato.ricavi_totali)}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-muted-foreground ml-2">• Imponibile:</span>
-                      <span className="font-medium">{formatCurrency(riepilogoFiltrato.ricavi_imponibile)}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-muted-foreground ml-2">• IVA:</span>
-                      <span className="font-medium">{formatCurrency(riepilogoFiltrato.ricavi_iva)}</span>
-                    </div>
-                  </div>
+                <span className="font-semibold text-base">Margine Lordo</span>
+              </div>
+              <div className="space-y-3">
+                <div className={`text-3xl font-bold ${riepilogoFiltrato.margine_lordo >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                  {formatCurrency(riepilogoFiltrato.margine_lordo)}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Ricavi Totali - Costi Totali
                 </div>
               </div>
+            </div>
 
-              {/* Card Costi Totali */}
-              <div className="rounded-xl border-2 border-border bg-card p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="p-2 rounded-lg bg-red-100">
-                    <TrendingDown className="h-5 w-5 text-red-600" />
-                  </div>
-                  <span className="font-semibold text-base">Costi Totali</span>
-                </div>
-                <div className="space-y-3">
-                  <div className="text-3xl font-bold text-red-600">
-                    {formatCurrency(riepilogoFiltrato.totaleCosti)}
-                  </div>
-                  <div className="space-y-2 pt-2 border-t border-border">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Fatture:</span>
-                      <span className="text-sm font-semibold">{formatCurrency(riepilogoFiltrato.costi_totali)}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-muted-foreground ml-2">• Imponibile:</span>
-                      <span className="font-medium">{formatCurrency(riepilogoFiltrato.costi_imponibile)}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-muted-foreground ml-2">• IVA:</span>
-                      <span className="font-medium">{formatCurrency(riepilogoFiltrato.costi_iva)}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Personale:</span>
-                      <span className="text-sm font-semibold text-yellow-600">{formatCurrency(riepilogoFiltrato.costiPersonale || 0)}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-muted-foreground ml-2">• Buste Paga:</span>
-                      <span className="font-medium">{formatCurrency(riepilogoFiltrato.costi_buste_paga || 0)}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-muted-foreground ml-2">• F24:</span>
-                      <span className="font-medium">{formatCurrency(riepilogoFiltrato.costi_f24 || 0)}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card Margine Lordo */}
-              <div className="rounded-xl border-2 border-border bg-card p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className={`p-2 rounded-lg ${riepilogoFiltrato.margine_lordo >= 0 ? 'bg-emerald-100' : 'bg-red-100'}`}>
-                    <FileText className={`h-5 w-5 ${riepilogoFiltrato.margine_lordo >= 0 ? 'text-emerald-600' : 'text-red-600'}`} />
-                  </div>
-                  <span className="font-semibold text-base">Margine Lordo</span>
-                </div>
-                <div className="space-y-2">
-                  <div className={`text-3xl font-bold ${riepilogoFiltrato.margine_lordo >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                    {formatCurrency(riepilogoFiltrato.margine_lordo)}
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-2">
-                    Ricavi - Costi (incluso personale)
-                  </div>
-                </div>
-              </div>
-
-              {/* Card Saldo IVA */}
-              <div className={`rounded-xl border-2 bg-card p-6 ${
-                (riepilogoFiltrato.saldo_iva || 0) === 0
-                  ? 'border-green-300 bg-green-50/30'
-                  : (riepilogoFiltrato.saldo_iva || 0) > 0
-                  ? 'border-red-300 bg-red-50/30'
-                  : 'border-green-300 bg-green-50/30'
-              }`}>
-                <div className="flex items-center gap-2 mb-4">
-                  <div className={`p-2 rounded-lg ${
+            {/* Card Saldo IVA */}
+            <div className={`rounded-xl border-2 p-6 ${
+              (riepilogoFiltrato.saldo_iva || 0) === 0
+                ? 'border-border bg-card'
+                : (riepilogoFiltrato.saldo_iva || 0) > 0
+                ? 'border-red-300 bg-red-50/30'
+                : 'border-green-300 bg-green-50/30'
+            }`}>
+              <div className="flex items-center gap-2 mb-4">
+                <div className={`p-2 rounded-lg ${
+                  (riepilogoFiltrato.saldo_iva || 0) === 0
+                    ? 'bg-gray-100'
+                    : (riepilogoFiltrato.saldo_iva || 0) > 0
+                    ? 'bg-red-100'
+                    : 'bg-green-100'
+                }`}>
+                  <Receipt className={`h-5 w-5 ${
                     (riepilogoFiltrato.saldo_iva || 0) === 0
-                      ? 'bg-gray-100'
-                      : (riepilogoFiltrato.saldo_iva || 0) > 0
-                      ? 'bg-red-100'
-                      : 'bg-green-100'
-                  }`}>
-                    <Receipt className={`h-5 w-5 ${
-                      (riepilogoFiltrato.saldo_iva || 0) === 0
-                        ? 'text-gray-600'
-                        : (riepilogoFiltrato.saldo_iva || 0) > 0
-                        ? 'text-red-600'
-                        : 'text-green-600'
-                    }`} />
-                  </div>
-                  <span className="font-semibold text-base">Saldo IVA</span>
-                </div>
-                <div className="space-y-2">
-                  <div className={`text-3xl font-bold ${
-                    (riepilogoFiltrato.saldo_iva || 0) === 0
-                      ? 'text-gray-700'
+                      ? 'text-gray-600'
                       : (riepilogoFiltrato.saldo_iva || 0) > 0
                       ? 'text-red-600'
                       : 'text-green-600'
-                  }`}>
-                    {formatCurrency(Math.abs(riepilogoFiltrato.saldo_iva || 0))}
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-2">
-                    {(riepilogoFiltrato.saldo_iva || 0) === 0
-                      ? 'In pareggio'
-                      : (riepilogoFiltrato.saldo_iva || 0) > 0
-                      ? 'IVA a debito'
-                      : 'IVA a credito'}
+                  }`} />
+                </div>
+                <span className="font-semibold text-base">Saldo IVA</span>
+              </div>
+              <div className="space-y-3">
+                <div className={`text-3xl font-bold ${
+                  (riepilogoFiltrato.saldo_iva || 0) === 0
+                    ? 'text-gray-700'
+                    : (riepilogoFiltrato.saldo_iva || 0) > 0
+                    ? 'text-red-600'
+                    : 'text-green-600'
+                }`}>
+                  {formatCurrency(Math.abs(riepilogoFiltrato.saldo_iva || 0))}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {(riepilogoFiltrato.saldo_iva || 0) === 0
+                    ? 'In pareggio'
+                    : (riepilogoFiltrato.saldo_iva || 0) > 0
+                    ? 'IVA a debito'
+                    : 'IVA a credito'}
+                </div>
+              </div>
+            </div>
+
+            {/* Card Ricavi Totali */}
+            <div className="rounded-xl border-2 border-border bg-card p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="p-2 rounded-lg bg-green-100">
+                  <TrendingUp className="h-5 w-5 text-green-600" />
+                </div>
+                <span className="font-semibold text-lg">Ricavi Totali</span>
+              </div>
+              <div className="space-y-3">
+                <div className="text-3xl font-bold text-green-600">
+                  {formatCurrency(riepilogoFiltrato.ricavi_totali)}
+                </div>
+                <div className="space-y-3 pt-2 border-t border-border">
+                  {/* Categoria Fatture */}
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-base">Fatture:</span>
+                      <span className="font-bold text-base text-green-600">{formatCurrency(riepilogoFiltrato.ricavi_totali)}</span>
+                    </div>
+                    <div className="flex justify-between items-center pl-4">
+                      <span className="text-muted-foreground text-sm">Imponibile:</span>
+                      <span className="text-sm">{formatCurrency(riepilogoFiltrato.ricavi_imponibile)}</span>
+                    </div>
+                    <div className="flex justify-between items-center pl-4">
+                      <span className="text-muted-foreground text-sm">IVA:</span>
+                      <span className="text-sm">{formatCurrency(riepilogoFiltrato.ricavi_iva)}</span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Placeholder per lista movimenti */}
-            <div className="rounded-xl border-2 border-dashed border-border bg-card p-12 text-center">
-              <LayoutGrid className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">Lista movimenti completa</h3>
-              <p className="text-sm text-muted-foreground">
-                Qui verrà visualizzata la lista unificata di tutti i movimenti (fatture, buste paga, F24, etc.)
-              </p>
+            {/* Card Costi Totali */}
+            <div className="rounded-xl border-2 border-border bg-card p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="p-2 rounded-lg bg-red-100">
+                  <TrendingDown className="h-5 w-5 text-red-600" />
+                </div>
+                <span className="font-semibold text-lg">Costi Totali</span>
+              </div>
+              <div className="space-y-3">
+                <div className="text-3xl font-bold text-red-600">
+                  {formatCurrency(riepilogoFiltrato.totaleCosti)}
+                </div>
+                <div className="space-y-3 pt-2 border-t border-border">
+                  {/* Categoria Fatture */}
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-base">Fatture:</span>
+                      <span className="font-bold text-base text-green-600">{formatCurrency(riepilogoFiltrato.costi_totali)}</span>
+                    </div>
+                    <div className="flex justify-between items-center pl-4">
+                      <span className="text-muted-foreground text-sm">Imponibile:</span>
+                      <span className="text-sm">{formatCurrency(riepilogoFiltrato.costi_imponibile)}</span>
+                    </div>
+                    <div className="flex justify-between items-center pl-4">
+                      <span className="text-muted-foreground text-sm">IVA:</span>
+                      <span className="text-sm">{formatCurrency(riepilogoFiltrato.costi_iva)}</span>
+                    </div>
+                  </div>
+
+                  {/* Categoria Personale */}
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-base">Personale:</span>
+                      <span className="font-bold text-base text-green-600">{formatCurrency(riepilogoFiltrato.costiPersonale || 0)}</span>
+                    </div>
+                    <div className="flex justify-between items-center pl-4">
+                      <span className="text-muted-foreground text-sm">Buste Paga:</span>
+                      <span className="text-sm">{formatCurrency(riepilogoFiltrato.costi_buste_paga || 0)}</span>
+                    </div>
+                    <div className="flex justify-between items-center pl-4">
+                      <span className="text-muted-foreground text-sm">F24:</span>
+                      <span className="text-sm">{formatCurrency(riepilogoFiltrato.costi_f24 || 0)}</span>
+                    </div>
+                  </div>
+
+                  {/* Categoria Note Spesa */}
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-base">Note Spesa:</span>
+                      <span className="font-bold text-base text-green-600">{formatCurrency(riepilogoFiltrato.costi_note_spesa || 0)}</span>
+                    </div>
+                    <div className="flex justify-between items-center pl-4">
+                      <span className="text-muted-foreground text-sm">Approvate:</span>
+                      <span className="text-sm">{formatCurrency(riepilogoFiltrato.costi_note_spesa_approvate || 0)}</span>
+                    </div>
+                    <div className="flex justify-between items-center pl-4">
+                      <span className="text-muted-foreground text-sm">Da Approvare:</span>
+                      <span className="text-sm">{formatCurrency(riepilogoFiltrato.costi_note_spesa_da_approvare || 0)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -393,14 +436,15 @@ export function EconomiaTab({
           />
         )}
 
-        {activeSubTab === 'altro' && (
-          <div className="rounded-xl border-2 border-dashed border-border bg-card p-12 text-center">
-            <FileStack className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium mb-2">Sezione in arrivo</h3>
-            <p className="text-sm text-muted-foreground">
-              Qui verranno visualizzate altre voci economiche (es. ammortamenti, accantonamenti, etc.)
-            </p>
-          </div>
+        {activeSubTab === 'note_spesa' && (
+          <NoteSpeseTab
+            commessaId={commessaId}
+            commessaNome={commessaNome}
+            noteSpese={noteSpese}
+            noteSpeseDaApprovare={noteSpeseDaApprovare}
+            noteSpeseRifiutate={noteSpeseRifiutate}
+            onReload={onReload}
+          />
         )}
       </div>
     </div>

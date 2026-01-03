@@ -1,11 +1,10 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Banknote, BadgeEuro, Eye } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Banknote, BadgeEuro, Users } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils/currency';
 import { format } from 'date-fns';
-import { it } from 'date-fns/locale';
+import { DataTable, DataTableColumn } from '@/components/ui/data-table';
 
 interface EconomiaPersonaleTabProps {
   bustePagaDettaglio: any[];
@@ -19,6 +18,17 @@ const MESI = [
   'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
 ];
 
+interface MovimentoPersonale {
+  id: string;
+  tipo: 'Busta Paga' | 'F24';
+  mese: number;
+  anno: number;
+  periodo: string;
+  totale: number;
+  count: number;
+  dettagli: any[];
+}
+
 export function EconomiaPersonaleTab({
   bustePagaDettaglio,
   f24Dettaglio,
@@ -26,13 +36,46 @@ export function EconomiaPersonaleTab({
   dateTo
 }: EconomiaPersonaleTabProps) {
 
-  // Filtra e raggruppa buste paga per mese/anno
-  const bustePagaRaggruppate = useMemo(() => {
-    let filtrate = bustePagaDettaglio;
+  // Calcola totali costi personale
+  const riepilogoPersonale = useMemo(() => {
+    let bustePagaFiltrate = bustePagaDettaglio;
+    let f24Filtrate = f24Dettaglio;
 
     // Applica filtro date se presente
     if (dateFrom && dateTo) {
-      filtrate = filtrate.filter(dettaglio => {
+      bustePagaFiltrate = bustePagaDettaglio.filter(dettaglio => {
+        if (!dettaglio.buste_paga) return false;
+        const { mese, anno } = dettaglio.buste_paga;
+        const bustaPagaDate = format(new Date(anno, mese - 1, 1), 'yyyy-MM-dd');
+        return bustaPagaDate >= dateFrom && bustaPagaDate <= dateTo;
+      });
+
+      f24Filtrate = f24Dettaglio.filter(dettaglio => {
+        if (!dettaglio.f24) return false;
+        const { mese, anno } = dettaglio.f24;
+        const f24Date = format(new Date(anno, mese - 1, 1), 'yyyy-MM-dd');
+        return f24Date >= dateFrom && f24Date <= dateTo;
+      });
+    }
+
+    const costi_buste_paga = bustePagaFiltrate.reduce((sum, d) => sum + (Number(d.importo_commessa) || 0), 0);
+    const costi_f24 = f24Filtrate.reduce((sum, d) => sum + (Number(d.valore_f24_commessa) || 0), 0);
+    const totale_personale = costi_buste_paga + costi_f24;
+
+    return {
+      costi_buste_paga,
+      costi_f24,
+      totale_personale,
+    };
+  }, [bustePagaDettaglio, f24Dettaglio, dateFrom, dateTo]);
+
+  // Prepara movimenti BUSTE PAGA per la tabella
+  const movimentiBustePaga = useMemo(() => {
+    let bustePagaFiltrate = bustePagaDettaglio;
+
+    // Applica filtro date se presente
+    if (dateFrom && dateTo) {
+      bustePagaFiltrate = bustePagaDettaglio.filter(dettaglio => {
         if (!dettaglio.buste_paga) return false;
         const { mese, anno } = dettaglio.buste_paga;
         const bustaPagaDate = format(new Date(anno, mese - 1, 1), 'yyyy-MM-dd');
@@ -40,16 +83,19 @@ export function EconomiaPersonaleTab({
       });
     }
 
-    // Raggruppa per mese/anno
-    const grouped = filtrate.reduce((acc: any, dettaglio: any) => {
+    // Raggruppa buste paga per mese/anno
+    const bustePagaGrouped = bustePagaFiltrate.reduce((acc: any, dettaglio: any) => {
       if (!dettaglio.buste_paga) return acc;
       const { mese, anno } = dettaglio.buste_paga;
-      const key = `${anno}-${mese}`;
+      const key = `bp-${anno}-${mese}`;
 
       if (!acc[key]) {
         acc[key] = {
+          id: key,
+          tipo: 'Busta Paga' as const,
           mese,
           anno,
+          periodo: `${MESI[mese - 1]} ${anno}`,
           totale: 0,
           count: 0,
           dettagli: []
@@ -63,20 +109,20 @@ export function EconomiaPersonaleTab({
       return acc;
     }, {});
 
-    // Converti in array e ordina per data (più recente prima)
-    return Object.values(grouped).sort((a: any, b: any) => {
+    const movimenti: MovimentoPersonale[] = Object.values(bustePagaGrouped);
+    return movimenti.sort((a, b) => {
       if (b.anno !== a.anno) return b.anno - a.anno;
       return b.mese - a.mese;
     });
   }, [bustePagaDettaglio, dateFrom, dateTo]);
 
-  // Filtra e raggruppa F24 per mese/anno
-  const f24Raggruppati = useMemo(() => {
-    let filtrati = f24Dettaglio;
+  // Prepara movimenti F24 per la tabella
+  const movimentiF24 = useMemo(() => {
+    let f24Filtrate = f24Dettaglio;
 
     // Applica filtro date se presente
     if (dateFrom && dateTo) {
-      filtrati = filtrati.filter(dettaglio => {
+      f24Filtrate = f24Dettaglio.filter(dettaglio => {
         if (!dettaglio.f24) return false;
         const { mese, anno } = dettaglio.f24;
         const f24Date = format(new Date(anno, mese - 1, 1), 'yyyy-MM-dd');
@@ -84,16 +130,19 @@ export function EconomiaPersonaleTab({
       });
     }
 
-    // Raggruppa per mese/anno
-    const grouped = filtrati.reduce((acc: any, dettaglio: any) => {
+    // Raggruppa F24 per mese/anno
+    const f24Grouped = f24Filtrate.reduce((acc: any, dettaglio: any) => {
       if (!dettaglio.f24) return acc;
       const { mese, anno } = dettaglio.f24;
-      const key = `${anno}-${mese}`;
+      const key = `f24-${anno}-${mese}`;
 
       if (!acc[key]) {
         acc[key] = {
+          id: key,
+          tipo: 'F24' as const,
           mese,
           anno,
+          periodo: `${MESI[mese - 1]} ${anno}`,
           totale: 0,
           count: 0,
           dettagli: []
@@ -107,146 +156,212 @@ export function EconomiaPersonaleTab({
       return acc;
     }, {});
 
-    // Converti in array e ordina per data (più recente prima)
-    return Object.values(grouped).sort((a: any, b: any) => {
+    const movimenti: MovimentoPersonale[] = Object.values(f24Grouped);
+    return movimenti.sort((a, b) => {
       if (b.anno !== a.anno) return b.anno - a.anno;
       return b.mese - a.mese;
     });
   }, [f24Dettaglio, dateFrom, dateTo]);
 
-  // Combina e ordina tutti i movimenti
-  const tuttiMovimenti = useMemo(() => {
-    const movimenti = [
-      ...bustePagaRaggruppate.map((bp: any) => ({
-        tipo: 'Busta Paga',
-        mese: bp.mese,
-        anno: bp.anno,
-        totale: bp.totale,
-        count: bp.count,
-        icon: Banknote,
-        iconBg: 'bg-yellow-100',
-        iconColor: 'text-yellow-600',
-        textColor: 'text-yellow-600'
-      })),
-      ...f24Raggruppati.map((f24: any) => ({
-        tipo: 'F24',
-        mese: f24.mese,
-        anno: f24.anno,
-        totale: f24.totale,
-        count: f24.count,
-        icon: BadgeEuro,
-        iconBg: 'bg-orange-100',
-        iconColor: 'text-orange-600',
-        textColor: 'text-orange-600'
-      }))
-    ];
+  // Colonne DataTable per Buste Paga
+  const columnsBustePaga: DataTableColumn<MovimentoPersonale>[] = [
+    {
+      key: 'periodo',
+      label: 'Periodo',
+      sortable: true,
+      render: (movimento) => (
+        <span className="text-sm font-medium">{movimento.periodo}</span>
+      ),
+    },
+    {
+      key: 'count',
+      label: 'Dipendenti',
+      sortable: true,
+      render: (movimento) => (
+        <span className="text-sm text-muted-foreground">{movimento.count}</span>
+      ),
+    },
+    {
+      key: 'totale',
+      label: 'Importo',
+      sortable: true,
+      render: (movimento) => (
+        <span className="text-sm font-bold text-yellow-600">
+          {formatCurrency(movimento.totale)}
+        </span>
+      ),
+    },
+  ];
 
-    // Ordina per data (più recente prima)
-    return movimenti.sort((a, b) => {
-      if (b.anno !== a.anno) return b.anno - a.anno;
-      return b.mese - a.mese;
-    });
-  }, [bustePagaRaggruppate, f24Raggruppati]);
-
-  const totaleCostiPersonale = useMemo(() => {
-    return tuttiMovimenti.reduce((sum, m) => sum + m.totale, 0);
-  }, [tuttiMovimenti]);
-
-  if (tuttiMovimenti.length === 0) {
-    return (
-      <div className="rounded-xl border-2 border-dashed border-border bg-card p-12 text-center">
-        <Banknote className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-        <h3 className="text-lg font-medium mb-2">Nessun costo del personale</h3>
-        <p className="text-sm text-muted-foreground">
-          {dateFrom && dateTo
-            ? 'Nessuna ripartizione di buste paga o F24 nel periodo selezionato'
-            : 'Non ci sono ancora ripartizioni di buste paga o F24 per questa commessa'}
-        </p>
-      </div>
-    );
-  }
+  // Colonne DataTable per F24
+  const columnsF24: DataTableColumn<MovimentoPersonale>[] = [
+    {
+      key: 'periodo',
+      label: 'Periodo',
+      sortable: true,
+      render: (movimento) => (
+        <span className="text-sm font-medium">{movimento.periodo}</span>
+      ),
+    },
+    {
+      key: 'count',
+      label: 'Dipendenti',
+      sortable: true,
+      render: (movimento) => (
+        <span className="text-sm text-muted-foreground">{movimento.count}</span>
+      ),
+    },
+    {
+      key: 'totale',
+      label: 'Importo',
+      sortable: true,
+      render: (movimento) => (
+        <span className="text-sm font-bold text-orange-600">
+          {formatCurrency(movimento.totale)}
+        </span>
+      ),
+    },
+  ];
 
   return (
-    <div className="space-y-4">
-      {/* Header con totale */}
-      <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-        <div className="flex items-center gap-3">
-          <Banknote className="h-5 w-5 text-muted-foreground" />
-          <span className="font-semibold">Costi del Personale</span>
+    <div className="space-y-6">
+      {/* Card Riepilogo Personale */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Card Buste Paga */}
+        <div className="rounded-xl border-2 border-border bg-card p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="p-2 rounded-lg bg-yellow-100">
+              <Banknote className="h-5 w-5 text-yellow-600" />
+            </div>
+            <span className="font-semibold text-base">Buste Paga</span>
+          </div>
+          <div className="space-y-3">
+            <div className="text-3xl font-bold text-yellow-600">
+              {formatCurrency(riepilogoPersonale.costi_buste_paga)}
+            </div>
+            <div className="space-y-2 pt-2 border-t border-border">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Costo mensile medio:</span>
+                <span className="text-sm font-semibold">
+                  {movimentiBustePaga.length > 0
+                    ? formatCurrency(riepilogoPersonale.costi_buste_paga / movimentiBustePaga.length)
+                    : formatCurrency(0)
+                  }
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Mesi ripartiti:</span>
+                <span className="text-sm font-semibold">{movimentiBustePaga.length}</span>
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="text-right">
-          <div className="text-sm text-muted-foreground">Totale</div>
-          <div className="text-2xl font-bold text-red-600">{formatCurrency(totaleCostiPersonale)}</div>
+
+        {/* Card F24 */}
+        <div className="rounded-xl border-2 border-border bg-card p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="p-2 rounded-lg bg-orange-100">
+              <BadgeEuro className="h-5 w-5 text-orange-600" />
+            </div>
+            <span className="font-semibold text-base">F24</span>
+          </div>
+          <div className="space-y-3">
+            <div className="text-3xl font-bold text-orange-600">
+              {formatCurrency(riepilogoPersonale.costi_f24)}
+            </div>
+            <div className="space-y-2 pt-2 border-t border-border">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Costo mensile medio:</span>
+                <span className="text-sm font-semibold">
+                  {movimentiF24.length > 0
+                    ? formatCurrency(riepilogoPersonale.costi_f24 / movimentiF24.length)
+                    : formatCurrency(0)
+                  }
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Mesi ripartiti:</span>
+                <span className="text-sm font-semibold">{movimentiF24.length}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Card Totale Personale */}
+        <div className="rounded-xl border-2 border-border bg-card p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="p-2 rounded-lg bg-red-100">
+              <Users className="h-5 w-5 text-red-600" />
+            </div>
+            <span className="font-semibold text-base">Totale Personale</span>
+          </div>
+          <div className="space-y-3">
+            <div className="text-3xl font-bold text-red-600">
+              {formatCurrency(riepilogoPersonale.totale_personale)}
+            </div>
+            <div className="space-y-2 pt-2 border-t border-border">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Buste Paga:</span>
+                <span className="text-sm font-semibold text-yellow-600">{formatCurrency(riepilogoPersonale.costi_buste_paga)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">F24:</span>
+                <span className="text-sm font-semibold text-orange-600">{formatCurrency(riepilogoPersonale.costi_f24)}</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Tabella movimenti */}
-      <div className="w-full overflow-hidden rounded-xl border border-border">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="bg-muted/50 border-b border-border">
-              <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Tipo</th>
-              <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Periodo</th>
-              <th className="px-6 py-4 text-right text-sm font-semibold text-foreground">Importo</th>
-              <th className="px-6 py-4 text-center text-sm font-semibold text-foreground">Azioni</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tuttiMovimenti.map((movimento, index) => {
-              const Icon = movimento.icon;
-              return (
-                <tr
-                  key={`${movimento.tipo}-${movimento.anno}-${movimento.mese}`}
-                  className="border-b border-border hover:bg-muted/30 transition-colors"
-                >
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg ${movimento.iconBg}`}>
-                        <Icon className={`h-4 w-4 ${movimento.iconColor}`} />
-                      </div>
-                      <span className="font-medium">{movimento.tipo}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-sm font-medium">
-                      {MESI[movimento.mese - 1]} {movimento.anno}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <span className={`text-lg font-bold ${movimento.textColor}`}>
-                      {formatCurrency(movimento.totale)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-2"
-                      onClick={() => {
-                        // TODO: Aprire dettaglio in sheet
-                        // Per ora solo placeholder
-                      }}
-                    >
-                      <Eye className="h-4 w-4" />
-                      Dettagli
-                    </Button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-          <tfoot>
-            <tr className="bg-muted/50 border-t-2 border-border">
-              <td className="px-6 py-5 text-left text-base font-bold text-foreground" colSpan={2}>
-                TOTALE COSTI PERSONALE
-              </td>
-              <td className="px-6 py-5 text-right text-xl font-bold text-red-600">
-                {formatCurrency(totaleCostiPersonale)}
-              </td>
-              <td></td>
-            </tr>
-          </tfoot>
-        </table>
+      {/* Tabelle Movimenti Personale - Suddivise */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Tabella Buste Paga */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-lg bg-yellow-100">
+              <Banknote className="h-5 w-5 text-yellow-600" />
+            </div>
+            <h3 className="font-semibold text-lg">Buste Paga</h3>
+          </div>
+          <DataTable<MovimentoPersonale>
+            data={movimentiBustePaga}
+            columns={columnsBustePaga}
+            keyField="id"
+            loading={false}
+            emptyIcon={Banknote}
+            emptyTitle="Nessuna busta paga"
+            emptyDescription={dateFrom && dateTo
+              ? 'Nessuna ripartizione di buste paga nel periodo selezionato'
+              : 'Non ci sono ancora ripartizioni di buste paga per questa commessa'}
+            searchable={false}
+            sortField="anno"
+            sortDirection="desc"
+          />
+        </div>
+
+        {/* Tabella F24 */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-lg bg-orange-100">
+              <BadgeEuro className="h-5 w-5 text-orange-600" />
+            </div>
+            <h3 className="font-semibold text-lg">F24</h3>
+          </div>
+          <DataTable<MovimentoPersonale>
+            data={movimentiF24}
+            columns={columnsF24}
+            keyField="id"
+            loading={false}
+            emptyIcon={BadgeEuro}
+            emptyTitle="Nessun F24"
+            emptyDescription={dateFrom && dateTo
+              ? 'Nessuna ripartizione di F24 nel periodo selezionato'
+              : 'Non ci sono ancora ripartizioni di F24 per questa commessa'}
+            searchable={false}
+            sortField="anno"
+            sortDirection="desc"
+          />
+        </div>
       </div>
     </div>
   );
