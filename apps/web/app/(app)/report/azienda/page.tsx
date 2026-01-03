@@ -14,6 +14,8 @@ interface RiepilogoEconomicoData {
   fatturatoPrevisto: number;
   fatturatoEmesso: number;
   costiTotali: number;
+  costiBustePaga: number;
+  costiF24: number;
   noteSpesa: number;
   utileLordo: number;
   saldoIva: number;
@@ -56,6 +58,8 @@ export default function ReportAziendaPage() {
     fatturatoPrevisto: 0,
     fatturatoEmesso: 0,
     costiTotali: 0,
+    costiBustePaga: 0,
+    costiF24: 0,
     noteSpesa: 0,
     utileLordo: 0,
     saldoIva: 0,
@@ -126,7 +130,9 @@ export default function ReportAziendaPage() {
       const [
         { data: fattureAttive },
         { data: fatturePassive },
-        { data: noteSpesa }
+        { data: noteSpesa },
+        { data: bustePagaDettaglio },
+        { data: f24Dettaglio }
       ] = await Promise.all([
         supabase
           .from('fatture_attive')
@@ -146,7 +152,27 @@ export default function ReportAziendaPage() {
           .in('commessa_id', commessaIds)
           .eq('stato', 'approvato')
           .gte('data_nota', dateFrom)
-          .lte('data_nota', dateTo)
+          .lte('data_nota', dateTo),
+        supabase
+          .from('buste_paga_dettaglio')
+          .select(`
+            importo_commessa,
+            buste_paga (
+              mese,
+              anno
+            )
+          `)
+          .in('commessa_id', commessaIds),
+        supabase
+          .from('f24_dettaglio')
+          .select(`
+            valore_f24_commessa,
+            f24 (
+              mese,
+              anno
+            )
+          `)
+          .in('commessa_id', commessaIds)
       ]);
 
       // Calcola i totali usando helper ottimizzati
@@ -161,7 +187,31 @@ export default function ReportAziendaPage() {
       const costiTotali = sumImponibili(fatturePassive);
       const totaleNoteSpesa = sumImporti(noteSpesa);
 
-      const utileLordo = fatturatoEmesso - costiTotali - totaleNoteSpesa;
+      // Filtra e calcola buste paga per date range
+      const bustePagaFiltrate = (bustePagaDettaglio || []).filter((dettaglio: any) => {
+        if (!dettaglio.buste_paga) return false;
+        const { mese, anno } = dettaglio.buste_paga;
+        const bustaPagaDate = format(new Date(anno, mese - 1, 1), 'yyyy-MM-dd');
+        return bustaPagaDate >= dateFrom && bustaPagaDate <= dateTo;
+      });
+
+      const totaleBustePaga = bustePagaFiltrate.reduce((sum: number, d: any) => {
+        return sum + (Number(d.importo_commessa) || 0);
+      }, 0);
+
+      // Filtra e calcola F24 per date range
+      const f24Filtrate = (f24Dettaglio || []).filter((dettaglio: any) => {
+        if (!dettaglio.f24) return false;
+        const { mese, anno } = dettaglio.f24;
+        const f24Date = format(new Date(anno, mese - 1, 1), 'yyyy-MM-dd');
+        return f24Date >= dateFrom && f24Date <= dateTo;
+      });
+
+      const totaleF24 = f24Filtrate.reduce((sum: number, d: any) => {
+        return sum + (Number(d.valore_f24_commessa) || 0);
+      }, 0);
+
+      const utileLordo = fatturatoEmesso - costiTotali - totaleBustePaga - totaleF24 - totaleNoteSpesa;
 
       // Calcola saldo IVA (IVA ricavi - IVA costi)
       const ivaFatturePassive = sumIva(fatturePassive);
@@ -172,6 +222,8 @@ export default function ReportAziendaPage() {
         fatturatoPrevisto,
         fatturatoEmesso,
         costiTotali,
+        costiBustePaga: totaleBustePaga,
+        costiF24: totaleF24,
         noteSpesa: totaleNoteSpesa,
         utileLordo,
         saldoIva,
