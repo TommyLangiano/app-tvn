@@ -62,8 +62,8 @@ const menuStructure = [
     icon: BarChart3,
     items: [
       { href: '/report/azienda', label: 'Azienda', icon: Building2 },
-      { href: '/report/hr', label: 'HR', icon: Users },
-      { href: '/report/commesse', label: 'Commesse', icon: Briefcase },
+      { href: '/report/hr', label: 'HR', icon: Users, disabled: true },
+      { href: '/report/commesse', label: 'Commesse', icon: Briefcase, disabled: true },
     ]
   },
   {
