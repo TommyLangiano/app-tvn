@@ -30,7 +30,7 @@ import { EditMovimentoModal } from '@/components/features/commesse/EditMovimento
 import { DeleteMovimentoModal } from '@/components/features/commesse/DeleteMovimentoModal';
 import { BulkDeleteMovimentiModal } from '@/components/features/commesse/BulkDeleteMovimentiModal';
 import { RapportiniTab } from '@/components/features/commesse/RapportiniTab';
-import { MovimentiTab } from '@/components/features/commesse/MovimentiTab';
+import { EconomiaTab } from '@/components/features/commesse/EconomiaTab';
 import { NoteSpeseTab } from '@/components/features/commesse/NoteSpeseTab';
 import { CommessaReportTab } from '@/components/features/commesse/CommessaReportTab';
 import { getSignedUrl } from '@/lib/utils/storage';
@@ -41,7 +41,7 @@ export default function CommessaDetailPage() {
   const params = useParams();
   const slug = params.id as string;
 
-  type TabValue = 'panoramica' | 'movimenti' | 'note-spesa' | 'rapportini' | 'report' | 'documenti' | 'dettagli' | 'impostazioni';
+  type TabValue = 'panoramica' | 'economia' | 'note-spesa' | 'rapportini' | 'report' | 'documenti' | 'dettagli' | 'impostazioni';
 
   const [activeTab, setActiveTab] = useState<TabValue>('panoramica');
   const [loading, setLoading] = useState(true);
@@ -1292,8 +1292,8 @@ export default function CommessaDetailPage() {
         tabs={[
           { value: 'panoramica', label: 'Panoramica', icon: LayoutDashboard },
           {
-            value: 'movimenti',
-            label: 'Fatture',
+            value: 'economia',
+            label: 'Economia',
             icon: Receipt
           },
           { value: 'note-spesa', label: 'Note Spesa', icon: FileText },
@@ -1315,9 +1315,9 @@ export default function CommessaDetailPage() {
         </div>
       )}
 
-      {/* TAB: Movimenti */}
-      {activeTab === 'movimenti' && (
-        <MovimentiTab
+      {/* TAB: Economia */}
+      {activeTab === 'economia' && (
+        <EconomiaTab
           commessaId={commessa?.id || ''}
           fattureAttive={fatture}
           fatturePassive={fatturePassive}
