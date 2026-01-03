@@ -14,7 +14,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
-import { DateRange } from 'react-day-picker';
 import { TabsFilter, TabItem } from '@/components/ui/tabs-filter';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
@@ -122,11 +121,13 @@ export default function FatturePage() {
   // Stati per filtri
   const [tipoFattura, setTipoFattura] = useState<'tutte' | 'attive' | 'passive'>('tutte');
   const [statoFattura, setStatoFattura] = useState<string>('tutti');
-  const [dateRangeEmissione, setDateRangeEmissione] = useState<DateRange | undefined>();
+  const [dateFromEmissione, setDateFromEmissione] = useState<string>('');
+  const [dateToEmissione, setDateToEmissione] = useState<string>('');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   // Filtri avanzati
-  const [dateRangeScadenza, setDateRangeScadenza] = useState<DateRange | undefined>();
+  const [dateFromScadenza, setDateFromScadenza] = useState<string>('');
+  const [dateToScadenza, setDateToScadenza] = useState<string>('');
   const [metodoPagamento, setMetodoPagamento] = useState<string>('tutti');
   const [annoFiscale, setAnnoFiscale] = useState<string>('tutti');
   const [importoDa, setImportoDa] = useState('');
@@ -411,19 +412,19 @@ export default function FatturePage() {
     }
 
     // Filtro data emissione
-    if (dateRangeEmissione?.from) {
-      fatture = fatture.filter(f => new Date(f.data_fattura) >= dateRangeEmissione.from!);
+    if (dateFromEmissione) {
+      fatture = fatture.filter(f => f.data_fattura >= dateFromEmissione);
     }
-    if (dateRangeEmissione?.to) {
-      fatture = fatture.filter(f => new Date(f.data_fattura) <= dateRangeEmissione.to!);
+    if (dateToEmissione) {
+      fatture = fatture.filter(f => f.data_fattura <= dateToEmissione);
     }
 
     // Filtri avanzati
-    if (dateRangeScadenza?.from) {
-      fatture = fatture.filter(f => f.scadenza_pagamento && new Date(f.scadenza_pagamento) >= dateRangeScadenza.from!);
+    if (dateFromScadenza) {
+      fatture = fatture.filter(f => f.scadenza_pagamento && f.scadenza_pagamento >= dateFromScadenza);
     }
-    if (dateRangeScadenza?.to) {
-      fatture = fatture.filter(f => f.scadenza_pagamento && new Date(f.scadenza_pagamento) <= dateRangeScadenza.to!);
+    if (dateToScadenza) {
+      fatture = fatture.filter(f => f.scadenza_pagamento && f.scadenza_pagamento <= dateToScadenza);
     }
     if (metodoPagamento !== 'tutti') {
       fatture = fatture.filter(f => f.modalita_pagamento?.toLowerCase() === metodoPagamento.toLowerCase());
@@ -1084,8 +1085,12 @@ export default function FatturePage() {
 
         {/* Periodo emissione */}
         <DateRangePicker
-          date={dateRangeEmissione}
-          onDateChange={setDateRangeEmissione}
+          from={dateFromEmissione}
+          to={dateToEmissione}
+          onRangeChange={(from, to) => {
+            setDateFromEmissione(from);
+            setDateToEmissione(to);
+          }}
           placeholder="Periodo"
           className="w-full lg:w-[240px]"
         />
@@ -1098,7 +1103,7 @@ export default function FatturePage() {
           size="icon"
         >
           <Filter className="h-4 w-4" />
-          {(dateRangeScadenza?.from || dateRangeScadenza?.to || metodoPagamento !== 'tutti' || annoFiscale !== 'tutti' || importoDa || importoA) && (
+          {(dateFromScadenza || dateToScadenza || metodoPagamento !== 'tutti' || annoFiscale !== 'tutti' || importoDa || importoA) && (
             <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-primary"></span>
           )}
         </Button>
@@ -1895,8 +1900,12 @@ export default function FatturePage() {
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">Scadenza</label>
                 <DateRangePicker
-                  date={dateRangeScadenza}
-                  onDateChange={setDateRangeScadenza}
+                  from={dateFromScadenza}
+                  to={dateToScadenza}
+                  onRangeChange={(from, to) => {
+                    setDateFromScadenza(from);
+                    setDateToScadenza(to);
+                  }}
                   placeholder="Seleziona periodo scadenza"
                   className="w-full"
                 />
