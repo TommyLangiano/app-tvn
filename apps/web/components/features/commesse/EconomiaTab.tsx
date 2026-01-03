@@ -267,7 +267,15 @@ export function EconomiaTab({
                   <div className="space-y-2 pt-2 border-t border-border">
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">Fatture:</span>
-                      <span className="text-sm font-semibold">{formatCurrency(riepilogoFiltrato.costi_imponibile)}</span>
+                      <span className="text-sm font-semibold">{formatCurrency(riepilogoFiltrato.costi_totali)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-muted-foreground ml-2">• Imponibile:</span>
+                      <span className="font-medium">{formatCurrency(riepilogoFiltrato.costi_imponibile)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-muted-foreground ml-2">• IVA:</span>
+                      <span className="font-medium">{formatCurrency(riepilogoFiltrato.costi_iva)}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">Personale:</span>
