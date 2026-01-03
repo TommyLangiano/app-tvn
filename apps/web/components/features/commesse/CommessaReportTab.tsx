@@ -5,7 +5,6 @@ import { format } from 'date-fns';
 import { RiepilogoEconomicoChart } from '@/app/(app)/report/components/charts/RiepilogoEconomicoChart';
 import { PeriodFilter, type PeriodType } from '@/app/(app)/report/azienda/components/PeriodFilter';
 import { getDateRangeFromPeriod, type DateRange } from '@/app/(app)/report/azienda/utils/dateFilters';
-import { createClient } from '@/lib/supabase/client';
 
 interface RiepilogoEconomicoData {
   fatturatoPrevisto: number;
@@ -25,6 +24,8 @@ interface CommessaReportTabProps {
   fattureAttive: any[];
   fatturePassive: any[];
   noteSpese: any[];
+  bustePagaDettaglio: any[];
+  f24Dettaglio: any[];
 }
 
 // Helper ottimizzato per ridurre operazioni di reduce
@@ -55,14 +56,12 @@ const sumImporti = (items: any[] | null): number => {
   return sum;
 };
 
-export function CommessaReportTab({ commessaId, commessa, fattureAttive, fatturePassive, noteSpese }: CommessaReportTabProps) {
+export function CommessaReportTab({ commessaId, commessa, fattureAttive, fatturePassive, noteSpese, bustePagaDettaglio, f24Dettaglio }: CommessaReportTabProps) {
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>('oggi');
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [customDateFrom, setCustomDateFrom] = useState<string>('');
   const [customDateTo, setCustomDateTo] = useState<string>('');
   const [dateRange, setDateRange] = useState<DateRange>(() => getDateRangeFromPeriod('oggi'));
-  const [bustePagaDettaglio, setBustePagaDettaglio] = useState<any[]>([]);
-  const [f24Dettaglio, setF24Dettaglio] = useState<any[]>([]);
 
   // Gestione cambio periodo
   const handlePeriodChange = useCallback((period: PeriodType) => {
@@ -95,54 +94,6 @@ export function CommessaReportTab({ commessaId, commessa, fattureAttive, fatture
       setDateRange(newRange);
     }
   }, []);
-
-  // Carica dettagli buste paga per la commessa
-  useEffect(() => {
-    const loadBustePagaDettaglio = async () => {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from('buste_paga_dettaglio')
-        .select(`
-          *,
-          buste_paga (
-            mese,
-            anno,
-            dipendente_id
-          )
-        `)
-        .eq('commessa_id', commessaId);
-
-      if (!error && data) {
-        setBustePagaDettaglio(data);
-      }
-    };
-
-    loadBustePagaDettaglio();
-  }, [commessaId]);
-
-  // Carica dettagli F24 per la commessa
-  useEffect(() => {
-    const loadF24Dettaglio = async () => {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from('f24_dettaglio')
-        .select(`
-          *,
-          f24 (
-            mese,
-            anno,
-            importo_f24
-          )
-        `)
-        .eq('commessa_id', commessaId);
-
-      if (!error && data) {
-        setF24Dettaglio(data);
-      }
-    };
-
-    loadF24Dettaglio();
-  }, [commessaId]);
 
   // Calcolo dati usando useMemo per prestazioni istantanee
   const riepilogoData = useMemo(() => {

@@ -55,6 +55,8 @@ export default function CommessaDetailPage() {
   const [rapportini, setRapportini] = useState<any[]>([]);
   const [rapportiniDaApprovare, setRapportiniDaApprovare] = useState<any[]>([]);
   const [rapportiniRifiutati, setRapportiniRifiutati] = useState<any[]>([]);
+  const [bustePagaDettaglio, setBustePagaDettaglio] = useState<any[]>([]);
+  const [f24Dettaglio, setF24Dettaglio] = useState<any[]>([]);
   // const [scontrini, setScontrini] = useState([])  // Tabella eliminata
   const [showFatturaForm, setShowFatturaForm] = useState(false);
   const [showCostoForm, setShowCostoForm] = useState(false);
@@ -401,6 +403,36 @@ export default function CommessaDetailPage() {
       setRapportini(rapportiniApprovatiRes.data || []);
       setRapportiniDaApprovare(rapportiniDaApprovareRes.data || []);
       setRapportiniRifiutati(rapportiniRifiutatiRes.data || []);
+
+      // Load buste paga dettaglio
+      const { data: bustePagaData } = await supabase
+        .from('buste_paga_dettaglio')
+        .select(`
+          *,
+          buste_paga (
+            mese,
+            anno,
+            dipendente_id
+          )
+        `)
+        .eq('commessa_id', commessaData.id);
+
+      setBustePagaDettaglio(bustePagaData || []);
+
+      // Load F24 dettaglio
+      const { data: f24Data } = await supabase
+        .from('f24_dettaglio')
+        .select(`
+          *,
+          f24 (
+            mese,
+            anno,
+            importo_f24
+          )
+        `)
+        .eq('commessa_id', commessaData.id);
+
+      setF24Dettaglio(f24Data || []);
 
     } catch {
       toast.error('Errore nel caricamento dei dati');
@@ -1326,6 +1358,8 @@ export default function CommessaDetailPage() {
           fattureAttive={fatture}
           fatturePassive={fatturePassive}
           noteSpese={noteSpese}
+          bustePagaDettaglio={bustePagaDettaglio}
+          f24Dettaglio={f24Dettaglio}
         />
       )}
 
