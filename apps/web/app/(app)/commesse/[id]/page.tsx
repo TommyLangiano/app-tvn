@@ -1322,6 +1322,8 @@ export default function CommessaDetailPage() {
           fattureAttive={fatture}
           fatturePassive={fatturePassive}
           riepilogo={riepilogo}
+          bustePagaDettaglio={bustePagaDettaglio}
+          f24Dettaglio={f24Dettaglio}
           onReload={refreshFattureData}
         />
       )}

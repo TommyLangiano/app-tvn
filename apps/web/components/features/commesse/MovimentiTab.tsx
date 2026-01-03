@@ -75,12 +75,14 @@ interface MovimentiTabProps {
   fattureAttive: FatturaAttiva[];
   fatturePassive: FatturaPassiva[];
   riepilogo?: RiepilogoEconomico | null;
+  bustePagaDettaglio: any[];
+  f24Dettaglio: any[];
   onReload?: () => void;
 }
 
 type TabType = 'all' | 'emesse' | 'ricevute';
 
-export function MovimentiTab({ commessaId, fattureAttive, fatturePassive, riepilogo, onReload }: MovimentiTabProps) {
+export function MovimentiTab({ commessaId, fattureAttive, fatturePassive, riepilogo, bustePagaDettaglio, f24Dettaglio, onReload }: MovimentiTabProps) {
   const [activeTab, setActiveTab] = useState<TabType>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [statoFattura, setStatoFattura] = useState<string>('tutti');
@@ -95,56 +97,6 @@ export function MovimentiTab({ commessaId, fattureAttive, fatturePassive, riepil
   const [isDeleting, setIsDeleting] = useState(false);
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
-  const [bustePagaDettaglio, setBustePagaDettaglio] = useState<any[]>([]);
-  const [f24Dettaglio, setF24Dettaglio] = useState<any[]>([]);
-
-  // Carica dettagli buste paga per la commessa
-  useEffect(() => {
-    const loadBustePagaDettaglio = async () => {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from('buste_paga_dettaglio')
-        .select(`
-          *,
-          buste_paga (
-            mese,
-            anno,
-            dipendente_id
-          )
-        `)
-        .eq('commessa_id', commessaId);
-
-      if (!error && data) {
-        setBustePagaDettaglio(data);
-      }
-    };
-
-    loadBustePagaDettaglio();
-  }, [commessaId]);
-
-  // Carica dettagli F24 per la commessa
-  useEffect(() => {
-    const loadF24Dettaglio = async () => {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from('f24_dettaglio')
-        .select(`
-          *,
-          f24 (
-            mese,
-            anno,
-            importo_f24
-          )
-        `)
-        .eq('commessa_id', commessaId);
-
-      if (!error && data) {
-        setF24Dettaglio(data);
-      }
-    };
-
-    loadF24Dettaglio();
-  }, [commessaId]);
 
   const handleDateRangeChange = (from: string, to: string) => {
     setDateFrom(from);
