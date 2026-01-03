@@ -485,7 +485,7 @@ function buildAnalyticsData(params: {
   const alerts = generateEnhancedAlerts(kpis, marginByProject, cashFlowForecast, agingReport, budgetVsActual);
 
   // Riepilogo Economico
-  const riepilogoEconomico = calculateRiepilogoEconomico(commesse, fatture, fatturePassive, noteSpesa, bustePaga);
+  const riepilogoEconomico = calculateRiepilogoEconomico(commesse, fatture, fatturePassive, noteSpesa, bustePaga, []);
 
   return {
     kpis,
@@ -665,7 +665,8 @@ function calculateRiepilogoEconomico(
   fatture: any[],
   fatturePassive: any[],
   noteSpesa: any[],
-  bustePaga: any[]
+  bustePaga: any[],
+  f24: any[] = []
 ) {
   // 1. Fatturato Totale Previsto: somma degli importo_commessa di tutte le commesse
   const fatturatoPrevisto = commesse.reduce((sum, c) => {
@@ -687,13 +688,18 @@ function calculateRiepilogoEconomico(
     return sum + (bp.importo_commessa || 0);
   }, 0);
 
+  // 3c. Costi F24: somma di tutti gli importi F24
+  const costiF24 = f24.reduce((sum, f) => {
+    return sum + (f.valore_f24_commessa || 0);
+  }, 0);
+
   // 4. Note spesa: somma di tutte le note spesa
   const totaleNoteSpesa = noteSpesa.reduce((sum, n) => {
     return sum + (n.importo || 0);
   }, 0);
 
-  // 5. Utile Lordo: Fatturato Emesso - Costi Totali - Costi Buste Paga - Note spesa
-  const utileLordo = fatturatoEmesso - costiTotali - costiBustePaga - totaleNoteSpesa;
+  // 5. Utile Lordo: Fatturato Emesso - Costi Totali - Costi Buste Paga - Costi F24 - Note spesa
+  const utileLordo = fatturatoEmesso - costiTotali - costiBustePaga - costiF24 - totaleNoteSpesa;
 
   // 6. Saldo IVA: IVA fatture passive (IVA a credito) - IVA fatture attive (IVA a debito)
   const ivaFatturePassive = fatturePassive.reduce((sum, f) => {
@@ -711,6 +717,7 @@ function calculateRiepilogoEconomico(
     fatturatoEmesso,
     costiTotali,
     costiBustePaga,
+    costiF24,
     noteSpesa: totaleNoteSpesa,
     utileLordo,
     saldoIva,
