@@ -255,55 +255,99 @@ export function EconomiaTab({
         </div>
       </div>
 
-      {/* Sub-tabs */}
-      <div className="flex gap-2 border-b border-border">
+      {/* Card Selector per Sub-tabs */}
+      <div className="grid grid-cols-3 gap-4">
+        {/* Card Fatture */}
         <button
           onClick={() => setActiveSubTab('fatture')}
-          className={`px-4 py-2.5 font-medium transition-colors relative ${
+          className={`rounded-xl border-2 p-6 transition-all duration-200 ${
             activeSubTab === 'fatture'
-              ? 'text-primary'
-              : 'text-muted-foreground hover:text-foreground'
+              ? 'border-green-500 bg-green-50/50 shadow-sm'
+              : 'border-border bg-card hover:border-green-300 hover:bg-green-50/30'
           }`}
         >
-          <div className="flex items-center gap-2">
-            <Receipt className="h-4 w-4" />
-            Fatture
+          <div className="flex items-center gap-3">
+            <div className={`p-2.5 rounded-lg transition-colors ${
+              activeSubTab === 'fatture'
+                ? 'bg-green-500'
+                : 'bg-muted'
+            }`}>
+              <Receipt className={`h-5 w-5 ${
+                activeSubTab === 'fatture'
+                  ? 'text-white'
+                  : 'text-muted-foreground'
+              }`} />
+            </div>
+            <span className={`font-semibold text-base ${
+              activeSubTab === 'fatture'
+                ? 'text-green-700'
+                : 'text-foreground'
+            }`}>
+              Fatture
+            </span>
           </div>
-          {activeSubTab === 'fatture' && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"></div>
-          )}
         </button>
+
+        {/* Card Personale */}
         <button
           onClick={() => setActiveSubTab('personale')}
-          className={`px-4 py-2.5 font-medium transition-colors relative ${
+          className={`rounded-xl border-2 p-6 transition-all duration-200 ${
             activeSubTab === 'personale'
-              ? 'text-primary'
-              : 'text-muted-foreground hover:text-foreground'
+              ? 'border-green-500 bg-green-50/50 shadow-sm'
+              : 'border-border bg-card hover:border-green-300 hover:bg-green-50/30'
           }`}
         >
-          <div className="flex items-center gap-2">
-            <Banknote className="h-4 w-4" />
-            Personale
+          <div className="flex items-center gap-3">
+            <div className={`p-2.5 rounded-lg transition-colors ${
+              activeSubTab === 'personale'
+                ? 'bg-green-500'
+                : 'bg-muted'
+            }`}>
+              <Banknote className={`h-5 w-5 ${
+                activeSubTab === 'personale'
+                  ? 'text-white'
+                  : 'text-muted-foreground'
+              }`} />
+            </div>
+            <span className={`font-semibold text-base ${
+              activeSubTab === 'personale'
+                ? 'text-green-700'
+                : 'text-foreground'
+            }`}>
+              Personale
+            </span>
           </div>
-          {activeSubTab === 'personale' && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"></div>
-          )}
         </button>
+
+        {/* Card Altro */}
         <button
           onClick={() => setActiveSubTab('altro')}
-          className={`px-4 py-2.5 font-medium transition-colors relative ${
+          className={`rounded-xl border-2 p-6 transition-all duration-200 ${
             activeSubTab === 'altro'
-              ? 'text-primary'
-              : 'text-muted-foreground hover:text-foreground'
+              ? 'border-green-500 bg-green-50/50 shadow-sm'
+              : 'border-border bg-card hover:border-green-300 hover:bg-green-50/30'
           }`}
         >
-          <div className="flex items-center gap-2">
-            <FileStack className="h-4 w-4" />
-            Altro
+          <div className="flex items-center gap-3">
+            <div className={`p-2.5 rounded-lg transition-colors ${
+              activeSubTab === 'altro'
+                ? 'bg-green-500'
+                : 'bg-muted'
+            }`}>
+              <FileStack className={`h-5 w-5 ${
+                activeSubTab === 'altro'
+                  ? 'text-white'
+                  : 'text-muted-foreground'
+              }`} />
+            </div>
+            <span className={`font-semibold text-base ${
+              activeSubTab === 'altro'
+                ? 'text-green-700'
+                : 'text-foreground'
+            }`}>
+              Altro
+            </span>
           </div>
-          {activeSubTab === 'altro' && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"></div>
-          )}
         </button>
       </div>
 
