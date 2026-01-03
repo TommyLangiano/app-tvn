@@ -352,7 +352,8 @@ export default function DipendentiPage() {
     setMansioneFilter('tutti');
     setAccountFilter('tutti');
     setRuoloFilter('tutti');
-    setDateRangeAssunzione(undefined);
+    setDateFromAssunzione('');
+    setDateToAssunzione('');
   };
 
   const hasActiveAdvancedFilters =
