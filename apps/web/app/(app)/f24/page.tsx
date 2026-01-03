@@ -131,7 +131,7 @@ export default function F24Page() {
             disabled={loading || !!f24}
           >
             <Plus className="h-4 w-4" />
-            {f24 ? 'Modifica F24' : 'Inserisci F24'}
+            {f24 ? 'Modifica Ripartizione' : 'Nuova Ripartizione'}
           </Button>
         </div>,
         navbarActionsContainer
@@ -154,7 +154,7 @@ export default function F24Page() {
         <div className="bg-card rounded-xl border border-border p-12 text-center">
           <Receipt className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <p className="text-muted-foreground">
-            Nessun F24 presente per {MESI[currentMonth]} {currentYear}. Clicca su "Inserisci F24" per iniziare.
+            Nessuna ripartizione F24 presente per {MESI[currentMonth]} {currentYear}. Clicca su "Nuova Ripartizione" per iniziare.
           </p>
         </div>
       ) : (

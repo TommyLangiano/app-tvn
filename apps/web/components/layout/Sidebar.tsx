@@ -129,8 +129,8 @@ const menuStructure = [
     label: 'Paghe e Contributi',
     icon: Wallet,
     items: [
-      { href: '/buste-paga', label: 'Buste Paga', icon: Banknote },
-      { href: '/f24', label: 'F24', icon: BadgeEuro },
+      { href: '/buste-paga', label: 'Ripartizione Buste Paga', icon: Banknote },
+      { href: '/f24', label: 'Ripartizione F24', icon: BadgeEuro },
       { href: '/cedolini', label: 'Cedolini', icon: FileSpreadsheet },
     ]
   },

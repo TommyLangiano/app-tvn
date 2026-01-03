@@ -207,7 +207,7 @@ export default function BustePagaPage() {
             className="gap-2 h-10 rounded-sm"
           >
             <Plus className="h-4 w-4" />
-            Inserisci Busta Paga
+            Nuova Ripartizione
           </Button>
         </div>,
         navbarActionsContainer
@@ -230,7 +230,7 @@ export default function BustePagaPage() {
         <div className="bg-card rounded-xl border border-border p-12 text-center">
           <Wallet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <p className="text-muted-foreground">
-            Nessuna busta paga presente per {MESI[currentMonth]} {currentYear}. Clicca su "Inserisci Busta Paga" per iniziare.
+            Nessuna ripartizione buste paga presente per {MESI[currentMonth]} {currentYear}. Clicca su "Nuova Ripartizione" per iniziare.
           </p>
         </div>
       ) : (
