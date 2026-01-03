@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Receipt, ArrowUpCircle, ArrowDownCircle, FileText, ChevronRight, Search, Trash2, X, Plus, TrendingUp, TrendingDown } from 'lucide-react';
 import { DataTable, DataTableColumn } from '@/components/ui/data-table';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,8 @@ import { toast } from 'sonner';
 import { getSignedUrl } from '@/lib/utils/storage';
 import { FatturaDetailSheet } from '@/components/features/fatture/FatturaDetailSheet';
 import { formatCurrency } from '@/lib/utils/currency';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
+import { format } from 'date-fns';
 
 interface FatturaAttiva {
   id: string;
@@ -62,6 +64,8 @@ interface RiepilogoEconomico {
   costi_imponibile: number;
   costi_iva: number;
   costi_totali: number;
+  costi_buste_paga?: number;
+  costi_f24?: number;
   margine_lordo: number;
   saldo_iva: number;
 }
@@ -89,6 +93,63 @@ export function MovimentiTab({ commessaId, fattureAttive, fatturePassive, riepil
   const [selectedFatturaDetail, setSelectedFatturaDetail] = useState<FatturaAttiva | FatturaPassiva | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [dateFrom, setDateFrom] = useState<string>('');
+  const [dateTo, setDateTo] = useState<string>('');
+  const [bustePagaDettaglio, setBustePagaDettaglio] = useState<any[]>([]);
+  const [f24Dettaglio, setF24Dettaglio] = useState<any[]>([]);
+
+  // Carica dettagli buste paga per la commessa
+  useEffect(() => {
+    const loadBustePagaDettaglio = async () => {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('buste_paga_dettaglio')
+        .select(`
+          *,
+          buste_paga (
+            mese,
+            anno,
+            dipendente_id
+          )
+        `)
+        .eq('commessa_id', commessaId);
+
+      if (!error && data) {
+        setBustePagaDettaglio(data);
+      }
+    };
+
+    loadBustePagaDettaglio();
+  }, [commessaId]);
+
+  // Carica dettagli F24 per la commessa
+  useEffect(() => {
+    const loadF24Dettaglio = async () => {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('f24_dettaglio')
+        .select(`
+          *,
+          f24 (
+            mese,
+            anno,
+            importo_f24
+          )
+        `)
+        .eq('commessa_id', commessaId);
+
+      if (!error && data) {
+        setF24Dettaglio(data);
+      }
+    };
+
+    loadF24Dettaglio();
+  }, [commessaId]);
+
+  const handleDateRangeChange = (from: string, to: string) => {
+    setDateFrom(from);
+    setDateTo(to);
+  };
 
   const handleUpdateStatoPagamento = async (
     fattura: FatturaAttiva | FatturaPassiva,
@@ -204,6 +265,13 @@ export function MovimentiTab({ commessaId, fattureAttive, fatturePassive, riepil
       filtered = filtered.filter(f => 'fornitore' in f);
     }
 
+    // Filter by date range
+    if (dateFrom && dateTo) {
+      filtered = filtered.filter(f => {
+        return f.data_fattura >= dateFrom && f.data_fattura <= dateTo;
+      });
+    }
+
     // Filter by stato
     if (statoFattura !== 'tutti') {
       filtered = filtered.filter(f => f.stato_pagamento === statoFattura);
@@ -223,7 +291,7 @@ export function MovimentiTab({ commessaId, fattureAttive, fatturePassive, riepil
     }
 
     return filtered;
-  }, [allFatture, activeTab, statoFattura, searchQuery]);
+  }, [allFatture, activeTab, statoFattura, searchQuery, dateFrom, dateTo]);
 
   const sortedFatture = useMemo(() => {
     const sorted = [...filteredFatture];
@@ -270,6 +338,67 @@ export function MovimentiTab({ commessaId, fattureAttive, fatturePassive, riepil
   const totaleFattureVisualizzate = useMemo(() => {
     return sortedFatture.reduce((sum, fattura) => sum + fattura.importo_totale, 0);
   }, [sortedFatture]);
+
+  // Calcola riepilogo filtrato per date range
+  const riepilogoFiltrato = useMemo(() => {
+    // Filtra fatture attive per date (se presenti)
+    const fattureAttiveFiltrate = dateFrom && dateTo
+      ? fattureAttive.filter(f => f.data_fattura >= dateFrom && f.data_fattura <= dateTo)
+      : fattureAttive;
+
+    // Filtra fatture passive per date (se presenti)
+    const fatturePassiveFiltrate = dateFrom && dateTo
+      ? fatturePassive.filter(f => f.data_fattura >= dateFrom && f.data_fattura <= dateTo)
+      : fatturePassive;
+
+    // Filtra buste paga per date range (se presenti)
+    const bustePagaFiltrate = dateFrom && dateTo
+      ? bustePagaDettaglio.filter(dettaglio => {
+          if (!dettaglio.buste_paga) return false;
+          const { mese, anno } = dettaglio.buste_paga;
+          const bustaPagaDate = format(new Date(anno, mese - 1, 1), 'yyyy-MM-dd');
+          return bustaPagaDate >= dateFrom && bustaPagaDate <= dateTo;
+        })
+      : bustePagaDettaglio;
+
+    // Filtra F24 per date range (se presenti)
+    const f24Filtrate = dateFrom && dateTo
+      ? f24Dettaglio.filter(dettaglio => {
+          if (!dettaglio.f24) return false;
+          const { mese, anno } = dettaglio.f24;
+          const f24Date = format(new Date(anno, mese - 1, 1), 'yyyy-MM-dd');
+          return f24Date >= dateFrom && f24Date <= dateTo;
+        })
+      : f24Dettaglio;
+
+    // Calcola totali sempre basandosi sulle fatture filtrate
+    const ricavi_imponibile = fattureAttiveFiltrate.reduce((sum, f) => sum + (f.importo_imponibile || 0), 0);
+    const ricavi_iva = fattureAttiveFiltrate.reduce((sum, f) => sum + (f.importo_iva || 0), 0);
+    const ricavi_totali = fattureAttiveFiltrate.reduce((sum, f) => sum + (f.importo_totale || 0), 0);
+
+    const costi_imponibile = fatturePassiveFiltrate.reduce((sum, f) => sum + (f.importo_imponibile || 0), 0);
+    const costi_iva = fatturePassiveFiltrate.reduce((sum, f) => sum + (f.importo_iva || 0), 0);
+    const costi_totali = fatturePassiveFiltrate.reduce((sum, f) => sum + (f.importo_totale || 0), 0);
+
+    const costi_buste_paga = bustePagaFiltrate.reduce((sum, d) => sum + (Number(d.importo_commessa) || 0), 0);
+    const costi_f24 = f24Filtrate.reduce((sum, d) => sum + (Number(d.valore_f24_commessa) || 0), 0);
+
+    const margine_lordo = ricavi_imponibile - costi_imponibile - costi_buste_paga - costi_f24;
+    const saldo_iva = ricavi_iva - costi_iva;
+
+    return {
+      ricavi_imponibile,
+      ricavi_iva,
+      ricavi_totali,
+      costi_imponibile,
+      costi_iva,
+      costi_totali,
+      costi_buste_paga,
+      costi_f24,
+      margine_lordo,
+      saldo_iva,
+    };
+  }, [dateFrom, dateTo, fattureAttive, fatturePassive, bustePagaDettaglio, f24Dettaglio]);
 
   const handleSort = (field: string) => {
     if (sortField === field) {
@@ -548,10 +677,19 @@ export function MovimentiTab({ commessaId, fattureAttive, fatturePassive, riepil
             <SelectItem value="Da Incassare">Da Incassare</SelectItem>
           </SelectContent>
         </Select>
+
+        {/* Date Range Picker */}
+        <DateRangePicker
+          from={dateFrom}
+          to={dateTo}
+          onRangeChange={handleDateRangeChange}
+          placeholder="Seleziona Intervallo"
+          className="w-full lg:w-auto"
+        />
       </div>
 
       {/* Dashboard Economico - Card dinamiche in base al tab */}
-      {riepilogo && (
+      {riepilogoFiltrato && (
         <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${activeTab === 'all' ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
           {/* TAB "TUTTE" - Mostra tutte e 4 le card */}
           {activeTab === 'all' && (
@@ -566,16 +704,16 @@ export function MovimentiTab({ commessaId, fattureAttive, fatturePassive, riepil
                 </div>
                 <div className="space-y-3">
                   <div className="text-3xl font-bold text-green-600">
-                    {formatCurrency(riepilogo.ricavi_totali)}
+                    {formatCurrency(riepilogoFiltrato.ricavi_totali)}
                   </div>
                   <div className="space-y-2 pt-2 border-t border-border">
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">Imponibile:</span>
-                      <span className="text-sm font-semibold">{formatCurrency(riepilogo.ricavi_imponibile)}</span>
+                      <span className="text-sm font-semibold">{formatCurrency(riepilogoFiltrato.ricavi_imponibile)}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">IVA:</span>
-                      <span className="text-sm font-semibold">{formatCurrency(riepilogo.ricavi_iva)}</span>
+                      <span className="text-sm font-semibold">{formatCurrency(riepilogoFiltrato.ricavi_iva)}</span>
                     </div>
                   </div>
                 </div>
@@ -591,22 +729,28 @@ export function MovimentiTab({ commessaId, fattureAttive, fatturePassive, riepil
                 </div>
                 <div className="space-y-3">
                   <div className="text-3xl font-bold text-red-600">
-                    {formatCurrency((riepilogo.costi_totali || 0) + (riepilogo.costi_buste_paga || 0))}
+                    {formatCurrency((riepilogoFiltrato.costi_totali || 0) + (riepilogoFiltrato.costi_buste_paga || 0) + (riepilogoFiltrato.costi_f24 || 0))}
                   </div>
                   <div className="space-y-2 pt-2 border-t border-border">
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">Fatture:</span>
-                      <span className="text-sm font-semibold">{formatCurrency(riepilogo.costi_imponibile)}</span>
+                      <span className="text-sm font-semibold">{formatCurrency(riepilogoFiltrato.costi_imponibile)}</span>
                     </div>
-                    {riepilogo.costi_buste_paga > 0 && (
+                    {(riepilogoFiltrato.costi_buste_paga || 0) > 0 && (
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-muted-foreground">Buste Paga:</span>
-                        <span className="text-sm font-semibold text-yellow-600">{formatCurrency(riepilogo.costi_buste_paga)}</span>
+                        <span className="text-sm font-semibold text-yellow-600">{formatCurrency(riepilogoFiltrato.costi_buste_paga || 0)}</span>
+                      </div>
+                    )}
+                    {(riepilogoFiltrato.costi_f24 || 0) > 0 && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">F24:</span>
+                        <span className="text-sm font-semibold text-orange-600">{formatCurrency(riepilogoFiltrato.costi_f24 || 0)}</span>
                       </div>
                     )}
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">IVA:</span>
-                      <span className="text-sm font-semibold">{formatCurrency(riepilogo.costi_iva)}</span>
+                      <span className="text-sm font-semibold">{formatCurrency(riepilogoFiltrato.costi_iva)}</span>
                     </div>
                   </div>
                 </div>
@@ -615,14 +759,14 @@ export function MovimentiTab({ commessaId, fattureAttive, fatturePassive, riepil
               {/* Card Margine Lordo */}
               <div className="rounded-xl border-2 border-border bg-card p-6">
                 <div className="flex items-center gap-2 mb-4">
-                  <div className={`p-2 rounded-lg ${riepilogo.margine_lordo >= 0 ? 'bg-emerald-100' : 'bg-red-100'}`}>
-                    <FileText className={`h-5 w-5 ${riepilogo.margine_lordo >= 0 ? 'text-emerald-600' : 'text-red-600'}`} />
+                  <div className={`p-2 rounded-lg ${riepilogoFiltrato.margine_lordo >= 0 ? 'bg-emerald-100' : 'bg-red-100'}`}>
+                    <FileText className={`h-5 w-5 ${riepilogoFiltrato.margine_lordo >= 0 ? 'text-emerald-600' : 'text-red-600'}`} />
                   </div>
                   <span className="font-semibold text-base">Margine Lordo</span>
                 </div>
                 <div className="space-y-2">
-                  <div className={`text-3xl font-bold ${riepilogo.margine_lordo >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                    {formatCurrency(riepilogo.margine_lordo)}
+                  <div className={`text-3xl font-bold ${riepilogoFiltrato.margine_lordo >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                    {formatCurrency(riepilogoFiltrato.margine_lordo)}
                   </div>
                   <div className="text-xs text-muted-foreground mt-2">
                     Imponibile ricavi - Imponibile costi
@@ -632,24 +776,24 @@ export function MovimentiTab({ commessaId, fattureAttive, fatturePassive, riepil
 
               {/* Card Saldo IVA */}
               <div className={`rounded-xl border-2 bg-card p-6 ${
-                (riepilogo.saldo_iva || 0) === 0
+                (riepilogoFiltrato.saldo_iva || 0) === 0
                   ? 'border-green-300 bg-green-50/30'
-                  : (riepilogo.saldo_iva || 0) > 0
+                  : (riepilogoFiltrato.saldo_iva || 0) > 0
                   ? 'border-red-300 bg-red-50/30'
                   : 'border-green-300 bg-green-50/30'
               }`}>
                 <div className="flex items-center gap-2 mb-4">
                   <div className={`p-2 rounded-lg ${
-                    (riepilogo.saldo_iva || 0) === 0
+                    (riepilogoFiltrato.saldo_iva || 0) === 0
                       ? 'bg-green-100'
-                      : (riepilogo.saldo_iva || 0) > 0
+                      : (riepilogoFiltrato.saldo_iva || 0) > 0
                       ? 'bg-red-100'
                       : 'bg-green-100'
                   }`}>
                     <FileText className={`h-5 w-5 ${
-                      (riepilogo.saldo_iva || 0) === 0
+                      (riepilogoFiltrato.saldo_iva || 0) === 0
                         ? 'text-green-600'
-                        : (riepilogo.saldo_iva || 0) > 0
+                        : (riepilogoFiltrato.saldo_iva || 0) > 0
                         ? 'text-red-600'
                         : 'text-green-600'
                     }`} />
@@ -658,28 +802,28 @@ export function MovimentiTab({ commessaId, fattureAttive, fatturePassive, riepil
                 </div>
                 <div className="space-y-2">
                   <div className={`text-3xl font-bold ${
-                    (riepilogo.saldo_iva || 0) === 0
+                    (riepilogoFiltrato.saldo_iva || 0) === 0
                       ? 'text-green-600'
-                      : (riepilogo.saldo_iva || 0) > 0
+                      : (riepilogoFiltrato.saldo_iva || 0) > 0
                       ? 'text-red-600'
                       : 'text-green-600'
                   }`}>
                     {formatCurrency(
-                      (riepilogo.saldo_iva || 0) === 0
+                      (riepilogoFiltrato.saldo_iva || 0) === 0
                         ? 0
-                        : (riepilogo.saldo_iva || 0) > 0
-                        ? -(riepilogo.saldo_iva || 0)
-                        : -(riepilogo.saldo_iva || 0)
+                        : (riepilogoFiltrato.saldo_iva || 0) > 0
+                        ? -(riepilogoFiltrato.saldo_iva || 0)
+                        : -(riepilogoFiltrato.saldo_iva || 0)
                     )}
                   </div>
                   <div className={`text-sm font-medium ${
-                    (riepilogo.saldo_iva || 0) === 0
+                    (riepilogoFiltrato.saldo_iva || 0) === 0
                       ? 'text-green-700'
-                      : (riepilogo.saldo_iva || 0) > 0
+                      : (riepilogoFiltrato.saldo_iva || 0) > 0
                       ? 'text-red-700'
                       : 'text-green-700'
                   }`}>
-                    {(riepilogo.saldo_iva || 0) === 0 ? 'Neutra' : (riepilogo.saldo_iva || 0) > 0 ? 'IVA a debito' : 'IVA a credito'}
+                    {(riepilogoFiltrato.saldo_iva || 0) === 0 ? 'Neutra' : (riepilogoFiltrato.saldo_iva || 0) > 0 ? 'IVA a debito' : 'IVA a credito'}
                   </div>
                   <div className="text-xs text-muted-foreground mt-2">
                     IVA ricavi - IVA costi
@@ -782,17 +926,23 @@ export function MovimentiTab({ commessaId, fattureAttive, fatturePassive, riepil
                 </div>
                 <div className="space-y-2">
                   <div className="text-3xl font-bold text-gray-700">
-                    {formatCurrency((riepilogo.costi_imponibile || 0) + (riepilogo.costi_buste_paga || 0))}
+                    {formatCurrency((riepilogo.costi_imponibile || 0) + (riepilogo.costi_buste_paga || 0) + (riepilogo.costi_f24 || 0))}
                   </div>
                   <div className="space-y-1 mt-2 pt-2 border-t border-border">
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-muted-foreground">Fatture:</span>
                       <span className="font-semibold">{formatCurrency(riepilogo.costi_imponibile)}</span>
                     </div>
-                    {riepilogo.costi_buste_paga > 0 && (
+                    {(riepilogo.costi_buste_paga || 0) > 0 && (
                       <div className="flex justify-between items-center text-xs">
                         <span className="text-muted-foreground">Buste Paga:</span>
                         <span className="font-semibold text-yellow-600">{formatCurrency(riepilogo.costi_buste_paga)}</span>
+                      </div>
+                    )}
+                    {(riepilogo.costi_f24 || 0) > 0 && (
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-muted-foreground">F24:</span>
+                        <span className="font-semibold text-orange-600">{formatCurrency(riepilogo.costi_f24)}</span>
                       </div>
                     )}
                   </div>

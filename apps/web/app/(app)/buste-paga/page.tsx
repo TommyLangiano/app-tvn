@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Wallet, Plus, FileText } from 'lucide-react';
+import { Wallet, Plus, FileText, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MonthNavigator } from '@/components/ui/month-navigator';
 import { NuovaBustaPagaModal } from '@/components/features/buste-paga/NuovaBustaPagaModal';
@@ -185,6 +185,14 @@ export default function BustePagaPage() {
             <FileText className="h-5 w-5 text-primary" />
           )}
         </>
+      ),
+    },
+    {
+      key: 'actions',
+      label: '',
+      sortable: false,
+      render: () => (
+        <ChevronRight className="h-5 w-5 text-muted-foreground" />
       ),
     },
   ];

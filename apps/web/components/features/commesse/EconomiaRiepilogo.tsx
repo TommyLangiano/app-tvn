@@ -103,9 +103,11 @@ export function EconomiaRiepilogo({
       {/* Card Riepilogo Economico */}
       <div className="rounded-xl border-2 border-border bg-card p-4 sm:p-6 space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-2">
-          <DollarSign className="h-5 w-5 text-primary" />
-          <h3 className="text-base sm:text-lg font-semibold">Riepilogo Economico</h3>
+        <div className="flex items-start gap-2">
+          <DollarSign className="h-5 w-5 text-primary mt-0.5" />
+          <h3 className="text-base sm:text-lg font-semibold leading-tight">
+            Riepilogo<br />Economico
+          </h3>
         </div>
 
         {/* Ricavi e Costi */}
@@ -115,7 +117,7 @@ export function EconomiaRiepilogo({
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-green-600" />
-                <h4 className="font-semibold text-green-600 text-sm sm:text-base">Ricavi</h4>
+                <h4 className="font-semibold text-green-600 text-sm sm:text-base">Fatture Emesse</h4>
               </div>
               {onNuovoRicavo && (
                 <Button
@@ -149,7 +151,7 @@ export function EconomiaRiepilogo({
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <TrendingDown className="h-4 w-4 text-red-600" />
-                <h4 className="font-semibold text-red-600 text-sm sm:text-base">Costi</h4>
+                <h4 className="font-semibold text-red-600 text-sm sm:text-base">Totale Costi</h4>
               </div>
               {onNuovoCosto && (
                 <Button
@@ -164,8 +166,16 @@ export function EconomiaRiepilogo({
             </div>
             <div className="space-y-2 pl-4 sm:pl-6">
               <div className="flex justify-between text-xs sm:text-sm gap-2">
-                <span className="text-muted-foreground">Imponibile:</span>
+                <span className="text-muted-foreground">Fatture:</span>
                 <span className="font-medium break-words text-right">{formatCurrency(riepilogo.costi_imponibile)}</span>
+              </div>
+              <div className="flex justify-between text-xs sm:text-sm gap-2">
+                <span className="text-muted-foreground">Buste Paga:</span>
+                <span className="font-medium break-words text-right">{formatCurrency(riepilogo.costi_buste_paga || 0)}</span>
+              </div>
+              <div className="flex justify-between text-xs sm:text-sm gap-2">
+                <span className="text-muted-foreground">F24:</span>
+                <span className="font-medium break-words text-right">{formatCurrency(riepilogo.costi_f24 || 0)}</span>
               </div>
               <div className="flex justify-between text-xs sm:text-sm gap-2">
                 <span className="text-muted-foreground">IVA:</span>
@@ -173,7 +183,7 @@ export function EconomiaRiepilogo({
               </div>
               <div className="flex justify-between border-t pt-2 gap-2">
                 <span className="font-semibold text-sm sm:text-base">Totale:</span>
-                <span className="font-bold text-sm sm:text-base break-words text-right">{formatCurrency(riepilogo.costi_totali)}</span>
+                <span className="font-bold text-sm sm:text-base break-words text-right">{formatCurrency(riepilogo.costi_totali + (riepilogo.costi_buste_paga || 0) + (riepilogo.costi_f24 || 0))}</span>
               </div>
             </div>
           </div>

@@ -1,0 +1,73 @@
+-- Migration: Fix riepilogo_economico_commessa with correct calculations
+-- Description: Corregge i calcoli del margine lordo (su imponibile) e aggiunge saldo IVA
+-- Date: 2026-01-03
+
+-- Drop the existing view
+DROP VIEW IF EXISTS public.riepilogo_economico_commessa;
+
+-- Recreate with correct calculations
+CREATE VIEW public.riepilogo_economico_commessa
+WITH (security_invoker = true) AS
+WITH ricavi AS (
+  SELECT
+    commessa_id,
+    COALESCE(SUM(importo_imponibile), 0) as ricavi_imponibile,
+    COALESCE(SUM(importo_iva), 0) as ricavi_iva,
+    COALESCE(SUM(importo_totale), 0) as ricavi_totali,
+    COUNT(*) as numero_ricavi
+  FROM fatture_attive
+  WHERE commessa_id IS NOT NULL
+  GROUP BY commessa_id
+),
+costi_fatture AS (
+  SELECT
+    commessa_id,
+    COALESCE(SUM(importo_imponibile), 0) as costi_imponibile,
+    COALESCE(SUM(importo_iva), 0) as costi_iva,
+    COALESCE(SUM(importo_totale), 0) as costi_totali,
+    COUNT(*) as numero_fatture_passive
+  FROM fatture_passive
+  WHERE commessa_id IS NOT NULL
+  GROUP BY commessa_id
+),
+costi_buste_paga AS (
+  SELECT
+    commessa_id,
+    COALESCE(SUM(importo_commessa), 0) as costi_buste_paga
+  FROM buste_paga_dettaglio
+  GROUP BY commessa_id
+),
+all_commesse AS (
+  SELECT DISTINCT commessa_id FROM fatture_attive WHERE commessa_id IS NOT NULL
+  UNION
+  SELECT DISTINCT commessa_id FROM fatture_passive WHERE commessa_id IS NOT NULL
+  UNION
+  SELECT DISTINCT commessa_id FROM buste_paga_dettaglio WHERE commessa_id IS NOT NULL
+)
+SELECT
+  ac.commessa_id,
+  -- Ricavi
+  COALESCE(r.ricavi_imponibile, 0) as ricavi_imponibile,
+  COALESCE(r.ricavi_iva, 0) as ricavi_iva,
+  COALESCE(r.ricavi_totali, 0) as ricavi_totali,
+  -- Costi (solo fatture passive - imponibile e IVA)
+  COALESCE(cf.costi_imponibile, 0) as costi_imponibile,
+  COALESCE(cf.costi_iva, 0) as costi_iva,
+  COALESCE(cf.costi_totali, 0) as costi_totali,
+  -- Costi Buste Paga (senza IVA)
+  COALESCE(cbp.costi_buste_paga, 0) as costi_buste_paga,
+  -- Margine Lordo = Ricavi Imponibile - Costi Imponibile - Costi Buste Paga
+  COALESCE(r.ricavi_imponibile, 0) - COALESCE(cf.costi_imponibile, 0) - COALESCE(cbp.costi_buste_paga, 0) as margine_lordo,
+  -- Saldo IVA = IVA Ricavi - IVA Costi
+  COALESCE(r.ricavi_iva, 0) - COALESCE(cf.costi_iva, 0) as saldo_iva,
+  -- Contatori
+  COALESCE(r.numero_ricavi, 0) + COALESCE(cf.numero_fatture_passive, 0) as totale_movimenti,
+  COALESCE(r.numero_ricavi, 0) as numero_ricavi,
+  COALESCE(cf.numero_fatture_passive, 0) as numero_costi
+FROM all_commesse ac
+LEFT JOIN ricavi r ON ac.commessa_id = r.commessa_id
+LEFT JOIN costi_fatture cf ON ac.commessa_id = cf.commessa_id
+LEFT JOIN costi_buste_paga cbp ON ac.commessa_id = cbp.commessa_id;
+
+-- Add comment
+COMMENT ON VIEW public.riepilogo_economico_commessa IS 'View che aggrega i dati economici per commessa (ricavi da fatture attive, costi da fatture passive e buste paga, margine calcolato su imponibile)';

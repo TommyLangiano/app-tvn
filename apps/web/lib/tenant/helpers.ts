@@ -17,14 +17,20 @@ export async function getCurrentTenantId(supabase?: SupabaseClient): Promise<str
   const { data: { user } } = await client.auth.getUser();
   if (!user) return null;
 
-  const { data: tenants } = await client
+  const { data: tenant, error } = await client
     .from('user_tenants')
     .select('tenant_id')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
-    .limit(1);
+    .limit(1)
+    .maybeSingle();
 
-  return tenants && tenants.length > 0 ? tenants[0].tenant_id : null;
+  if (error) {
+    console.error('Error fetching tenant:', error);
+    return null;
+  }
+
+  return tenant?.tenant_id || null;
 }
 
 /**
@@ -40,12 +46,18 @@ export async function getCurrentUserTenant(supabase?: SupabaseClient): Promise<{
   const { data: { user } } = await client.auth.getUser();
   if (!user) return null;
 
-  const { data: tenants } = await client
+  const { data: tenant, error } = await client
     .from('user_tenants')
     .select('tenant_id, role')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
-    .limit(1);
+    .limit(1)
+    .maybeSingle();
 
-  return tenants && tenants.length > 0 ? tenants[0] : null;
+  if (error) {
+    console.error('Error fetching user tenant:', error);
+    return null;
+  }
+
+  return tenant || null;
 }

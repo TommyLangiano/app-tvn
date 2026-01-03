@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { ArrowRight, Mail, MapPin, FileText, Building2 } from 'lucide-react';
+import { ArrowRight, Mail, MapPin, FileText, Building2, LogOut } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 const formeGiuridiche = [
@@ -76,6 +76,12 @@ export default function AccountRecoveryPage() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    window.location.href = '/sign-in';
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -120,6 +126,19 @@ export default function AccountRecoveryPage() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="max-w-4xl w-full">
+        {/* Logout Button */}
+        <div className="flex justify-end mb-4">
+          <Button
+            onClick={handleLogout}
+            variant="outline"
+            size="sm"
+            className="gap-2"
+          >
+            <LogOut className="h-4 w-4" />
+            Esci
+          </Button>
+        </div>
+
         {/* Logo Header */}
         <div className="flex justify-center mb-8">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg">

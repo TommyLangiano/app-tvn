@@ -53,6 +53,7 @@ interface RiepilogoEconomicoData {
   fatturatoEmesso: number;
   costiTotali: number;
   costiBustePaga: number;
+  costiF24: number;
   noteSpesa: number;
   utileLordo: number;
   saldoIva: number;
@@ -73,6 +74,27 @@ export const RiepilogoEconomicoChart = memo(({ data }: RiepilogoEconomicoChartPr
       'Saldo IVA'
     ],
     datasets: [
+      // Tutte le colonne standard (verde)
+      {
+        label: 'Valori',
+        data: [
+          data.fatturatoPrevisto,
+          data.fatturatoEmesso,
+          0, // Costi mostrati con stack
+          data.noteSpesa,
+          data.utileLordo,
+          -data.saldoIva
+        ],
+        backgroundColor: 'rgb(5, 150, 105)', // emerald-600 (primary)
+        borderWidth: 2,
+        borderColor: 'rgb(5, 150, 105)',
+        hoverBorderColor: 'rgb(4, 120, 87)', // emerald-700
+        borderRadius: 6,
+        maxBarThickness: 60,
+        barPercentage: 0.65,
+        categoryPercentage: 0.75,
+        stack: 'stack0',
+      },
       // Prima parte della barra costi (verde - fatture)
       {
         label: 'Costi Fatture',
@@ -85,12 +107,14 @@ export const RiepilogoEconomicoChart = memo(({ data }: RiepilogoEconomicoChartPr
           0
         ],
         backgroundColor: 'rgb(5, 150, 105)', // emerald-600 (verde)
-        borderWidth: 0,
+        borderWidth: 2,
+        borderColor: 'rgb(5, 150, 105)',
+        hoverBorderColor: 'rgb(4, 120, 87)', // emerald-700
         borderRadius: { topLeft: 0, topRight: 0, bottomLeft: 6, bottomRight: 6 },
         maxBarThickness: 60,
-        barPercentage: 0.6,
-        categoryPercentage: 0.7,
-        stack: 'costi',
+        barPercentage: 0.65,
+        categoryPercentage: 0.75,
+        stack: 'stack0',
       },
       // Seconda parte della barra costi (giallo - buste paga)
       {
@@ -104,30 +128,35 @@ export const RiepilogoEconomicoChart = memo(({ data }: RiepilogoEconomicoChartPr
           0
         ],
         backgroundColor: 'rgb(234, 179, 8)', // yellow-600 (giallo)
-        borderWidth: 0,
+        borderWidth: 2,
+        borderColor: 'rgb(234, 179, 8)',
+        hoverBorderColor: 'rgb(202, 138, 4)', // yellow-700
+        borderRadius: { topLeft: 0, topRight: 0, bottomLeft: 0, bottomRight: 0 },
+        maxBarThickness: 60,
+        barPercentage: 0.65,
+        categoryPercentage: 0.75,
+        stack: 'stack0',
+      },
+      // Terza parte della barra costi (rosso - F24)
+      {
+        label: 'Costi F24',
+        data: [
+          0,
+          0,
+          data.costiF24,
+          0,
+          0,
+          0
+        ],
+        backgroundColor: 'rgb(220, 38, 38)', // red-600 (rosso)
+        borderWidth: 2,
+        borderColor: 'rgb(220, 38, 38)',
+        hoverBorderColor: 'rgb(185, 28, 28)', // red-700
         borderRadius: { topLeft: 6, topRight: 6, bottomLeft: 0, bottomRight: 0 },
         maxBarThickness: 60,
-        barPercentage: 0.6,
-        categoryPercentage: 0.7,
-        stack: 'costi',
-      },
-      // Tutte le altre colonne (verde)
-      {
-        label: 'Valori',
-        data: [
-          data.fatturatoPrevisto,
-          data.fatturatoEmesso,
-          0, // Costi mostrati con stack
-          data.noteSpesa,
-          data.utileLordo,
-          -data.saldoIva
-        ],
-        backgroundColor: 'rgb(5, 150, 105)', // emerald-600 (primary)
-        borderWidth: 0,
-        borderRadius: 6,
-        maxBarThickness: 60,
-        barPercentage: 0.6,
-        categoryPercentage: 0.7,
+        barPercentage: 0.65,
+        categoryPercentage: 0.75,
+        stack: 'stack0',
       }
     ]
   }), [data]);
@@ -145,6 +174,7 @@ export const RiepilogoEconomicoChart = memo(({ data }: RiepilogoEconomicoChartPr
         titleColor: '#1f2937',
         bodyColor: '#1f2937',
         borderWidth: 2,
+        borderColor: '#059669',
         padding: 16,
         displayColors: true,
         cornerRadius: 8,
@@ -169,32 +199,41 @@ export const RiepilogoEconomicoChart = memo(({ data }: RiepilogoEconomicoChartPr
                 return `Costi Fatture: ${formatCurrencyExact(value)}`;
               } else if (label === 'Costi Buste Paga') {
                 return `Costi Buste Paga: ${formatCurrencyExact(value)}`;
+              } else if (label === 'Costi F24') {
+                return `Costi F24: ${formatCurrencyExact(value)}`;
               }
             }
 
             return formatCurrencyExact(value);
           },
-          footer: function(context: any) {
-            // Per la colonna "Tot. Imp. Costi" mostra il totale
+          afterBody: function(context: any) {
+            // Per la colonna "Tot. Imp. Costi" mostra il totale dopo tutte le label
             if (context[0]?.dataIndex === 2) {
-              const totale = data.costiTotali + data.costiBustePaga;
-              return `Totale: ${formatCurrencyExact(totale)}`;
+              const totale = data.costiTotali + data.costiBustePaga + data.costiF24;
+              return `\n━━━━━━━━━━━━━━━━\nTOTALE COSTI: ${formatCurrencyExact(totale)}`;
             }
             return '';
           }
-        }
+        },
+        footerFont: {
+          size: 16,
+          weight: 'bold' as const,
+        },
+        footerColor: '#1f2937',
       }
     },
     scales: {
       y: {
         stacked: true,
         beginAtZero: true,
+        suggestedMax: undefined, // Lascia che il grafico si adatti automaticamente
+        grace: '5%', // Aggiungi 5% di spazio sopra il valore massimo
         grid: {
           color: 'rgba(0, 0, 0, 0.05)',
           drawBorder: false,
         },
         ticks: {
-          maxTicksLimit: 6,
+          maxTicksLimit: 8,
           callback: function(value: any) {
             return formatCurrencyNoDecimals(value);
           },
@@ -227,7 +266,7 @@ export const RiepilogoEconomicoChart = memo(({ data }: RiepilogoEconomicoChartPr
   }), [data]);
 
   return (
-    <div className="w-full h-[450px]">
+    <div className="w-full h-[550px]">
       <Bar data={chartData} options={options} />
     </div>
   );
@@ -237,6 +276,7 @@ export const RiepilogoEconomicoChart = memo(({ data }: RiepilogoEconomicoChartPr
     prevProps.data.fatturatoEmesso === nextProps.data.fatturatoEmesso &&
     prevProps.data.costiTotali === nextProps.data.costiTotali &&
     prevProps.data.costiBustePaga === nextProps.data.costiBustePaga &&
+    prevProps.data.costiF24 === nextProps.data.costiF24 &&
     prevProps.data.noteSpesa === nextProps.data.noteSpesa &&
     prevProps.data.utileLordo === nextProps.data.utileLordo &&
     prevProps.data.saldoIva === nextProps.data.saldoIva

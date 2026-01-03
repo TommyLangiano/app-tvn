@@ -19,6 +19,7 @@ import { formatCurrency } from '@/lib/utils/currency';
 import { InfoNotaSpesaModal } from '@/components/features/note-spesa/InfoNotaSpesaModal';
 import { DeleteNotaSpesaModal } from '@/components/features/note-spesa/DeleteNotaSpesaModal';
 import { ConfermaNotaSpesaModal } from '@/components/features/note-spesa/ConfermaNotaSpesaModal';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
 
 type User = {
   id: string;
@@ -61,6 +62,8 @@ export function NoteSpeseTab({
   // Filtri
   const [searchTerm, setSearchTerm] = useState('');
   const [filtroUtente, setFiltroUtente] = useState<string>('');
+  const [dateFrom, setDateFrom] = useState<string>('');
+  const [dateTo, setDateTo] = useState<string>('');
 
   // Tab state
   const [activeTab, setActiveTab] = useState<TabType>('approvate');
@@ -81,6 +84,11 @@ export function NoteSpeseTab({
 
   // Multi-selection states
   const [selectedNoteSpese, setSelectedNoteSpese] = useState<Set<string>>(new Set());
+
+  const handleDateRangeChange = (from: string, to: string) => {
+    setDateFrom(from);
+    setDateTo(to);
+  };
 
   useEffect(() => {
     loadInitialData();
@@ -181,6 +189,11 @@ export function NoteSpeseTab({
       filtered = filtered.filter(n => n.dipendente_id === filtroUtente);
     }
 
+    // Filtro Date Range
+    if (dateFrom && dateTo) {
+      filtered = filtered.filter(n => n.data_nota >= dateFrom && n.data_nota <= dateTo);
+    }
+
     // Ordinamento
     filtered.sort((a, b) => {
       let aVal: any;
@@ -220,7 +233,7 @@ export function NoteSpeseTab({
     });
 
     return filtered;
-  }, [noteSpeseProp, noteSpeseDaApprovareProp, noteSpeseRifiutateProp, activeTab, searchTerm, filtroUtente, sortField, sortDirection]);
+  }, [noteSpeseProp, noteSpeseDaApprovareProp, noteSpeseRifiutateProp, activeTab, searchTerm, filtroUtente, dateFrom, dateTo, sortField, sortDirection]);
 
   // Tab counts
   const tabCounts = useMemo(() => {
@@ -240,7 +253,7 @@ export function NoteSpeseTab({
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filtroUtente, itemsPerPage]);
+  }, [searchTerm, filtroUtente, dateFrom, dateTo, itemsPerPage]);
 
   // Count active filters
   const activeFiltersCount = [
@@ -592,6 +605,15 @@ export function NoteSpeseTab({
             ))}
           </SelectContent>
         </Select>
+
+        {/* Date Range Picker */}
+        <DateRangePicker
+          from={dateFrom}
+          to={dateTo}
+          onRangeChange={handleDateRangeChange}
+          placeholder="Seleziona Intervallo"
+          className="w-full lg:w-auto"
+        />
       </div>
 
       {/* DataTable */}

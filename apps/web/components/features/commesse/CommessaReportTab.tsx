@@ -5,11 +5,14 @@ import { format } from 'date-fns';
 import { RiepilogoEconomicoChart } from '@/app/(app)/report/components/charts/RiepilogoEconomicoChart';
 import { PeriodFilter, type PeriodType } from '@/app/(app)/report/azienda/components/PeriodFilter';
 import { getDateRangeFromPeriod, type DateRange } from '@/app/(app)/report/azienda/utils/dateFilters';
+import { createClient } from '@/lib/supabase/client';
 
 interface RiepilogoEconomicoData {
   fatturatoPrevisto: number;
   fatturatoEmesso: number;
   costiTotali: number;
+  costiBustePaga: number;
+  costiF24: number;
   noteSpesa: number;
   utileLordo: number;
   saldoIva: number;
@@ -58,6 +61,8 @@ export function CommessaReportTab({ commessaId, commessa, fattureAttive, fatture
   const [customDateFrom, setCustomDateFrom] = useState<string>('');
   const [customDateTo, setCustomDateTo] = useState<string>('');
   const [dateRange, setDateRange] = useState<DateRange>(() => getDateRangeFromPeriod('oggi'));
+  const [bustePagaDettaglio, setBustePagaDettaglio] = useState<any[]>([]);
+  const [f24Dettaglio, setF24Dettaglio] = useState<any[]>([]);
 
   // Gestione cambio periodo
   const handlePeriodChange = useCallback((period: PeriodType) => {
@@ -90,6 +95,54 @@ export function CommessaReportTab({ commessaId, commessa, fattureAttive, fatture
       setDateRange(newRange);
     }
   }, []);
+
+  // Carica dettagli buste paga per la commessa
+  useEffect(() => {
+    const loadBustePagaDettaglio = async () => {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('buste_paga_dettaglio')
+        .select(`
+          *,
+          buste_paga (
+            mese,
+            anno,
+            dipendente_id
+          )
+        `)
+        .eq('commessa_id', commessaId);
+
+      if (!error && data) {
+        setBustePagaDettaglio(data);
+      }
+    };
+
+    loadBustePagaDettaglio();
+  }, [commessaId]);
+
+  // Carica dettagli F24 per la commessa
+  useEffect(() => {
+    const loadF24Dettaglio = async () => {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('f24_dettaglio')
+        .select(`
+          *,
+          f24 (
+            mese,
+            anno,
+            importo_f24
+          )
+        `)
+        .eq('commessa_id', commessaId);
+
+      if (!error && data) {
+        setF24Dettaglio(data);
+      }
+    };
+
+    loadF24Dettaglio();
+  }, [commessaId]);
 
   // Calcolo dati usando useMemo per prestazioni istantanee
   const riepilogoData = useMemo(() => {
@@ -127,12 +180,50 @@ export function CommessaReportTab({ commessaId, commessa, fattureAttive, fatture
       return n.stato === 'approvato' && n.data_nota >= dateFrom && n.data_nota <= dateTo;
     });
 
+    // Filtra buste paga per data range (usando mese/anno)
+    const bustePagaFiltrate = bustePagaDettaglio.filter(dettaglio => {
+      if (!dettaglio.buste_paga) return false;
+      const { mese, anno } = dettaglio.buste_paga;
+
+      // Converti mese/anno in data (primo giorno del mese)
+      const bustaPagaDate = format(new Date(anno, mese - 1, 1), 'yyyy-MM-dd');
+
+      return bustaPagaDate >= dateFrom && bustaPagaDate <= dateTo;
+    });
+
+    // Calcola totale costi buste paga
+    const totaleBustePaga = bustePagaFiltrate.reduce((sum, dettaglio) => {
+      return sum + (Number(dettaglio.importo_commessa) || 0);
+    }, 0);
+
+    console.log('💼 Buste paga filtrate:', bustePagaFiltrate.length);
+    console.log('💼 Totale costi buste paga:', totaleBustePaga);
+
+    // Filtra F24 per date range (usando mese/anno)
+    const f24Filtrate = f24Dettaglio.filter(dettaglio => {
+      if (!dettaglio.f24) return false;
+      const { mese, anno } = dettaglio.f24;
+
+      // Converti mese/anno in data (primo giorno del mese)
+      const f24Date = format(new Date(anno, mese - 1, 1), 'yyyy-MM-dd');
+
+      return f24Date >= dateFrom && f24Date <= dateTo;
+    });
+
+    // Calcola totale costi F24
+    const totaleF24 = f24Filtrate.reduce((sum, dettaglio) => {
+      return sum + (Number(dettaglio.valore_f24_commessa) || 0);
+    }, 0);
+
+    console.log('📋 F24 filtrate:', f24Filtrate.length);
+    console.log('📋 Totale costi F24:', totaleF24);
+
     // Calcola i totali usando helper ottimizzati
     const fatturatoPrevisto = commessa?.importo_commessa || commessa?.budget_commessa || 0;
     const fatturatoEmesso = sumImponibili(fattureAttiveFiltrate);
     const costiTotali = sumImponibili(fatturePassiveFiltrate);
     const totaleNoteSpesa = sumImporti(noteSpeseApprovate);
-    const utileLordo = fatturatoEmesso - costiTotali - totaleNoteSpesa;
+    const utileLordo = fatturatoEmesso - costiTotali - totaleBustePaga - totaleF24 - totaleNoteSpesa;
 
     // Calcola saldo IVA (IVA ricavi - IVA costi)
     const ivaFatturePassive = sumIva(fatturePassiveFiltrate);
@@ -157,12 +248,14 @@ export function CommessaReportTab({ commessaId, commessa, fattureAttive, fatture
       fatturatoPrevisto,
       fatturatoEmesso,
       costiTotali,
+      costiBustePaga: totaleBustePaga,
+      costiF24: totaleF24,
       noteSpesa: totaleNoteSpesa,
       utileLordo,
       saldoIva,
       percentualeUtileLordo,
     };
-  }, [dateRange, commessa, fattureAttive, fatturePassive, noteSpese]);
+  }, [dateRange, commessa, fattureAttive, fatturePassive, noteSpese, bustePagaDettaglio, f24Dettaglio]);
 
   // Effetto per aggiornare automaticamente il dateRange quando cambia l'anno corrente
   useEffect(() => {
@@ -190,19 +283,23 @@ export function CommessaReportTab({ commessaId, commessa, fattureAttive, fatture
       <div className="bg-card rounded-xl border border-border overflow-hidden">
         {/* Header con titolo e filtri sulla stessa riga */}
         <div className="px-6 pt-6 pb-6">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-foreground">Riepilogo Economico</h1>
+          <div className="flex items-start justify-between gap-4">
+            <h1 className="text-2xl font-bold text-foreground leading-tight">
+              Riepilogo<br />Economico
+            </h1>
 
             {/* Filtri Periodo */}
-            <PeriodFilter
-              selectedPeriod={selectedPeriod}
-              selectedYear={selectedYear}
-              customDateFrom={customDateFrom}
-              customDateTo={customDateTo}
-              onPeriodChange={handlePeriodChange}
-              onYearChange={handleYearChange}
-              onCustomDateChange={handleCustomDateChange}
-            />
+            <div className="flex items-center">
+              <PeriodFilter
+                selectedPeriod={selectedPeriod}
+                selectedYear={selectedYear}
+                customDateFrom={customDateFrom}
+                customDateTo={customDateTo}
+                onPeriodChange={handlePeriodChange}
+                onYearChange={handleYearChange}
+                onCustomDateChange={handleCustomDateChange}
+              />
+            </div>
           </div>
         </div>
 

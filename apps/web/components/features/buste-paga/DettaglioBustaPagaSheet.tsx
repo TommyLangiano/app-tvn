@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FileText, Trash2, X, ChevronDown, ChevronRight } from 'lucide-react';
+import { FileText, Trash2, X } from 'lucide-react';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { getSignedUrl } from '@/lib/utils/storage';
@@ -33,7 +33,6 @@ export function DettaglioBustaPagaSheet({
   const [allegatoUrl, setAllegatoUrl] = useState<string | null>(null);
   const [dettagli, setDettagli] = useState<BustaPagaDettaglio[]>([]);
   const [loadingDettagli, setLoadingDettagli] = useState(true);
-  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (bustaPaga.allegato_url) {
@@ -44,8 +43,6 @@ export function DettaglioBustaPagaSheet({
   useEffect(() => {
     if (isOpen) {
       loadDettagli();
-      // Espandi tutti gli items di default
-      setExpandedItems(new Set());
     }
   }, [isOpen, bustaPaga.id]);
 
@@ -124,16 +121,6 @@ export function DettaglioBustaPagaSheet({
     });
   };
 
-  const toggleExpand = (id: string) => {
-    const newExpanded = new Set(expandedItems);
-    if (newExpanded.has(id)) {
-      newExpanded.delete(id);
-    } else {
-      newExpanded.add(id);
-    }
-    setExpandedItems(newExpanded);
-  };
-
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
@@ -179,7 +166,7 @@ export function DettaglioBustaPagaSheet({
           <div className="bg-primary/5 rounded-lg p-6 space-y-4">
             <h3 className="text-lg font-semibold border-b pb-2">Riepilogo</h3>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div>
                 <p className="text-sm text-muted-foreground">Ore Totali</p>
                 <p className="text-2xl font-bold text-primary">
@@ -188,17 +175,16 @@ export function DettaglioBustaPagaSheet({
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Importo Totale</p>
-                <p className="text-2xl font-bold text-primary">
+                <p className="text-2xl font-bold text-foreground">
                   {formatCurrency(Number(bustaPaga.importo_totale))}
                 </p>
               </div>
-            </div>
-
-            <div className="pt-4 border-t border-border">
-              <p className="text-sm text-muted-foreground">Costo Orario</p>
-              <p className="text-xl font-semibold text-foreground">
-                {formatCurrency(Number(bustaPaga.costo_orario))}/h
-              </p>
+              <div>
+                <p className="text-sm text-muted-foreground">Costo Orario</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {formatCurrency(Number(bustaPaga.costo_orario))}/h
+                </p>
+              </div>
             </div>
           </div>
 
@@ -219,86 +205,53 @@ export function DettaglioBustaPagaSheet({
               </div>
             ) : (
               <div className="space-y-3">
-                {dettagli.map((dettaglio) => {
-                  const isExpanded = expandedItems.has(dettaglio.id);
-                  return (
-                    <div
-                      key={dettaglio.id}
-                      className="bg-white border border-border rounded-lg overflow-hidden transition-shadow hover:shadow-sm"
-                    >
-                      {/* Header - Sempre visibile e cliccabile */}
-                      <div
-                        onClick={() => toggleExpand(dettaglio.id)}
-                        className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 transition-colors"
-                      >
-                        <div className="flex items-center gap-3 flex-1">
-                          <button
-                            className="text-muted-foreground hover:text-foreground transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleExpand(dettaglio.id);
-                            }}
-                          >
-                            {isExpanded ? (
-                              <ChevronDown className="h-5 w-5" />
-                            ) : (
-                              <ChevronRight className="h-5 w-5" />
-                            )}
-                          </button>
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-foreground">
-                              {(dettaglio.commesse as any)?.nome_commessa || 'Commessa sconosciuta'}
-                            </h4>
-                            {(dettaglio.commesse as any)?.codice_commessa && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                Codice: {(dettaglio.commesse as any).codice_commessa}
-                              </p>
-                            )}
-                          </div>
+                {dettagli.map((dettaglio) => (
+                  <div
+                    key={dettaglio.id}
+                    className="bg-white border border-border rounded-lg overflow-hidden transition-shadow hover:shadow-sm"
+                  >
+                    <div className="p-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-foreground">
+                            {(dettaglio.commesse as any)?.nome_commessa || 'Commessa sconosciuta'}
+                          </h4>
+                          {(dettaglio.commesse as any)?.codice_commessa && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Codice: {(dettaglio.commesse as any).codice_commessa}
+                            </p>
+                          )}
                         </div>
-                        <div className="text-right">
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Ore Lavorate</p>
                           <p className="text-lg font-bold text-primary">
                             {Number(dettaglio.ore_commessa).toFixed(2)} h
                           </p>
-                          <p className="text-sm text-muted-foreground">
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Importo</p>
+                          <p className="text-lg font-bold text-foreground">
                             {formatCurrency(Number(dettaglio.importo_commessa))}
                           </p>
                         </div>
                       </div>
 
-                      {/* Dettagli espandibili */}
-                      {isExpanded && (
-                        <div className="px-4 pb-4 pt-2 border-t border-border bg-gray-50/50">
-                          <div className="grid grid-cols-2 gap-4 mb-3">
-                            <div>
-                              <p className="text-xs text-muted-foreground mb-1">Ore Lavorate</p>
-                              <p className="text-lg font-bold text-primary">
-                                {Number(dettaglio.ore_commessa).toFixed(2)} h
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-muted-foreground mb-1">Importo</p>
-                              <p className="text-lg font-bold text-foreground">
-                                {formatCurrency(Number(dettaglio.importo_commessa))}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="pt-3 border-t border-border">
-                            <div className="flex items-center justify-between text-xs text-muted-foreground">
-                              <span>Percentuale sul totale:</span>
-                              <span className="font-semibold">
-                                {bustaPaga.ore_totali > 0
-                                  ? ((Number(dettaglio.ore_commessa) / Number(bustaPaga.ore_totali)) * 100).toFixed(1)
-                                  : 0}%
-                              </span>
-                            </div>
-                          </div>
+                      <div className="pt-3 mt-3 border-t border-border">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>Percentuale sul totale:</span>
+                          <span className="font-semibold">
+                            {bustaPaga.ore_totali > 0
+                              ? ((Number(dettaglio.ore_commessa) / Number(bustaPaga.ore_totali)) * 100).toFixed(1)
+                              : 0}%
+                          </span>
                         </div>
-                      )}
+                      </div>
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
               </div>
             )}
           </div>

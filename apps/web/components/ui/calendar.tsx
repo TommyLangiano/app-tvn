@@ -17,6 +17,13 @@ function Calendar({
       showOutsideDays={showOutsideDays}
       className={cn('p-4 rounded-lg border', className)}
       weekStartsOn={1}
+      modifiersClassNames={{
+        selected: 'bg-primary text-primary-foreground hover:bg-primary/90',
+        range_start: 'bg-primary text-primary-foreground',
+        range_end: 'bg-primary text-primary-foreground',
+        range_middle: '!bg-primary/10 !text-foreground',
+        today: '!text-primary !font-bold',
+      }}
       {...props}
     />
   );
