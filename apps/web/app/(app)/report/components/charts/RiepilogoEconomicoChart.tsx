@@ -50,11 +50,11 @@ ChartJS.register(
 
 interface RiepilogoEconomicoData {
   fatturatoPrevisto: number;
-  fatturatoEmesso: number;
-  costiTotali: number;
+  imponibileRicavi: number;
+  imponibileCostiFatture: number;
   costiBustePaga: number;
   costiF24: number;
-  noteSpesa: number;
+  noteSpesaApprovate: number;
   utileLordo: number;
   saldoIva: number;
 }
@@ -67,25 +67,23 @@ export const RiepilogoEconomicoChart = memo(({ data }: RiepilogoEconomicoChartPr
   const chartData = useMemo(() => ({
     labels: [
       'Importo Contratto',
-      'Tot. Imp. Fatturato',
-      'Tot. Imp. Costi',
-      'Note Spesa',
+      'Imponibile Ricavi',
+      'Imponibile Costi',
       'Utile Lordo',
       'Saldo IVA'
     ],
     datasets: [
-      // Tutte le colonne standard (verde)
+      // Colonne standard (verde)
       {
-        label: 'Valori',
+        label: 'Importo Contratto',
         data: [
           data.fatturatoPrevisto,
-          data.fatturatoEmesso,
-          0, // Costi mostrati con stack
-          data.noteSpesa,
-          data.utileLordo,
-          -data.saldoIva
+          0,
+          0,
+          0,
+          0
         ],
-        backgroundColor: 'rgb(5, 150, 105)', // emerald-600 (primary)
+        backgroundColor: 'rgb(5, 150, 105)', // emerald-600
         borderWidth: 2,
         borderColor: 'rgb(5, 150, 105)',
         hoverBorderColor: 'rgb(4, 120, 87)', // emerald-700
@@ -95,18 +93,37 @@ export const RiepilogoEconomicoChart = memo(({ data }: RiepilogoEconomicoChartPr
         categoryPercentage: 0.75,
         stack: 'stack0',
       },
-      // Prima parte della barra costi (verde - fatture)
+      // Imponibile Ricavi
       {
-        label: 'Costi Fatture',
+        label: 'Imponibile Ricavi',
         data: [
           0,
-          0,
-          data.costiTotali,
+          data.imponibileRicavi,
           0,
           0,
           0
         ],
-        backgroundColor: 'rgb(5, 150, 105)', // emerald-600 (verde)
+        backgroundColor: 'rgb(5, 150, 105)', // emerald-600
+        borderWidth: 2,
+        borderColor: 'rgb(5, 150, 105)',
+        hoverBorderColor: 'rgb(4, 120, 87)', // emerald-700
+        borderRadius: 6,
+        maxBarThickness: 60,
+        barPercentage: 0.65,
+        categoryPercentage: 0.75,
+        stack: 'stack0',
+      },
+      // Imponibile Costi - Fatture (verde)
+      {
+        label: 'Fatture Passive',
+        data: [
+          0,
+          0,
+          data.imponibileCostiFatture,
+          0,
+          0
+        ],
+        backgroundColor: 'rgb(5, 150, 105)', // emerald-600
         borderWidth: 2,
         borderColor: 'rgb(5, 150, 105)',
         hoverBorderColor: 'rgb(4, 120, 87)', // emerald-700
@@ -116,18 +133,17 @@ export const RiepilogoEconomicoChart = memo(({ data }: RiepilogoEconomicoChartPr
         categoryPercentage: 0.75,
         stack: 'stack0',
       },
-      // Seconda parte della barra costi (giallo - buste paga)
+      // Imponibile Costi - Buste Paga (giallo)
       {
-        label: 'Costi Buste Paga',
+        label: 'Buste Paga',
         data: [
           0,
           0,
           data.costiBustePaga,
           0,
-          0,
           0
         ],
-        backgroundColor: 'rgb(234, 179, 8)', // yellow-600 (giallo)
+        backgroundColor: 'rgb(234, 179, 8)', // yellow-600
         borderWidth: 2,
         borderColor: 'rgb(234, 179, 8)',
         hoverBorderColor: 'rgb(202, 138, 4)', // yellow-700
@@ -137,22 +153,81 @@ export const RiepilogoEconomicoChart = memo(({ data }: RiepilogoEconomicoChartPr
         categoryPercentage: 0.75,
         stack: 'stack0',
       },
-      // Terza parte della barra costi (rosso - F24)
+      // Imponibile Costi - F24 (arancione)
       {
-        label: 'Costi F24',
+        label: 'F24',
         data: [
           0,
           0,
           data.costiF24,
           0,
+          0
+        ],
+        backgroundColor: 'rgb(249, 115, 22)', // orange-500
+        borderWidth: 2,
+        borderColor: 'rgb(249, 115, 22)',
+        hoverBorderColor: 'rgb(234, 88, 12)', // orange-600
+        borderRadius: { topLeft: 0, topRight: 0, bottomLeft: 0, bottomRight: 0 },
+        maxBarThickness: 60,
+        barPercentage: 0.65,
+        categoryPercentage: 0.75,
+        stack: 'stack0',
+      },
+      // Imponibile Costi - Note Spesa (viola)
+      {
+        label: 'Note Spesa Approvate',
+        data: [
+          0,
+          0,
+          data.noteSpesaApprovate,
           0,
           0
         ],
-        backgroundColor: 'rgb(220, 38, 38)', // red-600 (rosso)
+        backgroundColor: 'rgb(168, 85, 247)', // purple-500
         borderWidth: 2,
-        borderColor: 'rgb(220, 38, 38)',
-        hoverBorderColor: 'rgb(185, 28, 28)', // red-700
+        borderColor: 'rgb(168, 85, 247)',
+        hoverBorderColor: 'rgb(147, 51, 234)', // purple-600
         borderRadius: { topLeft: 6, topRight: 6, bottomLeft: 0, bottomRight: 0 },
+        maxBarThickness: 60,
+        barPercentage: 0.65,
+        categoryPercentage: 0.75,
+        stack: 'stack0',
+      },
+      // Utile Lordo
+      {
+        label: 'Utile Lordo',
+        data: [
+          0,
+          0,
+          0,
+          data.utileLordo,
+          0
+        ],
+        backgroundColor: 'rgb(5, 150, 105)', // emerald-600
+        borderWidth: 2,
+        borderColor: 'rgb(5, 150, 105)',
+        hoverBorderColor: 'rgb(4, 120, 87)', // emerald-700
+        borderRadius: 6,
+        maxBarThickness: 60,
+        barPercentage: 0.65,
+        categoryPercentage: 0.75,
+        stack: 'stack0',
+      },
+      // Saldo IVA
+      {
+        label: 'Saldo IVA',
+        data: [
+          0,
+          0,
+          0,
+          0,
+          data.saldoIva
+        ],
+        backgroundColor: 'rgb(5, 150, 105)', // emerald-600
+        borderWidth: 2,
+        borderColor: 'rgb(5, 150, 105)',
+        hoverBorderColor: 'rgb(4, 120, 87)', // emerald-700
+        borderRadius: 6,
         maxBarThickness: 60,
         barPercentage: 0.65,
         categoryPercentage: 0.75,
@@ -188,31 +263,50 @@ export const RiepilogoEconomicoChart = memo(({ data }: RiepilogoEconomicoChartPr
         },
         callbacks: {
           label: function(context: any) {
-            const label = context.dataset.label || '';
             const value = context.parsed.y;
+            const dataIndex = context.dataIndex;
 
-            if (value === 0) return;
+            // Salta completamente valori a 0
+            if (value === 0) return null;
 
-            // Per la colonna "Tot. Imp. Costi" mostra il dettaglio
-            if (context.dataIndex === 2) {
-              if (label === 'Costi Fatture') {
-                return `Costi Fatture: ${formatCurrencyExact(value)}`;
-              } else if (label === 'Costi Buste Paga') {
-                return `Costi Buste Paga: ${formatCurrencyExact(value)}`;
-              } else if (label === 'Costi F24') {
-                return `Costi F24: ${formatCurrencyExact(value)}`;
-              }
+            // Importo Contratto (index 0) - non mostrare label, solo valore
+            if (dataIndex === 0) {
+              return formatCurrencyExact(value);
             }
 
-            return formatCurrencyExact(value);
+            // Imponibile Ricavi (index 1) - rinomina label
+            if (dataIndex === 1) {
+              return `Imp. Fatture Emesse: ${formatCurrencyExact(value)}`;
+            }
+
+            // Imponibile Costi (index 2) - rinomina Fatture Passive
+            if (dataIndex === 2) {
+              const label = context.dataset.label || '';
+              if (label === 'Fatture Passive') {
+                return `Imp. Fatture Ricevute: ${formatCurrencyExact(value)}`;
+              }
+              return `${label}: ${formatCurrencyExact(value)}`;
+            }
+
+            // Utile Lordo (index 3) e Saldo IVA (index 4) - solo valore
+            if (dataIndex === 3 || dataIndex === 4) {
+              return formatCurrencyExact(value);
+            }
+
+            const label = context.dataset.label || '';
+            return `${label}: ${formatCurrencyExact(value)}`;
           },
           afterBody: function(context: any) {
-            // Per la colonna "Tot. Imp. Costi" mostra il totale dopo tutte le label
+            // Per la colonna "Imponibile Costi" mostra il totale dopo tutte le label
             if (context[0]?.dataIndex === 2) {
-              const totale = data.costiTotali + data.costiBustePaga + data.costiF24;
+              const totale = data.imponibileCostiFatture + data.costiBustePaga + data.costiF24 + data.noteSpesaApprovate;
               return `\n━━━━━━━━━━━━━━━━\nTOTALE COSTI: ${formatCurrencyExact(totale)}`;
             }
             return '';
+          },
+          // Filtra completamente i dataset con valore 0 dal tooltip
+          filter: function(tooltipItem: any) {
+            return tooltipItem.parsed.y !== 0;
           }
         },
         footerFont: {
@@ -273,11 +367,11 @@ export const RiepilogoEconomicoChart = memo(({ data }: RiepilogoEconomicoChartPr
 }, (prevProps, nextProps) => {
   return (
     prevProps.data.fatturatoPrevisto === nextProps.data.fatturatoPrevisto &&
-    prevProps.data.fatturatoEmesso === nextProps.data.fatturatoEmesso &&
-    prevProps.data.costiTotali === nextProps.data.costiTotali &&
+    prevProps.data.imponibileRicavi === nextProps.data.imponibileRicavi &&
+    prevProps.data.imponibileCostiFatture === nextProps.data.imponibileCostiFatture &&
     prevProps.data.costiBustePaga === nextProps.data.costiBustePaga &&
     prevProps.data.costiF24 === nextProps.data.costiF24 &&
-    prevProps.data.noteSpesa === nextProps.data.noteSpesa &&
+    prevProps.data.noteSpesaApprovate === nextProps.data.noteSpesaApprovate &&
     prevProps.data.utileLordo === nextProps.data.utileLordo &&
     prevProps.data.saldoIva === nextProps.data.saldoIva
   );

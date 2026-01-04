@@ -171,15 +171,21 @@ export function CommessaReportTab({ commessaId, commessa, fattureAttive, fatture
 
     // Calcola i totali usando helper ottimizzati
     const fatturatoPrevisto = commessa?.importo_commessa || commessa?.budget_commessa || 0;
-    const fatturatoEmesso = sumImponibili(fattureAttiveFiltrate);
-    const costiTotali = sumImponibili(fatturePassiveFiltrate);
-    const totaleNoteSpesa = sumImporti(noteSpeseApprovate);
-    const utileLordo = fatturatoEmesso - costiTotali - totaleBustePaga - totaleF24 - totaleNoteSpesa;
+    const imponibileRicavi = sumImponibili(fattureAttiveFiltrate);
+    const imponibileCostiFatture = sumImponibili(fatturePassiveFiltrate);
+    const totaleNoteSpesaApprovate = sumImporti(noteSpeseApprovate);
 
-    // Calcola saldo IVA (IVA ricavi - IVA costi)
+    // Imponibile Costi = Fatture + Buste Paga + F24 + Note Spesa Approvate
+    const imponibileCosti = imponibileCostiFatture + totaleBustePaga + totaleF24 + totaleNoteSpesaApprovate;
+
+    const utileLordo = imponibileRicavi - imponibileCosti;
+
+    // Calcola saldo IVA (IVA ricavi - IVA costi) * -1 per invertire la visualizzazione
+    // Positivo nel calcolo = IVA a debito = negativo nel grafico (va giù)
+    // Negativo nel calcolo = IVA a credito = positivo nel grafico (va su)
     const ivaFatturePassive = sumIva(fatturePassiveFiltrate);
     const ivaFattureAttive = sumIva(fattureAttiveFiltrate);
-    const saldoIva = ivaFattureAttive - ivaFatturePassive;
+    const saldoIva = (ivaFattureAttive - ivaFatturePassive) * -1;
 
     console.log('💰 IVA Fatture Attive:', ivaFattureAttive);
     console.log('💰 IVA Fatture Passive:', ivaFatturePassive);
@@ -187,21 +193,21 @@ export function CommessaReportTab({ commessaId, commessa, fattureAttive, fatture
 
     // Calcola percentuale utile lordo: (100 x Utile Lordo) / Fatturato Emesso
     // Nota: permette valori negativi se l'utile è negativo (perdita)
-    const percentualeUtileLordo = fatturatoEmesso !== 0
-      ? (100 * utileLordo) / fatturatoEmesso
+    const percentualeUtileLordo = imponibileRicavi !== 0
+      ? (100 * utileLordo) / imponibileRicavi
       : 0;
 
     console.log('📊 Utile Lordo:', utileLordo);
-    console.log('📊 Fatturato Emesso:', fatturatoEmesso);
+    console.log('📊 Imponibile Ricavi:', imponibileRicavi);
     console.log('📊 % Utile Lordo:', percentualeUtileLordo);
 
     return {
       fatturatoPrevisto,
-      fatturatoEmesso,
-      costiTotali,
+      imponibileRicavi,
+      imponibileCostiFatture,
       costiBustePaga: totaleBustePaga,
       costiF24: totaleF24,
-      noteSpesa: totaleNoteSpesa,
+      noteSpesaApprovate: totaleNoteSpesaApprovate,
       utileLordo,
       saldoIva,
       percentualeUtileLordo,
