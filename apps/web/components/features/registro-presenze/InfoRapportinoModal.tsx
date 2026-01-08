@@ -217,11 +217,22 @@ export function InfoRapportinoModal({ rapportino: rapportinoRaw, users, commesse
     try {
       setIsSaving(true);
       const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        toast.error('Utente non autenticato');
+        return;
+      }
 
       const { error } = await supabase
         .from('rapportini')
         .update({
           stato: 'approvato',
+          approvato_da: user.id,
+          approvato_il: new Date().toISOString(),
+          rifiutato_da: null,
+          rifiutato_il: null,
+          motivo_rifiuto: null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', rapportino.id);
@@ -243,11 +254,25 @@ export function InfoRapportinoModal({ rapportino: rapportinoRaw, users, commesse
     try {
       setIsSaving(true);
       const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        toast.error('Utente non autenticato');
+        return;
+      }
+
+      // Chiedi motivo del rifiuto
+      const motivo = prompt('Motivo del rifiuto (opzionale):');
 
       const { error } = await supabase
         .from('rapportini')
         .update({
           stato: 'rifiutato',
+          rifiutato_da: user.id,
+          rifiutato_il: new Date().toISOString(),
+          motivo_rifiuto: motivo || null,
+          approvato_da: null,
+          approvato_il: null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', rapportino.id);

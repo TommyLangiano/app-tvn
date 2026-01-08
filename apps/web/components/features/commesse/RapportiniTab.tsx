@@ -301,10 +301,23 @@ export function RapportiniTab({
   const handleApprova = async (rapportino: Rapportino) => {
     try {
       const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        toast.error('Utente non autenticato');
+        return;
+      }
 
       const { error } = await supabase
         .from('rapportini')
-        .update({ stato: 'approvato' })
+        .update({
+          stato: 'approvato',
+          approvato_da: user.id,
+          approvato_il: new Date().toISOString(),
+          rifiutato_da: null,
+          rifiutato_il: null,
+          motivo_rifiuto: null
+        })
         .eq('id', rapportino.id);
 
       if (error) throw error;
@@ -322,10 +335,26 @@ export function RapportiniTab({
   const handleRifiuta = async (rapportino: Rapportino) => {
     try {
       const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        toast.error('Utente non autenticato');
+        return;
+      }
+
+      // Qui potresti chiedere un motivo del rifiuto con un prompt o modal
+      const motivo = prompt('Motivo del rifiuto (opzionale):');
 
       const { error } = await supabase
         .from('rapportini')
-        .update({ stato: 'rifiutato' })
+        .update({
+          stato: 'rifiutato',
+          rifiutato_da: user.id,
+          rifiutato_il: new Date().toISOString(),
+          motivo_rifiuto: motivo || null,
+          approvato_da: null,
+          approvato_il: null
+        })
         .eq('id', rapportino.id);
 
       if (error) throw error;

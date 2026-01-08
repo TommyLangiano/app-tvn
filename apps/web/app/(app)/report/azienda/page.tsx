@@ -12,11 +12,11 @@ import { toast } from 'sonner';
 
 interface RiepilogoEconomicoData {
   fatturatoPrevisto: number;
-  fatturatoEmesso: number;
-  costiTotali: number;
+  imponibileRicavi: number;
+  imponibileCostiFatture: number;
   costiBustePaga: number;
   costiF24: number;
-  noteSpesa: number;
+  noteSpesaApprovate: number;
   utileLordo: number;
   saldoIva: number;
 }
@@ -56,11 +56,11 @@ export default function ReportAziendaPage() {
   const [dateRange, setDateRange] = useState<DateRange>(() => getDateRangeFromPeriod('oggi'));
   const [riepilogoData, setRiepilogoData] = useState<RiepilogoEconomicoData>({
     fatturatoPrevisto: 0,
-    fatturatoEmesso: 0,
-    costiTotali: 0,
+    imponibileRicavi: 0,
+    imponibileCostiFatture: 0,
     costiBustePaga: 0,
     costiF24: 0,
-    noteSpesa: 0,
+    noteSpesaApprovate: 0,
     utileLordo: 0,
     saldoIva: 0,
   });
@@ -220,11 +220,11 @@ export default function ReportAziendaPage() {
 
       setRiepilogoData({
         fatturatoPrevisto,
-        fatturatoEmesso,
-        costiTotali,
+        imponibileRicavi: fatturatoEmesso,
+        imponibileCostiFatture: costiTotali,
         costiBustePaga: totaleBustePaga,
         costiF24: totaleF24,
-        noteSpesa: totaleNoteSpesa,
+        noteSpesaApprovate: totaleNoteSpesa,
         utileLordo,
         saldoIva,
       });

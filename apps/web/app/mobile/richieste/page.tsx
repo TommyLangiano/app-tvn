@@ -1,71 +1,96 @@
 'use client';
 
 import { memo } from 'react';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { FileText, Plus } from 'lucide-react';
+import { Plus, Receipt, Plane, Clock } from 'lucide-react';
 import Link from 'next/link';
 
-const EmptyState = memo(() => (
-  <Card className="p-12 text-center border-2 border-dashed border-gray-300">
-    <div className="flex justify-center mb-4">
-      <div className="p-4 rounded-full bg-gray-100">
-        <FileText className="w-12 h-12 text-gray-400" />
+interface TipologiaRichiestaCardProps {
+  icon: React.ReactNode;
+  title: string;
+  subtitle: string;
+  href: string;
+  iconBgColor: string;
+  iconColor: string;
+}
+
+const TipologiaRichiestaCard = memo(({ icon, title, subtitle, href, iconBgColor, iconColor }: TipologiaRichiestaCardProps) => (
+  <Link href={href} prefetch={true}>
+    <div className="bg-white rounded-2xl p-6 border-2 border-gray-200 shadow-sm hover:shadow-lg hover:border-emerald-500 transition-all cursor-pointer mb-3">
+      <div className="flex items-center gap-4">
+        <div className="text-emerald-600">
+          {icon}
+        </div>
+        <div className="flex-1">
+          <h3 className="text-lg font-bold text-gray-900">{title}</h3>
+          <p className="text-sm text-gray-500">{subtitle}</p>
+        </div>
       </div>
     </div>
-    <h3 className="text-lg font-semibold text-gray-900 mb-2">
-      Nessuna richiesta
-    </h3>
-    <p className="text-sm text-gray-500 mb-6">
-      Le tue richieste di permessi, ferie e malattie appariranno qui
-    </p>
-    <Link href="/mobile/richieste/nuova" prefetch={true}>
-      <Button className="bg-emerald-600 hover:bg-emerald-700">
-        <Plus className="w-4 h-4 mr-2" />
-        Crea prima richiesta
-      </Button>
-    </Link>
-  </Card>
+  </Link>
 ));
 
-EmptyState.displayName = 'EmptyState';
-
-const InfoCards = memo(() => (
-  <div className="grid grid-cols-2 gap-4">
-    <Card className="p-4 border-2 border-gray-200">
-      <p className="text-xs text-gray-500 mb-1">Ferie rimanenti</p>
-      <p className="text-2xl font-bold text-gray-900">20</p>
-      <p className="text-xs text-gray-400 mt-1">giorni</p>
-    </Card>
-    <Card className="p-4 border-2 border-gray-200">
-      <p className="text-xs text-gray-500 mb-1">Permessi ROL</p>
-      <p className="text-2xl font-bold text-gray-900">32</p>
-      <p className="text-xs text-gray-400 mt-1">ore</p>
-    </Card>
-  </div>
-));
-
-InfoCards.displayName = 'InfoCards';
+TipologiaRichiestaCard.displayName = 'TipologiaRichiestaCard';
 
 export default function RichiestePage() {
   return (
-    <div className="p-4 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Richieste</h1>
-          <p className="text-sm text-gray-500 mt-1">Gestisci permessi, ferie e malattie</p>
+    <div className="space-y-6">
+      {/* Header verde */}
+      <div className="bg-emerald-600 px-6 py-8 text-white">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-xl font-bold">Richieste</h1>
+          <Link href="/mobile/richieste/nuova" prefetch={true}>
+            <button
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '40px',
+                height: '40px',
+                borderRadius: '50%',
+                background: 'rgba(255, 255, 255, 0.2)',
+                backdropFilter: 'blur(8px)',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+            >
+              <Plus className="text-white" style={{ width: '20px', height: '20px' }} strokeWidth={2.5} />
+            </button>
+          </Link>
         </div>
-        <Link href="/mobile/richieste/nuova" prefetch={true}>
-          <Button className="bg-emerald-600 hover:bg-emerald-700">
-            <Plus className="w-4 h-4 mr-2" />
-            Nuova
-          </Button>
-        </Link>
       </div>
 
-      <EmptyState />
+      {/* Contenuto */}
+      <div className="relative z-10" style={{ marginTop: '-40px', paddingLeft: '16px', paddingRight: '16px' }}>
+        <div>
+          <TipologiaRichiestaCard
+            icon={<Receipt className="w-8 h-8" />}
+            title="Note Spesa"
+            subtitle="Visualizza e gestisci le note spesa"
+            href="/mobile/richieste/note-spesa"
+            iconBgColor=""
+            iconColor=""
+          />
 
-      <InfoCards />
+          <TipologiaRichiestaCard
+            icon={<Plane className="w-8 h-8" />}
+            title="Ferie"
+            subtitle="Richiedi e consulta le ferie"
+            href="/mobile/richieste/ferie"
+            iconBgColor=""
+            iconColor=""
+          />
+
+          <TipologiaRichiestaCard
+            icon={<Clock className="w-8 h-8" />}
+            title="Permessi"
+            subtitle="Gestisci permessi e ROL"
+            href="/mobile/richieste/permessi"
+            iconBgColor=""
+            iconColor=""
+          />
+        </div>
+      </div>
     </div>
   );
 }

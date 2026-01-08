@@ -135,11 +135,11 @@ export interface AnalyticsData {
   };
   riepilogoEconomico: {
     fatturatoPrevisto: number;
-    fatturatoEmesso: number;
-    costiTotali: number;
+    imponibileRicavi: number;
+    imponibileCostiFatture: number;
     costiBustePaga: number;
     costiF24: number;
-    noteSpesa: number;
+    noteSpesaApprovate: number;
     utileLordo: number;
     saldoIva: number;
   };
@@ -212,11 +212,11 @@ function getEmptyAnalyticsData(): AnalyticsData {
     },
     riepilogoEconomico: {
       fatturatoPrevisto: 0,
-      fatturatoEmesso: 0,
-      costiTotali: 0,
+      imponibileRicavi: 0,
+      imponibileCostiFatture: 0,
       costiBustePaga: 0,
       costiF24: 0,
-      noteSpesa: 0,
+      noteSpesaApprovate: 0,
       utileLordo: 0,
       saldoIva: 0,
     },
@@ -714,11 +714,11 @@ function calculateRiepilogoEconomico(
 
   return {
     fatturatoPrevisto,
-    fatturatoEmesso,
-    costiTotali,
+    imponibileRicavi: fatturatoEmesso,
+    imponibileCostiFatture: costiTotali,
     costiBustePaga,
     costiF24,
-    noteSpesa: totaleNoteSpesa,
+    noteSpesaApprovate: totaleNoteSpesa,
     utileLordo,
     saldoIva,
   };

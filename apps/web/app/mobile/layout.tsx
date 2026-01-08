@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo, useCallback, memo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Home, Calendar, FileText, User } from 'lucide-react';
 import { BottomNav } from '@/components/mobile/BottomNav';
 import { FABMenu } from '@/components/mobile/FABMenu';
@@ -27,6 +27,7 @@ export default function MobileLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [loading, setLoading] = useState(true);
   const [fabOpen, setFabOpen] = useState(false);
 
@@ -96,6 +97,11 @@ export default function MobileLayout({
     setFabOpen(false);
   }, []);
 
+  // Check if we should hide bottom nav (on creation pages)
+  const shouldHideBottomNav = useMemo(() => {
+    return pathname?.includes('/nuovo') || pathname?.includes('/nuova');
+  }, [pathname]);
+
   if (loading) {
     return <LoadingScreen />;
   }
@@ -106,14 +112,17 @@ export default function MobileLayout({
         <MobileHeader title="AppTVN" showNotifications />
 
         <main className="flex-1 overflow-y-auto" style={{
-          paddingBottom: 'calc(90px + env(safe-area-inset-bottom) + 16px)',
+          paddingBottom: shouldHideBottomNav ? '0' : 'calc(90px + env(safe-area-inset-bottom) + 16px)',
         }}>
           {children}
         </main>
 
-        <BottomNav items={navItems} onFabClick={handleFabClick} />
-
-        <FABMenu isOpen={fabOpen} onClose={handleFabClose} />
+        {!shouldHideBottomNav && (
+          <>
+            <BottomNav items={navItems} onFabClick={handleFabClick} />
+            <FABMenu isOpen={fabOpen} onClose={handleFabClose} />
+          </>
+        )}
       </div>
     </MobileDataProvider>
   );

@@ -33,6 +33,7 @@ import { RapportiniTab } from '@/components/features/commesse/RapportiniTab';
 import { EconomiaTab } from '@/components/features/commesse/EconomiaTab';
 import { NoteSpeseTab } from '@/components/features/commesse/NoteSpeseTab';
 import { CommessaReportTab } from '@/components/features/commesse/CommessaReportTab';
+import { PanoramicaTab } from '@/components/features/commesse/PanoramicaTab';
 import { getSignedUrl } from '@/lib/utils/storage';
 import { formatCurrency } from '@/lib/utils/currency';
 
@@ -42,8 +43,11 @@ export default function CommessaDetailPage() {
   const slug = params.id as string;
 
   type TabValue = 'panoramica' | 'economia' | 'rapportini' | 'report' | 'documenti' | 'dettagli' | 'impostazioni';
+  type EconomiaSubTab = 'tutto' | 'fatture' | 'personale' | 'note_spesa';
 
   const [activeTab, setActiveTab] = useState<TabValue>('panoramica');
+  const [economiaSubTab, setEconomiaSubTab] = useState<EconomiaSubTab>('tutto');
+  const [selectedFatturaId, setSelectedFatturaId] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [commessa, setCommessa] = useState<Commessa | null>(null);
   const [riepilogo, setRiepilogo] = useState<RiepilogoEconomico | null>(null);
@@ -1415,11 +1419,26 @@ export default function CommessaDetailPage() {
       />
 
       {/* TAB: Panoramica */}
-      {activeTab === 'panoramica' && (
-        <div className="rounded-xl border-2 border-dashed border-border bg-card p-12 text-center">
-          <LayoutDashboard className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-          <p className="text-muted-foreground">Dashboard panoramica in arrivo</p>
-        </div>
+      {activeTab === 'panoramica' && commessa && (
+        <PanoramicaTab
+          commessaId={commessa.id}
+          fatturePassive={fatturePassive}
+          noteSpeseDaApprovare={noteSpeseDaApprovare}
+          onTabChange={(tab, subTab, fatturaId) => {
+            console.log('🔍 Page - onTabChange chiamato con:', tab, subTab, fatturaId);
+            if (subTab) {
+              console.log('🔍 Page - Impostando economiaSubTab a:', subTab);
+              setEconomiaSubTab(subTab as EconomiaSubTab);
+            }
+            if (fatturaId) {
+              console.log('🔍 Page - Impostando selectedFatturaId a:', fatturaId);
+              setSelectedFatturaId(fatturaId);
+            }
+            console.log('🔍 Page - Cambiando activeTab a:', tab);
+            setActiveTab(tab as TabValue);
+          }}
+          onReload={loadCommessaData}
+        />
       )}
 
       {/* TAB: Economia */}
@@ -1436,6 +1455,9 @@ export default function CommessaDetailPage() {
           noteSpeseDaApprovare={noteSpeseDaApprovare}
           noteSpeseRifiutate={noteSpeseRifiutate}
           onReload={refreshEconomiaData}
+          initialSubTab={economiaSubTab}
+          initialFatturaId={selectedFatturaId}
+          onClearFatturaId={() => setSelectedFatturaId(undefined)}
         />
       )}
 

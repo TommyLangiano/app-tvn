@@ -262,12 +262,12 @@ export const RiepilogoEconomicoChart = memo(({ data }: RiepilogoEconomicoChartPr
           weight: 600,
         },
         callbacks: {
-          label: function(context: any) {
+          label: function(context: any): string | string[] | undefined {
             const value = context.parsed.y;
             const dataIndex = context.dataIndex;
 
             // Salta completamente valori a 0
-            if (value === 0) return null;
+            if (value === 0) return undefined;
 
             // Importo Contratto (index 0) - non mostrare label, solo valore
             if (dataIndex === 0) {

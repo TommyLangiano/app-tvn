@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Receipt, TrendingUp, TrendingDown, FileText, Banknote, LayoutGrid } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils/currency';
 import { format } from 'date-fns';
@@ -35,6 +35,9 @@ interface EconomiaTabProps {
   noteSpeseDaApprovare: NotaSpesa[];
   noteSpeseRifiutate: NotaSpesa[];
   onReload?: () => void;
+  initialSubTab?: SubTab;
+  initialFatturaId?: string;
+  onClearFatturaId?: () => void;
 }
 
 type SubTab = 'tutto' | 'fatture' | 'personale' | 'note_spesa';
@@ -50,11 +53,20 @@ export function EconomiaTab({
   noteSpese,
   noteSpeseDaApprovare,
   noteSpeseRifiutate,
-  onReload
+  onReload,
+  initialSubTab = 'tutto',
+  initialFatturaId,
+  onClearFatturaId
 }: EconomiaTabProps) {
-  const [activeSubTab, setActiveSubTab] = useState<SubTab>('tutto');
+  const [activeSubTab, setActiveSubTab] = useState<SubTab>(initialSubTab);
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
+
+  // Aggiorna il sub-tab quando cambia initialSubTab
+  useEffect(() => {
+    console.log('🔍 EconomiaTab - initialSubTab ricevuto:', initialSubTab);
+    setActiveSubTab(initialSubTab);
+  }, [initialSubTab]);
 
   // Calcola riepilogo filtrato per date
   const riepilogoFiltrato = useMemo(() => {
@@ -424,6 +436,8 @@ export function EconomiaTab({
             dateFrom={dateFrom}
             dateTo={dateTo}
             onReload={onReload}
+            initialFatturaId={initialFatturaId}
+            onClearFatturaId={onClearFatturaId}
           />
         )}
 

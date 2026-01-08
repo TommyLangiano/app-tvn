@@ -78,11 +78,13 @@ interface MovimentiTabProps {
   bustePagaDettaglio: any[];
   f24Dettaglio: any[];
   onReload?: () => void;
+  initialFatturaId?: string;
+  onClearFatturaId?: () => void;
 }
 
 type TipoFattura = 'tutte' | 'emesse' | 'ricevute';
 
-export function MovimentiTab({ commessaId, fattureAttive, fatturePassive, riepilogo, bustePagaDettaglio, f24Dettaglio, onReload }: MovimentiTabProps) {
+export function MovimentiTab({ commessaId, fattureAttive, fatturePassive, riepilogo, bustePagaDettaglio, f24Dettaglio, onReload, initialFatturaId, onClearFatturaId }: MovimentiTabProps) {
   const [tipoFattura, setTipoFattura] = useState<TipoFattura>('tutte');
   const [searchQuery, setSearchQuery] = useState('');
   const [statoFattura, setStatoFattura] = useState<string>('tutti');
@@ -97,6 +99,17 @@ export function MovimentiTab({ commessaId, fattureAttive, fatturePassive, riepil
   const [isDeleting, setIsDeleting] = useState(false);
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
+
+  // Apri fattura se viene passato initialFatturaId
+  useEffect(() => {
+    if (initialFatturaId) {
+      const fattura = [...fattureAttive, ...fatturePassive].find(f => f.id === initialFatturaId);
+      if (fattura) {
+        setSelectedFatturaDetail(fattura);
+        setIsSheetOpen(true);
+      }
+    }
+  }, [initialFatturaId, fattureAttive, fatturePassive]);
 
   const handleDateRangeChange = (from: string, to: string) => {
     setDateFrom(from);
@@ -606,7 +619,12 @@ export function MovimentiTab({ commessaId, fattureAttive, fatturePassive, riepil
           {selectedFatturaDetail && (
             <FatturaDetailSheet
               fattura={selectedFatturaDetail}
-              onClose={() => setIsSheetOpen(false)}
+              onClose={() => {
+                setIsSheetOpen(false);
+                if (onClearFatturaId) {
+                  onClearFatturaId();
+                }
+              }}
               onOpenFile={handleOpenFile}
               onDelete={() => setShowDeleteConfirm(true)}
               onUpdate={() => {
@@ -614,6 +632,9 @@ export function MovimentiTab({ commessaId, fattureAttive, fatturePassive, riepil
                   onReload();
                 }
                 setIsSheetOpen(false);
+                if (onClearFatturaId) {
+                  onClearFatturaId();
+                }
               }}
             />
           )}

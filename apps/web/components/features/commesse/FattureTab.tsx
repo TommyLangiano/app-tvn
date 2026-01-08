@@ -12,6 +12,8 @@ interface FattureTabProps {
   dateFrom?: string;
   dateTo?: string;
   onReload?: () => void;
+  initialFatturaId?: string;
+  onClearFatturaId?: () => void;
 }
 
 export function FattureTab({
@@ -20,7 +22,9 @@ export function FattureTab({
   fatturePassive,
   dateFrom = '',
   dateTo = '',
-  onReload
+  onReload,
+  initialFatturaId,
+  onClearFatturaId
 }: FattureTabProps) {
   // Calcola riepilogo solo per fatture (senza personale)
   const riepilogoFatture = useMemo(() => {
@@ -206,6 +210,8 @@ export function FattureTab({
         bustePagaDettaglio={[]}
         f24Dettaglio={[]}
         onReload={onReload}
+        initialFatturaId={initialFatturaId}
+        onClearFatturaId={onClearFatturaId}
       />
     </div>
   );

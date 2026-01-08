@@ -255,11 +255,11 @@ export default function ReportPage() {
           <RiepilogoEconomicoChart
             data={analyticsData?.riepilogoEconomico || {
               fatturatoPrevisto: 0,
-              fatturatoEmesso: 0,
-              costiTotali: 0,
+              imponibileRicavi: 0,
+              imponibileCostiFatture: 0,
               costiBustePaga: 0,
               costiF24: 0,
-              noteSpesa: 0,
+              noteSpesaApprovate: 0,
               utileLordo: 0,
               saldoIva: 0,
             }}

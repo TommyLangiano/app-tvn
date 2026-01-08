@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Receipt, Plus, Search, ArrowUpCircle, ArrowDownCircle, FileText, X, Edit, Save, XCircle, ChevronsUpDown, Check, CloudUpload, Trash2, Filter, ArrowUpDown, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react';
 import { DataTable, DataTableColumn } from '@/components/ui/data-table';
 import { Button } from '@/components/ui/button';
@@ -101,6 +101,7 @@ interface Commessa {
 
 export default function FatturePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<TabType>('all');
   const [fattureAttive, setFattureAttive] = useState<FatturaAttiva[]>([]);
   const [fatturePassive, setFatturePassive] = useState<FatturaPassiva[]>([]);
@@ -176,6 +177,61 @@ export default function FatturePage() {
     loadFatture();
     setNavbarActionsContainer(document.getElementById('navbar-actions'));
   }, []);
+
+  // Carica fattura specifica dall'URL direttamente dal DB (più veloce)
+  useEffect(() => {
+    const fatturaId = searchParams.get('fattura');
+    if (!fatturaId) return;
+
+    const loadFatturaById = async () => {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: tenants } = await supabase
+          .from('user_tenants')
+          .select('tenant_id')
+          .eq('user_id', user.id)
+          .single();
+
+        if (!tenants) return;
+
+        // Cerca prima nelle fatture passive (più comune da panoramica)
+        const { data: fatturaPassiva } = await supabase
+          .from('fatture_passive')
+          .select('*, commesse(nome_commessa)')
+          .eq('id', fatturaId)
+          .eq('tenant_id', tenants.tenant_id)
+          .maybeSingle();
+
+        if (fatturaPassiva) {
+          setSelectedFatturaDetail(fatturaPassiva as FatturaPassiva);
+          setIsSheetOpen(true);
+          setActiveTab('ricevute');
+          return;
+        }
+
+        // Se non trovata, cerca nelle attive
+        const { data: fatturaAttiva } = await supabase
+          .from('fatture_attive')
+          .select('*, commesse(nome_commessa)')
+          .eq('id', fatturaId)
+          .eq('tenant_id', tenants.tenant_id)
+          .maybeSingle();
+
+        if (fatturaAttiva) {
+          setSelectedFatturaDetail(fatturaAttiva as FatturaAttiva);
+          setIsSheetOpen(true);
+          setActiveTab('emesse');
+        }
+      } catch (error) {
+        console.error('Errore caricamento fattura:', error);
+      }
+    };
+
+    loadFatturaById();
+  }, [searchParams]);
 
   const loadFatture = async () => {
     try {
