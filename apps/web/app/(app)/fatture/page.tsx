@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Receipt, Plus, Search, ArrowUpCircle, ArrowDownCircle, FileText, X, Edit, Save, XCircle, ChevronsUpDown, Check, CloudUpload, Trash2, Filter, ArrowUpDown, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -99,7 +99,7 @@ interface Commessa {
   codice_commessa?: string;
 }
 
-export default function FatturePage() {
+function FatturePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<TabType>('all');
@@ -2284,5 +2284,13 @@ export default function FatturePage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function FatturePage() {
+  return (
+    <Suspense fallback={<div className="p-8">Caricamento...</div>}>
+      <FatturePageContent />
+    </Suspense>
   );
 }
