@@ -311,9 +311,12 @@ export function PanoramicaTab({ commessaId, fatturePassive, noteSpeseDaApprovare
       {selectedNotaSpesa && isSheetOpen && (
         <InfoNotaSpesaModal
           isOpen={isSheetOpen}
-          onClose={() => {
-            setIsSheetOpen(false);
-            setSelectedNotaSpesa(null);
+          onOpenChange={(open) => {
+            setIsSheetOpen(open);
+            if (!open) setSelectedNotaSpesa(null);
+          }}
+          onUpdate={() => {
+            // Refresh data if needed
           }}
           notaSpesa={selectedNotaSpesa}
         />
