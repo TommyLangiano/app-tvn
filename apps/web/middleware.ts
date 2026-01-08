@@ -69,21 +69,31 @@ export async function middleware(request: NextRequest) {
 
   // If user is logged in
   if (user) {
+    // 🚀 OTTIMIZZAZIONE: Fetch user_tenants e custom_role in parallelo una volta sola
+    const { data: userTenant, error: tenantError } = await supabase
+      .from('user_tenants')
+      .select(`
+        tenant_id,
+        role,
+        custom_role_id,
+        custom_roles!inner (
+          system_role_key
+        )
+      `)
+      .eq('user_id', user.id)
+      .single();
+
+    // CRITICAL: Handle missing tenant - redirect to account recovery
+    if (tenantError || !userTenant) {
+      console.error('[Middleware] Tenant not found for user:', user.id, tenantError);
+      return NextResponse.redirect(new URL('/account-recovery', request.url));
+    }
+
+    const userRoleKey = (userTenant.custom_roles as any)?.system_role_key;
+    const isDipendente = userRoleKey === 'dipendente';
+
     // Skip onboarding check for signup and sign-in pages
     if (pathname.startsWith('/sign-in') || pathname.startsWith('/signup')) {
-      // Check if user needs onboarding
-      const { data: userTenant, error: tenantError } = await supabase
-        .from('user_tenants')
-        .select('tenant_id, role, custom_role_id')
-        .eq('user_id', user.id)
-        .single();
-
-      // CRITICAL: Handle missing tenant - redirect to account recovery
-      if (tenantError || !userTenant) {
-        console.error('[Middleware] Tenant not found for user:', user.id, tenantError);
-        return NextResponse.redirect(new URL('/account-recovery', request.url));
-      }
-
       const { data: profile, error: profileError } = await supabase
         .from('tenant_profiles')
         .select('onboarding_completed')
@@ -102,16 +112,8 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL('/onboarding/step-1', request.url));
       } else {
         // Check if user is dipendente - redirect to mobile
-        if (userTenant.custom_role_id) {
-          const { data: customRole } = await supabase
-            .from('custom_roles')
-            .select('system_role_key')
-            .eq('id', userTenant.custom_role_id)
-            .single();
-
-          if (customRole?.system_role_key === 'dipendente') {
-            return NextResponse.redirect(new URL('/mobile/home', request.url));
-          }
+        if (isDipendente) {
+          return NextResponse.redirect(new URL('/mobile/home', request.url));
         }
 
         return NextResponse.redirect(new URL('/dashboard', request.url));
@@ -120,60 +122,20 @@ export async function middleware(request: NextRequest) {
 
     // Protect mobile routes - only dipendenti can access
     if (pathname.startsWith('/mobile')) {
-      const { data: userTenant } = await supabase
-        .from('user_tenants')
-        .select('custom_role_id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (userTenant?.custom_role_id) {
-        const { data: customRole } = await supabase
-          .from('custom_roles')
-          .select('system_role_key')
-          .eq('id', userTenant.custom_role_id)
-          .single();
-
-        if (customRole?.system_role_key !== 'dipendente') {
-          return NextResponse.redirect(new URL('/dashboard', request.url));
-        }
+      if (!isDipendente) {
+        return NextResponse.redirect(new URL('/dashboard', request.url));
       }
     }
 
     // Protect admin routes - dipendenti cannot access
     if (pathname.startsWith('/dashboard') || pathname.startsWith('/(app)')) {
-      const { data: userTenant } = await supabase
-        .from('user_tenants')
-        .select('custom_role_id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (userTenant?.custom_role_id) {
-        const { data: customRole } = await supabase
-          .from('custom_roles')
-          .select('system_role_key')
-          .eq('id', userTenant.custom_role_id)
-          .single();
-
-        if (customRole?.system_role_key === 'dipendente') {
-          return NextResponse.redirect(new URL('/mobile/home', request.url));
-        }
+      if (isDipendente) {
+        return NextResponse.redirect(new URL('/mobile/home', request.url));
       }
     }
 
     // Check if user needs to complete onboarding
     if (!pathname.startsWith('/onboarding') && !pathname.startsWith('/api') && !pathname.startsWith('/tenant-error') && !pathname.startsWith('/account-recovery') && !pathname.startsWith('/mobile')) {
-      const { data: userTenant, error: tenantError } = await supabase
-        .from('user_tenants')
-        .select('tenant_id, role, custom_role_id')
-        .eq('user_id', user.id)
-        .single();
-
-      // CRITICAL: Handle missing tenant - redirect to account recovery
-      if (tenantError || !userTenant) {
-        console.error('[Middleware] Tenant not found for user:', user.id, tenantError);
-        return NextResponse.redirect(new URL('/account-recovery', request.url));
-      }
-
       const { data: profile, error: profileError } = await supabase
         .from('tenant_profiles')
         .select('onboarding_completed')

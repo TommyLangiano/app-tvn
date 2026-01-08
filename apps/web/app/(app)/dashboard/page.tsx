@@ -15,18 +15,28 @@ export default async function DashboardPage() {
     return null;
   }
 
-  // Check if user has any tenants
-  const { data: userTenants } = await supabase
-    .from('user_tenants')
-    .select(`
-      tenant_id,
-      role,
-      tenants (
-        id,
-        name
-      )
-    `)
-    .eq('user_id', user.id);
+  // 🚀 OTTIMIZZAZIONE: Fetch parallelo di user_tenants e user_profiles
+  const [
+    { data: userTenants },
+    { data: profile }
+  ] = await Promise.all([
+    supabase
+      .from('user_tenants')
+      .select(`
+        tenant_id,
+        role,
+        tenants (
+          id,
+          name
+        )
+      `)
+      .eq('user_id', user.id),
+    supabase
+      .from('user_profiles')
+      .select('full_name')
+      .eq('user_id', user.id)
+      .single()
+  ]);
 
   // If user has no tenants, show create tenant form
   if (!userTenants || userTenants.length === 0) {
@@ -36,13 +46,6 @@ export default async function DashboardPage() {
   // Single-tenant setup: Get first tenant
   const tenant = userTenants[0];
   const userRole = tenant.role;
-
-  // Get user profile for full name
-  const { data: profile } = await supabase
-    .from('user_profiles')
-    .select('full_name')
-    .eq('user_id', user.id)
-    .single();
 
   const userName = profile?.full_name || user.email?.split('@')[0] || 'Utente';
 
