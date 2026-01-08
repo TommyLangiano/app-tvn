@@ -298,7 +298,6 @@ export function PanoramicaTab({ commessaId, fatturePassive, noteSpeseDaApprovare
       {/* Modali */}
       {selectedNotaSpesa && modalTipo && (
         <ConfermaNotaSpesaModal
-          isOpen={!!modalTipo}
           onClose={() => {
             setModalTipo(null);
             setSelectedNotaSpesa(null);
