@@ -27,9 +27,12 @@ interface Rapportino {
   motivo_rifiuto?: string;
   modificato_da?: string;
   modificato_il?: string;
-  commesse: {
+  commessa_id?: string;
+  commesse?: {
+    id: string;
     nome_commessa: string;
     cliente_commessa: string;
+    codice_commessa?: string;
   } | null;
 }
 
@@ -115,9 +118,12 @@ export function MobileDataProvider({ children }: { children: ReactNode }) {
           motivo_rifiuto,
           modificato_da,
           modificato_il,
+          commessa_id,
           commesse!inner (
+            id,
             nome_commessa,
-            cliente_commessa
+            cliente_commessa,
+            codice_commessa
           )
         `)
         .eq('dipendente_id', dipendenteData.id)
