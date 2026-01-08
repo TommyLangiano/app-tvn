@@ -47,8 +47,8 @@ interface Rapportino {
   modificato_da?: string;
   modificato_il?: string;
   commessa_id?: string;
-  commesse: {
-    id?: string;
+  commesse?: {
+    id: string;
     nome_commessa: string;
     cliente_commessa: string;
     codice_commessa?: string;
