@@ -686,7 +686,7 @@ export default function MobilePresenzePage() {
                 setSelectedRapportino(rapportino);
                 setEditedData({
                   ...rapportino,
-                  commessa_id: rapportino.commesse?.id || rapportino.commessa_id,
+                  commessa_id: (rapportino.commesse?.id || rapportino.commessa_id) as string,
                   tempo_pausa: String(rapportino.tempo_pausa || 60),
                 });
                 setCustomPausa('');

@@ -76,7 +76,7 @@ export async function middleware(request: NextRequest) {
         tenant_id,
         role,
         custom_role_id,
-        custom_roles!inner (
+        custom_roles (
           system_role_key
         )
       `)
@@ -89,8 +89,9 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/account-recovery', request.url));
     }
 
-    const userRoleKey = (userTenant.custom_roles as any)?.system_role_key;
-    const isDipendente = userRoleKey === 'dipendente';
+    // Support both old role string and new custom_role_id system
+    const userRoleKey = (userTenant.custom_roles as any)?.system_role_key || userTenant.role;
+    const isDipendente = userRoleKey === 'dipendente' || userRoleKey === 'operaio';
 
     // Skip onboarding check for signup and sign-in pages
     if (pathname.startsWith('/sign-in') || pathname.startsWith('/signup')) {
