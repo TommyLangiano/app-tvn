@@ -30,14 +30,17 @@ import {
   Banknote,
   BadgeEuro,
   FileSpreadsheet,
-  CreditCard
+  CreditCard,
+  PanelLeft,
+  PanelLeftClose,
+  ReceiptText
 } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useSidebar } from '@/contexts/SidebarContext';
 import { useUser } from '@/contexts/UserContext';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { UserAvatar } from '@/components/common/UserAvatar';
 import {
@@ -47,6 +50,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 // Menu structure con categorie - spostato fuori dal componente per evitare ricreazione
 const menuStructure = [
@@ -122,7 +131,7 @@ const menuStructure = [
     type: 'single',
     href: '/note-spesa',
     label: 'Note Spesa',
-    icon: Receipt
+    icon: ReceiptText
   },
   {
     type: 'category',
@@ -184,6 +193,29 @@ export function Sidebar() {
   const { user, tenant, loading } = useUser();
   const [userStatus, setUserStatus] = useState<'online' | 'away' | 'offline'>('online');
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
+
+  // Load collapsed state from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('sidebar-collapsed');
+    if (saved !== null) {
+      setIsCollapsed(saved === 'true');
+    }
+  }, []);
+
+  // Toggle collapsed state
+  const toggleCollapse = useCallback(() => {
+    setIsCollapsed(prev => {
+      const newValue = !prev;
+      localStorage.setItem('sidebar-collapsed', String(newValue));
+      // Chiudi tutte le categorie quando si collassa
+      if (newValue) {
+        setExpandedCategories([]);
+      }
+      return newValue;
+    });
+  }, []);
 
   // All data now comes from UserContext - no more API calls!
 
@@ -216,83 +248,142 @@ export function Sidebar() {
 
   return (
     <aside className={cn(
-      "fixed left-0 top-0 z-50 h-screen w-80 bg-white dark:bg-surface border-r border-border transition-transform duration-300 overflow-y-auto",
-      isOpen ? "translate-x-0" : "-translate-x-full"
+      "fixed left-0 top-0 z-50 h-screen bg-white dark:bg-surface border-r border-border transition-all duration-300 overflow-y-auto",
+      isOpen ? "translate-x-0" : "-translate-x-full",
+      isCollapsed ? "w-20" : "w-80"
     )}>
       <div className="flex flex-col h-full">
 
+        {/* Toggle button */}
+        <div className={cn(
+          "absolute top-4 z-10 transition-all duration-300",
+          isCollapsed ? "left-1/2 -translate-x-1/2" : "right-4"
+        )}>
+          <button
+            onClick={toggleCollapse}
+            className="p-2 hover:bg-green-500/10 rounded-lg transition-colors group"
+            title={isCollapsed ? "Espandi sidebar" : "Comprimi sidebar"}
+          >
+            {isCollapsed ? (
+              <PanelLeft className="h-5 w-5 text-gray-500 group-hover:text-green-600" />
+            ) : (
+              <PanelLeftClose className="h-5 w-5 text-gray-500 group-hover:text-green-600" />
+            )}
+          </button>
+        </div>
+
         {/* Header - Logo e nome azienda orizzontale */}
-        <div className="px-6 pt-12 pb-6">
-          <div className="flex items-center gap-4">
+        <div className={cn(
+          "pb-6 transition-all duration-300",
+          isCollapsed ? "px-2 pt-20" : "px-6 pt-12"
+        )}>
+          <div className={cn(
+            "flex items-center transition-all duration-300",
+            isCollapsed ? "justify-center" : "gap-4"
+          )}>
             {/* Logo azienda */}
             <div className={cn(
-              "w-12 h-12 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0",
-              tenant?.logoUrl ? "bg-transparent" : "bg-primary/10"
+              "rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0",
+              tenant?.logoUrl ? "bg-transparent" : "bg-green-500/10",
+              isCollapsed ? "w-14 h-14" : "w-12 h-12"
             )}>
               {tenant?.logoUrl ? (
                 <img src={tenant.logoUrl} alt="Logo" className="h-full w-full object-contain" />
               ) : (
-                <Building2 className="h-6 w-6 text-primary" />
+                <Building2 className={cn(
+                  "text-green-600",
+                  isCollapsed ? "h-7 w-7" : "h-6 w-6"
+                )} />
               )}
             </div>
 
             {/* Nome azienda con testo dinamico */}
-            <div className="flex-1 min-w-0">
-              {loading ? (
-                <div className="h-5 w-full bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-              ) : (
-                <h1 className="font-bold uppercase tracking-wide text-foreground leading-tight" style={{
-                  fontSize: 'clamp(0.75rem, 1.5vw + 0.5rem, 1rem)',
-                  wordBreak: 'break-word'
-                }}>
-                  {tenant?.ragioneSociale || 'LA MIA AZIENDA'}
-                </h1>
-              )}
-            </div>
+            {!isCollapsed && (
+              <div className="flex-1 min-w-0">
+                {loading ? (
+                  <div className="h-5 w-full bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                ) : (
+                  <h1 className="font-bold uppercase tracking-wide text-foreground leading-tight" style={{
+                    fontSize: 'clamp(0.75rem, 1.5vw + 0.5rem, 1rem)',
+                    wordBreak: 'break-word'
+                  }}>
+                    {tenant?.ragioneSociale || 'LA MIA AZIENDA'}
+                  </h1>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-4 pt-8 pb-2 overflow-y-auto">
-          <div className="space-y-1">
-            {menuStructure.map((item, index) => {
-              if (item.type === 'single') {
-                const Icon = item.icon;
-                const href = item.href!; // Type assertion: single items always have href
-                const isActive = pathname === href || pathname.startsWith(href + '/');
-                const isDisabled = item.disabled;
+        <TooltipProvider delayDuration={0}>
+          <nav className={cn(
+            "flex-1 pt-8 pb-2 overflow-y-auto transition-all duration-300",
+            isCollapsed ? "px-2" : "px-4"
+          )}>
+            <div className="space-y-1">
+              {menuStructure.map((item, index) => {
+                if (item.type === 'single') {
+                  const Icon = item.icon;
+                  const href = item.href!; // Type assertion: single items always have href
+                  const isActive = pathname === href || pathname.startsWith(href + '/');
+                  const isDisabled = item.disabled;
 
-                if (isDisabled) {
-                  return (
-                    <div
+                  if (isDisabled) {
+                    const iconContent = (
+                      <div
+                        key={href}
+                        className={cn(
+                          "group flex items-center rounded-lg opacity-40 cursor-not-allowed transition-all duration-200",
+                          isCollapsed ? "justify-center px-3 py-2.5" : "gap-3 px-4 py-2.5"
+                        )}
+                      >
+                        <Icon className="h-4 w-4 flex-shrink-0 text-gray-400" />
+                        {!isCollapsed && <span className="text-sm font-medium text-gray-500">{item.label}</span>}
+                      </div>
+                    );
+
+                    if (isCollapsed) {
+                      return (
+                        <Tooltip key={href}>
+                          <TooltipTrigger asChild>{iconContent}</TooltipTrigger>
+                          <TooltipContent side="right">{item.label} (Non disponibile)</TooltipContent>
+                        </Tooltip>
+                      );
+                    }
+                    return iconContent;
+                  }
+
+                  const linkContent = (
+                    <Link
                       key={href}
-                      className="group flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-lg opacity-40 cursor-not-allowed"
+                      href={href}
+                      className={cn(
+                        'group flex items-center rounded-lg text-sm font-medium transition-all duration-200',
+                        isCollapsed ? "justify-center px-3 py-2.5" : "gap-3 px-4 py-2.5",
+                        isActive
+                          ? 'bg-green-500/10 text-green-600'
+                          : 'text-gray-700 dark:text-gray-300 hover:bg-green-500/5'
+                      )}
                     >
-                      <Icon className="h-4 w-4 flex-shrink-0 text-gray-400" />
-                      <span className="text-gray-500">{item.label}</span>
-                    </div>
+                      <Icon className={cn(
+                        "h-4 w-4 flex-shrink-0",
+                        isActive ? "text-green-600" : "text-gray-500 dark:text-gray-400 group-hover:text-green-600"
+                      )} />
+                      {!isCollapsed && <span>{item.label}</span>}
+                    </Link>
                   );
-                }
 
-                return (
-                  <Link
-                    key={href}
-                    href={href}
-                    className={cn(
-                      'group flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200',
-                      isActive
-                        ? 'bg-primary/10 text-primary'
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-primary/5'
-                    )}
-                  >
-                    <Icon className={cn(
-                      "h-4 w-4 flex-shrink-0",
-                      isActive ? "text-primary" : "text-gray-500 dark:text-gray-400 group-hover:text-primary"
-                    )} />
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              }
+                  if (isCollapsed) {
+                    return (
+                      <Tooltip key={href}>
+                        <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
+                        <TooltipContent side="right">{item.label}</TooltipContent>
+                      </Tooltip>
+                    );
+                  }
+                  return linkContent;
+                }
 
               if (item.type === 'category') {
                 const Icon = item.icon;
@@ -301,6 +392,43 @@ export function Sidebar() {
                   pathname === child.href || pathname.startsWith(child.href + '/')
                 );
                 const isDisabled = item.disabled;
+
+                // Se collapsed, mostra solo icona con tooltip
+                if (isCollapsed) {
+                  const buttonContent = (
+                    <button
+                      key={index}
+                      disabled={isDisabled}
+                      className={cn(
+                        'w-full group flex items-center justify-center rounded-lg transition-all duration-200 px-3 py-2.5',
+                        isDisabled
+                          ? 'opacity-40 cursor-not-allowed'
+                          : hasActiveChild
+                          ? 'bg-green-500/10 text-green-600'
+                          : 'text-gray-700 dark:text-gray-300 hover:bg-green-500/5'
+                      )}
+                    >
+                      <Icon className={cn(
+                        "h-4 w-4 flex-shrink-0",
+                        hasActiveChild ? "text-green-600" : "text-gray-500 dark:text-gray-400 group-hover:text-green-600"
+                      )} />
+                    </button>
+                  );
+
+                  return (
+                    <Tooltip key={index}>
+                      <TooltipTrigger asChild>{buttonContent}</TooltipTrigger>
+                      <TooltipContent side="right">
+                        <div className="text-sm font-semibold mb-1">{item.label}</div>
+                        {item.items && item.items.length > 0 && (
+                          <div className="text-xs text-muted-foreground">
+                            {item.items.map(sub => sub.label).join(', ')}
+                          </div>
+                        )}
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                }
 
                 return (
                   <div key={index}>
@@ -313,14 +441,14 @@ export function Sidebar() {
                         isDisabled
                           ? 'opacity-40 cursor-not-allowed'
                           : hasActiveChild
-                          ? 'bg-primary/5 text-primary'
-                          : 'text-gray-700 dark:text-gray-300 hover:bg-primary/5'
+                          ? 'bg-green-500/5 text-green-600'
+                          : 'text-gray-700 dark:text-gray-300 hover:bg-green-500/5'
                       )}
                     >
                       <div className="flex items-center gap-3">
                         <Icon className={cn(
                           "h-4 w-4 flex-shrink-0",
-                          hasActiveChild ? "text-primary" : "text-gray-500 dark:text-gray-400 group-hover:text-primary"
+                          hasActiveChild ? "text-green-600" : "text-gray-500 dark:text-gray-400 group-hover:text-green-600"
                         )} />
                         <span>{item.label}</span>
                       </div>
@@ -364,8 +492,8 @@ export function Sidebar() {
                               className={cn(
                                 'group flex items-center gap-3 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200',
                                 isActive
-                                  ? 'bg-primary/10 text-primary'
-                                  : 'text-gray-600 dark:text-gray-400 hover:bg-primary/5 hover:text-gray-900 dark:hover:text-gray-200'
+                                  ? 'bg-green-500/10 text-green-600'
+                                  : 'text-gray-600 dark:text-gray-400 hover:bg-green-500/5 hover:text-gray-900 dark:hover:text-gray-200'
                               )}
                               style={{
                                 animationDelay: `${subIndex * 50}ms`,
@@ -374,7 +502,7 @@ export function Sidebar() {
                             >
                               <SubIcon className={cn(
                                 "h-3.5 w-3.5 flex-shrink-0",
-                                isActive ? "text-primary" : "text-gray-400 dark:text-gray-500 group-hover:text-primary"
+                                isActive ? "text-green-600" : "text-gray-400 dark:text-gray-500 group-hover:text-green-600"
                               )} />
                               <span>{subItem.label}</span>
                             </Link>
@@ -390,11 +518,18 @@ export function Sidebar() {
             })}
           </div>
         </nav>
+        </TooltipProvider>
 
         {/* Footer - Profilo utente */}
-        <div className="px-4 pb-8 pt-4">
+        <div className={cn(
+          "pb-8 pt-4 transition-all duration-300",
+          isCollapsed ? "px-2" : "px-4"
+        )}>
           {/* Profilo utente */}
-          <div className="flex items-center gap-3 px-3 py-3">
+          <div className={cn(
+            "flex items-center py-3 transition-all duration-300",
+            isCollapsed ? "justify-center px-0" : "gap-3 px-3"
+          )}>
             <div className="relative flex-shrink-0">
               {user ? (
                 <UserAvatar user={{ full_name: user?.fullName || "", email: user?.email || "", avatar_url: undefined }} size="md" />
@@ -407,29 +542,31 @@ export function Sidebar() {
               )} />
             </div>
 
-            <div className="flex-1 min-w-0">
-              {loading ? (
-                <>
-                  <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded mb-1 animate-pulse" />
-                  <div className="h-3 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                </>
-              ) : (
-                <>
-                  <p className="text-sm font-semibold text-foreground truncate leading-tight">
-                    {user?.fullName}
-                  </p>
-                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
-                    {user?.role === 'admin' ? 'Amministratore' :
-                     user?.role === 'manager' ? 'Manager' :
-                     user?.role === 'operaio' ? 'Operaio' :
-                     'Utente'}
-                  </p>
-                </>
-              )}
-            </div>
+            {!isCollapsed && (
+              <>
+                <div className="flex-1 min-w-0">
+                  {loading ? (
+                    <>
+                      <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded mb-1 animate-pulse" />
+                      <div className="h-3 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm font-semibold text-foreground truncate leading-tight">
+                        {user?.fullName}
+                      </p>
+                      <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
+                        {user?.role === 'admin' ? 'Amministratore' :
+                         user?.role === 'manager' ? 'Manager' :
+                         user?.role === 'operaio' ? 'Operaio' :
+                         'Utente'}
+                      </p>
+                    </>
+                  )}
+                </div>
 
-            {/* Menu dropdown */}
-            <DropdownMenu>
+                {/* Menu dropdown */}
+                <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="p-1 hover:bg-primary/5 rounded-lg transition-colors focus:outline-none data-[state=open]:bg-transparent">
                   <MoreVertical className="h-5 w-5 text-gray-500 dark:text-gray-400 hover:text-primary" />
@@ -517,6 +654,8 @@ export function Sidebar() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+              </>
+            )}
           </div>
         </div>
 
