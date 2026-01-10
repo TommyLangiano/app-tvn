@@ -262,51 +262,79 @@ export const RiepilogoEconomicoChart = memo(({ data }: RiepilogoEconomicoChartPr
           weight: 600,
         },
         callbacks: {
-          label: function(context: any): string | string[] | undefined {
-            const value = context.parsed.y;
+          title: function(context: any) {
+            if (!context || !context[0]) return '';
+            const dataIndex = context[0].dataIndex;
+
+            // Per colonna "Imponibile Costi" mostra titolo personalizzato
+            if (dataIndex === 2) {
+              return 'Imponibile Costi';
+            }
+
+            return context[0].label || '';
+          },
+          beforeBody: function(context: any) {
+            if (!context || !context[0]) return [];
+            const dataIndex = context[0].dataIndex;
+
+            // SOLO per colonna "Imponibile Costi" (index 2)
+            if (dataIndex === 2) {
+              const lines: string[] = [];
+
+              if (data.imponibileCostiFatture > 0) {
+                lines.push(`Imp. Fatture Ricevute: ${formatCurrencyExact(data.imponibileCostiFatture)}`);
+              }
+              if (data.costiBustePaga > 0) {
+                lines.push(`Buste Paga: ${formatCurrencyExact(data.costiBustePaga)}`);
+              }
+              if (data.costiF24 > 0) {
+                lines.push(`F24: ${formatCurrencyExact(data.costiF24)}`);
+              }
+              if (data.noteSpesaApprovate > 0) {
+                lines.push(`Note Spesa Approvate: ${formatCurrencyExact(data.noteSpesaApprovate)}`);
+              }
+
+              return lines;
+            }
+
+            // Per TUTTE le altre colonne (0, 1, 3, 4) NON mostrare nulla
+            return [];
+          },
+          label: function(context: any): string | undefined {
             const dataIndex = context.dataIndex;
 
-            // Salta completamente valori a 0
+            // Per colonna "Imponibile Costi" (index 2) NON mostrare label
+            if (dataIndex === 2) {
+              return undefined;
+            }
+
+            // Per tutte le altre colonne (0, 1, 3, 4)
+            const value = context.parsed.y;
+            const label = context.dataset.label || '';
+
             if (value === 0) return undefined;
 
-            // Importo Contratto (index 0) - non mostrare label, solo valore
-            if (dataIndex === 0) {
-              return formatCurrencyExact(value);
-            }
-
-            // Imponibile Ricavi (index 1) - rinomina label
-            if (dataIndex === 1) {
+            if (label === 'Imponibile Ricavi') {
               return `Imp. Fatture Emesse: ${formatCurrencyExact(value)}`;
             }
-
-            // Imponibile Costi (index 2) - rinomina Fatture Passive
-            if (dataIndex === 2) {
-              const label = context.dataset.label || '';
-              if (label === 'Fatture Passive') {
-                return `Imp. Fatture Ricevute: ${formatCurrencyExact(value)}`;
-              }
-              return `${label}: ${formatCurrencyExact(value)}`;
-            }
-
-            // Utile Lordo (index 3) e Saldo IVA (index 4) - solo valore
-            if (dataIndex === 3 || dataIndex === 4) {
+            if (label === 'Importo Contratto' || label === 'Utile Lordo' || label === 'Saldo IVA') {
               return formatCurrencyExact(value);
             }
 
-            const label = context.dataset.label || '';
             return `${label}: ${formatCurrencyExact(value)}`;
           },
           afterBody: function(context: any) {
-            // Per la colonna "Imponibile Costi" mostra il totale dopo tutte le label
-            if (context[0]?.dataIndex === 2) {
+            if (!context || !context[0]) return '';
+            const dataIndex = context[0].dataIndex;
+
+            // SOLO per colonna "Imponibile Costi" (index 2)
+            if (dataIndex === 2) {
               const totale = data.imponibileCostiFatture + data.costiBustePaga + data.costiF24 + data.noteSpesaApprovate;
               return `\n━━━━━━━━━━━━━━━━\nTOTALE COSTI: ${formatCurrencyExact(totale)}`;
             }
+
+            // Per TUTTE le altre colonne NON mostrare nulla
             return '';
-          },
-          // Filtra completamente i dataset con valore 0 dal tooltip
-          filter: function(tooltipItem: any) {
-            return tooltipItem.parsed.y !== 0;
           }
         },
         footerFont: {
@@ -354,8 +382,8 @@ export const RiepilogoEconomicoChart = memo(({ data }: RiepilogoEconomicoChartPr
       }
     },
     interaction: {
-      mode: 'index' as const,
-      intersect: false,
+      mode: 'point' as const,
+      intersect: true,
     },
   }), [data]);
 

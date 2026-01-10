@@ -19,6 +19,7 @@ interface RiepilogoEconomicoData {
   noteSpesaApprovate: number;
   utileLordo: number;
   saldoIva: number;
+  percentualeUtileLordo: number;
 }
 
 // Helper ottimizzato per ridurre operazioni di reduce
@@ -63,6 +64,7 @@ export default function ReportAziendaPage() {
     noteSpesaApprovate: 0,
     utileLordo: 0,
     saldoIva: 0,
+    percentualeUtileLordo: 0,
   });
 
   // Gestione cambio periodo
@@ -115,18 +117,14 @@ export default function ReportAziendaPage() {
       const dateFrom = format(range.from, 'yyyy-MM-dd');
       const dateTo = format(range.to, 'yyyy-MM-dd');
 
-      // Fetch commesse per calcolare fatturato previsto - filtrate per data_inizio
+      // Fetch TUTTE le commesse del tenant per calcolare fatturato previsto
       const { data: commesse } = await supabase
         .from('commesse')
-        .select('id, importo_commessa, budget_commessa, data_inizio')
-        .eq('tenant_id', tenantId)
-        .gte('data_inizio', dateFrom)
-        .lte('data_inizio', dateTo);
+        .select('importo_commessa, budget_commessa')
+        .eq('tenant_id', tenantId);
 
-      const commessaIds = (commesse || []).map(c => c.id);
-
-      // Ottimizzazione: esegui tutte le query in parallelo con filtri di data
-      // Note: solo note_spesa hanno sistema approvazione (stato: approvato/da_approvare/rifiutato)
+      // Ottimizzazione: esegui tutte le query in parallelo
+      // IMPORTANTE: prendi TUTTI i dati del tenant (con e senza commessa)
       const [
         { data: fattureAttive },
         { data: fatturePassive },
@@ -134,45 +132,52 @@ export default function ReportAziendaPage() {
         { data: bustePagaDettaglio },
         { data: f24Dettaglio }
       ] = await Promise.all([
+        // TUTTE le fatture attive del tenant
         supabase
           .from('fatture_attive')
-          .select('importo_imponibile, importo_iva')
-          .in('commessa_id', commessaIds)
+          .select('importo_imponibile, importo_iva, data_fattura')
+          .eq('tenant_id', tenantId)
           .gte('data_fattura', dateFrom)
           .lte('data_fattura', dateTo),
+        // TUTTE le fatture passive del tenant
         supabase
           .from('fatture_passive')
-          .select('importo_imponibile, importo_iva')
-          .in('commessa_id', commessaIds)
+          .select('importo_imponibile, importo_iva, data_fattura')
+          .eq('tenant_id', tenantId)
           .gte('data_fattura', dateFrom)
           .lte('data_fattura', dateTo),
+        // TUTTE le note spesa approvate del tenant
         supabase
           .from('note_spesa')
-          .select('importo')
-          .in('commessa_id', commessaIds)
+          .select('importo, data_nota')
+          .eq('tenant_id', tenantId)
           .eq('stato', 'approvato')
           .gte('data_nota', dateFrom)
           .lte('data_nota', dateTo),
+        // TUTTE le buste paga dettaglio del tenant
         supabase
           .from('buste_paga_dettaglio')
           .select(`
             importo_commessa,
-            buste_paga (
+            buste_paga!inner (
               mese,
-              anno
+              anno,
+              tenant_id
             )
           `)
-          .in('commessa_id', commessaIds),
+          .eq('buste_paga.tenant_id', tenantId),
+        // TUTTI gli F24 dettaglio del tenant
         supabase
           .from('f24_dettaglio')
           .select(`
             valore_f24_commessa,
-            f24 (
+            f24!inner (
               mese,
-              anno
+              anno,
+              tenant_id
             )
           `)
-          .in('commessa_id', commessaIds)
+          .eq('f24.tenant_id', tenantId)
       ]);
 
       // Calcola i totali usando helper ottimizzati
@@ -213,10 +218,15 @@ export default function ReportAziendaPage() {
 
       const utileLordo = fatturatoEmesso - costiTotali - totaleBustePaga - totaleF24 - totaleNoteSpesa;
 
-      // Calcola saldo IVA (IVA ricavi - IVA costi)
+      // Calcola saldo IVA (IVA ricavi - IVA costi) * -1 per invertire visualizzazione
       const ivaFatturePassive = sumIva(fatturePassive);
       const ivaFattureAttive = sumIva(fattureAttive);
-      const saldoIva = ivaFattureAttive - ivaFatturePassive;
+      const saldoIva = (ivaFattureAttive - ivaFatturePassive) * -1;
+
+      // Calcola percentuale utile lordo: (100 x Utile Lordo) / Fatturato Emesso
+      const percentualeUtileLordo = fatturatoEmesso !== 0
+        ? (100 * utileLordo) / fatturatoEmesso
+        : 0;
 
       setRiepilogoData({
         fatturatoPrevisto,
@@ -227,6 +237,7 @@ export default function ReportAziendaPage() {
         noteSpesaApprovate: totaleNoteSpesa,
         utileLordo,
         saldoIva,
+        percentualeUtileLordo,
       });
     } catch (error) {
       console.error('Error loading riepilogo economico:', error);
@@ -283,9 +294,27 @@ export default function ReportAziendaPage() {
         {/* Linea divisoria */}
         <div className="border-b border-border"></div>
 
-        {/* Riepilogo Economico Chart */}
-        <div className="p-6">
+        {/* Riepilogo Economico Chart con KPI in sovraimpressione */}
+        <div className="p-6 relative">
           <RiepilogoEconomicoChart data={riepilogoData} />
+
+          {/* Card % Utile Lordo in sovraimpressione in alto a destra */}
+          <div className="absolute top-8 right-8">
+            <div className="bg-white border border-border rounded-lg shadow-lg p-4 min-w-[160px]">
+              <div className="text-center">
+                <p className="text-xs font-medium text-muted-foreground mb-1">% Utile Lordo</p>
+                <p className={`text-2xl font-bold ${
+                  riepilogoData.percentualeUtileLordo === 0
+                    ? 'text-slate-600'
+                    : riepilogoData.percentualeUtileLordo > 0
+                    ? 'text-green-600'
+                    : 'text-red-600'
+                }`}>
+                  {(Math.floor(riepilogoData.percentualeUtileLordo * 10) / 10).toFixed(1)}%
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
