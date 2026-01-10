@@ -595,6 +595,96 @@ export default function RapportiniPage() {
     }
   }, [selectedRapportini, tenantId, loadRapportini, loadRapportiniDaApprovare, loadRapportiniRifiutati]);
 
+  const handleBulkApprove = useCallback(async () => {
+    if (selectedRapportini.size === 0) return;
+
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        toast.error('Utente non autenticato');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('rapportini')
+        .update({
+          stato: 'approvato',
+          approvato_da: user.id,
+          approvato_il: new Date().toISOString(),
+          rifiutato_da: null,
+          rifiutato_il: null,
+          motivo_rifiuto: null,
+          updated_at: new Date().toISOString(),
+        })
+        .in('id', Array.from(selectedRapportini));
+
+      if (error) throw error;
+
+      toast.success(`${selectedRapportini.size} rapportini approvati`);
+      setSelectedRapportini(new Set());
+
+      // Reload all rapportini in parallel
+      if (tenantId) {
+        await Promise.all([
+          loadRapportini(tenantId),
+          loadRapportiniDaApprovare(tenantId),
+          loadRapportiniRifiutati(tenantId)
+        ]);
+      }
+    } catch {
+      toast.error('Errore nell\'approvazione');
+    }
+  }, [selectedRapportini, tenantId, loadRapportini, loadRapportiniDaApprovare, loadRapportiniRifiutati]);
+
+  const handleBulkReject = useCallback(async () => {
+    if (selectedRapportini.size === 0) return;
+
+    const motivo = prompt('Motivo del rifiuto (opzionale):');
+    // Se l'utente clicca Annulla, prompt ritorna null e usciamo
+    if (motivo === null) return;
+
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        toast.error('Utente non autenticato');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('rapportini')
+        .update({
+          stato: 'rifiutato',
+          rifiutato_da: user.id,
+          rifiutato_il: new Date().toISOString(),
+          motivo_rifiuto: motivo || null,
+          approvato_da: null,
+          approvato_il: null,
+          updated_at: new Date().toISOString(),
+        })
+        .in('id', Array.from(selectedRapportini));
+
+      if (error) throw error;
+
+      toast.success(`${selectedRapportini.size} rapportini rifiutati`);
+      setSelectedRapportini(new Set());
+
+      // Reload all rapportini in parallel
+      if (tenantId) {
+        await Promise.all([
+          loadRapportini(tenantId),
+          loadRapportiniDaApprovare(tenantId),
+          loadRapportiniRifiutati(tenantId)
+        ]);
+      }
+    } catch {
+      toast.error('Errore nel rifiuto');
+    }
+  }, [selectedRapportini, tenantId, loadRapportini, loadRapportiniDaApprovare, loadRapportiniRifiutati]);
+
   const handleExport = async (format: 'excel' | 'pdf' | 'csv', selectedUserIds: string[], layout: 'list' | 'grid', periodo: { month: number; year: number } | { dataInizio: string; dataFine: string }) => {
     // Load rapportini for selected period
     const supabase = createClient();
@@ -1612,19 +1702,13 @@ export default function RapportiniPage() {
                     label: 'Approva selezionati',
                     icon: ClipboardCheck,
                     variant: 'default',
-                    action: async (selected) => {
-                      // TODO: Implementare approvazione
-                      console.log('Approva:', selected);
-                    },
+                    action: handleBulkApprove,
                   },
                   {
                     label: 'Rifiuta selezionati',
                     icon: ClipboardX,
                     variant: 'destructive',
-                    action: async (selected) => {
-                      // TODO: Implementare rifiuto
-                      console.log('Rifiuta:', selected);
-                    },
+                    action: handleBulkReject,
                   },
                 ]
               : activeTab === 'rifiutate'
@@ -1633,10 +1717,7 @@ export default function RapportiniPage() {
                     label: 'Approva selezionati',
                     icon: ClipboardCheck,
                     variant: 'default',
-                    action: async (selected) => {
-                      // TODO: Implementare approvazione (ripristino)
-                      console.log('Approva:', selected);
-                    },
+                    action: handleBulkApprove,
                   },
                   {
                     label: 'Elimina selezionati',
