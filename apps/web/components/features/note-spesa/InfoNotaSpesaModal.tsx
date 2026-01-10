@@ -24,7 +24,8 @@ interface Dipendente {
 
 interface Commessa {
   id: string;
-  titolo: string;
+  nome_commessa: string;
+  codice_commessa?: string;
   slug: string;
 }
 
@@ -146,9 +147,9 @@ export function InfoNotaSpesaModal({ notaSpesa, isOpen, onOpenChange, onUpdate, 
       const supabase = createClient();
       const { data, error } = await supabase
         .from('commesse')
-        .select('id, titolo, slug')
+        .select('id, nome_commessa, codice_commessa, slug')
         .eq('tenant_id', tenant)
-        .order('titolo');
+        .order('nome_commessa');
 
       if (error) throw error;
       setCommesse(data || []);
@@ -633,7 +634,7 @@ export function InfoNotaSpesaModal({ notaSpesa, isOpen, onOpenChange, onUpdate, 
                         aria-expanded={openCommessaCombo}
                         className="w-full justify-between h-11 border-2 border-border bg-white font-normal"
                       >
-                        {commesse.find(c => c.id === selectedCommessaId)?.titolo || notaSpesa.commesse?.titolo || "Seleziona commessa..."}
+                        {commesse.find(c => c.id === selectedCommessaId)?.nome_commessa || notaSpesa.commesse?.nome_commessa || "Seleziona commessa..."}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
@@ -649,7 +650,7 @@ export function InfoNotaSpesaModal({ notaSpesa, isOpen, onOpenChange, onUpdate, 
                           {commesse.map((commessa) => (
                             <CommandItem
                               key={commessa.id}
-                              value={commessa.titolo}
+                              value={commessa.nome_commessa}
                               onSelect={() => handleSelectCommessa(commessa.id)}
                             >
                               <Check
@@ -659,7 +660,7 @@ export function InfoNotaSpesaModal({ notaSpesa, isOpen, onOpenChange, onUpdate, 
                                 )}
                               />
                               <div className="flex flex-col">
-                                <span>{commessa.titolo}</span>
+                                <span>{commessa.nome_commessa}</span>
                                 {commessa.slug && (
                                   <span className="text-xs text-muted-foreground">{commessa.slug}</span>
                                 )}
@@ -671,7 +672,7 @@ export function InfoNotaSpesaModal({ notaSpesa, isOpen, onOpenChange, onUpdate, 
                     </PopoverContent>
                   </Popover>
                 ) : (
-                  <p className="font-medium">{notaSpesa.commesse?.titolo || '-'}</p>
+                  <p className="font-medium">{notaSpesa.commesse?.nome_commessa || '-'}</p>
                 )}
               </div>
 
