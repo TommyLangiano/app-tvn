@@ -19,6 +19,10 @@ export interface Commessa {
   importo_commessa?: number;
   budget_commessa?: number;
   costo_materiali?: number;
+  costo_vitto?: number;
+  costo_alloggio?: number;
+  costo_carburante?: number;
+  costi_vari?: number;
   cig?: string; // Required for Pubblico
   cup?: string; // Required for Pubblico
   citta?: string;
@@ -44,6 +48,10 @@ export interface CommessaFormData {
   importo_commessa?: number;
   budget_commessa?: number;
   costo_materiali?: number;
+  costo_vitto?: number;
+  costo_alloggio?: number;
+  costo_carburante?: number;
+  costi_vari?: number;
   cig?: string; // Required for Pubblico
   cup?: string; // Required for Pubblico
   citta?: string;
