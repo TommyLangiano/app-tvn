@@ -39,7 +39,9 @@ export interface NotaSpesa {
 
   // Joined data
   commesse?: {
-    titolo: string;
+    id: string;
+    nome_commessa: string;
+    codice_commessa?: string;
     slug: string;
   };
   dipendenti?: {
