@@ -71,6 +71,14 @@ export interface FatturaPassiva {
   created_at: string;
   updated_at: string;
   created_by: string;
+
+  // Relazioni (opzionali - solo quando si fa il join)
+  commesse?: {
+    id: string;
+    nome_commessa: string;
+    codice_commessa?: string;
+    slug?: string;
+  };
 }
 
 // Tipo unione per tutti i costi

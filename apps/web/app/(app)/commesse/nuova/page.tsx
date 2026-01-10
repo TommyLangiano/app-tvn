@@ -79,6 +79,10 @@ export default function NuovaCommessaPage() {
   const [uploadingFiles, setUploadingFiles] = useState(false);
   const [budgetCommessa, setBudgetCommessa] = useState<string>('');
   const [costoMateriali, setCostoMateriali] = useState<string>('');
+  const [costoVitto, setCostoVitto] = useState<string>('');
+  const [costoAlloggio, setCostoAlloggio] = useState<string>('');
+  const [costoCarburante, setCostoCarburante] = useState<string>('');
+  const [costiVari, setCostiVari] = useState<string>('');
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [warnings, setWarnings] = useState<Record<string, boolean>>({});
   const [formData, setFormData] = useState<CommessaFormData>({
@@ -501,6 +505,10 @@ export default function NuovaCommessaPage() {
         created_by: user.id,
         budget_commessa: budgetCommessa ? parseFloat(budgetCommessa) : null,
         costo_materiali: costoMateriali ? parseFloat(costoMateriali) : null,
+        costo_vitto: costoVitto ? parseFloat(costoVitto) : null,
+        costo_alloggio: costoAlloggio ? parseFloat(costoAlloggio) : null,
+        costo_carburante: costoCarburante ? parseFloat(costoCarburante) : null,
+        costi_vari: costiVari ? parseFloat(costiVari) : null,
       };
 
       // Remove CIG and CUP if not Pubblico or if empty
@@ -1141,6 +1149,110 @@ export default function NuovaCommessaPage() {
                 {!errors.costo_materiali && warnings.costo_materiali && (
                   <p className="text-sm text-yellow-600 font-medium">Il costo materiali supera il budget commessa</p>
                 )}
+              </div>
+
+              {/* Costo Vitto */}
+              <div className="space-y-2">
+                <Label htmlFor="costo_vitto">Costo Vitto (€)</Label>
+                <Input
+                  id="costo_vitto"
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0,00"
+                  value={formatCurrencyInput(costoVitto)}
+                  onChange={(e) => {
+                    const rawValue = e.target.value.replace(/[^\d,]/g, '');
+                    const commaCount = (rawValue.match(/,/g) || []).length;
+                    if (commaCount > 1) return;
+                    const parts = rawValue.split(',');
+                    const integerPart = parts[0];
+                    const decimalPart = parts[1];
+                    if (decimalPart && decimalPart.length > 2) return;
+                    const numericValue = rawValue.replace(',', '.');
+                    const num = parseFloat(numericValue);
+                    if (!isNaN(num) && num > 999999999.99) return;
+                    const cleanValue = integerPart + (decimalPart !== undefined ? '.' + decimalPart : '');
+                    setCostoVitto(cleanValue);
+                  }}
+                />
+              </div>
+
+              {/* Costo Alloggio */}
+              <div className="space-y-2">
+                <Label htmlFor="costo_alloggio">Costo Alloggio (€)</Label>
+                <Input
+                  id="costo_alloggio"
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0,00"
+                  value={formatCurrencyInput(costoAlloggio)}
+                  onChange={(e) => {
+                    const rawValue = e.target.value.replace(/[^\d,]/g, '');
+                    const commaCount = (rawValue.match(/,/g) || []).length;
+                    if (commaCount > 1) return;
+                    const parts = rawValue.split(',');
+                    const integerPart = parts[0];
+                    const decimalPart = parts[1];
+                    if (decimalPart && decimalPart.length > 2) return;
+                    const numericValue = rawValue.replace(',', '.');
+                    const num = parseFloat(numericValue);
+                    if (!isNaN(num) && num > 999999999.99) return;
+                    const cleanValue = integerPart + (decimalPart !== undefined ? '.' + decimalPart : '');
+                    setCostoAlloggio(cleanValue);
+                  }}
+                />
+              </div>
+
+              {/* Costo Carburante */}
+              <div className="space-y-2">
+                <Label htmlFor="costo_carburante">Costo Carburante (€)</Label>
+                <Input
+                  id="costo_carburante"
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0,00"
+                  value={formatCurrencyInput(costoCarburante)}
+                  onChange={(e) => {
+                    const rawValue = e.target.value.replace(/[^\d,]/g, '');
+                    const commaCount = (rawValue.match(/,/g) || []).length;
+                    if (commaCount > 1) return;
+                    const parts = rawValue.split(',');
+                    const integerPart = parts[0];
+                    const decimalPart = parts[1];
+                    if (decimalPart && decimalPart.length > 2) return;
+                    const numericValue = rawValue.replace(',', '.');
+                    const num = parseFloat(numericValue);
+                    if (!isNaN(num) && num > 999999999.99) return;
+                    const cleanValue = integerPart + (decimalPart !== undefined ? '.' + decimalPart : '');
+                    setCostoCarburante(cleanValue);
+                  }}
+                />
+              </div>
+
+              {/* Costi Vari */}
+              <div className="space-y-2">
+                <Label htmlFor="costi_vari">Costi Vari (€)</Label>
+                <Input
+                  id="costi_vari"
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0,00"
+                  value={formatCurrencyInput(costiVari)}
+                  onChange={(e) => {
+                    const rawValue = e.target.value.replace(/[^\d,]/g, '');
+                    const commaCount = (rawValue.match(/,/g) || []).length;
+                    if (commaCount > 1) return;
+                    const parts = rawValue.split(',');
+                    const integerPart = parts[0];
+                    const decimalPart = parts[1];
+                    if (decimalPart && decimalPart.length > 2) return;
+                    const numericValue = rawValue.replace(',', '.');
+                    const num = parseFloat(numericValue);
+                    if (!isNaN(num) && num > 999999999.99) return;
+                    const cleanValue = integerPart + (decimalPart !== undefined ? '.' + decimalPart : '');
+                    setCostiVari(cleanValue);
+                  }}
+                />
               </div>
             </div>
           </div>

@@ -555,6 +555,75 @@ export function FatturaDetailSheet({ fattura, onClose, onOpenFile, onDelete, onU
               </div>
 
               <div>
+                <p className="text-sm text-muted-foreground mb-2">Commessa</p>
+                {isEditing ? (
+                  <Popover open={openCommessaCombo} onOpenChange={setOpenCommessaCombo}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={openCommessaCombo}
+                        className="w-full justify-between h-11 border-2 border-border bg-white font-normal"
+                      >
+                        {commesse.find(c => c.id === selectedCommessaId)?.nome_commessa || fattura.commesse?.nome_commessa || "Seleziona commessa..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="p-0" align="start" style={{ width: 'var(--radix-popover-trigger-width)' }}>
+                      <Command>
+                        <CommandInput placeholder="Cerca commessa..." />
+                        <CommandEmpty>
+                          <div className="p-2 text-sm text-muted-foreground">
+                            Nessuna commessa trovata
+                          </div>
+                        </CommandEmpty>
+                        <CommandGroup className="max-h-[200px] overflow-auto">
+                          <CommandItem
+                            value="nessuna-commessa"
+                            onSelect={() => {
+                              setSelectedCommessaId('');
+                              setEditedData(prev => ({ ...prev, commessa_id: null }));
+                              setOpenCommessaCombo(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                !selectedCommessaId ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            <span className="text-muted-foreground italic">Nessuna commessa</span>
+                          </CommandItem>
+                          {commesse.map((commessa) => (
+                            <CommandItem
+                              key={commessa.id}
+                              value={commessa.nome_commessa}
+                              onSelect={() => handleSelectCommessa(commessa.id)}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  selectedCommessaId === commessa.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <div className="flex flex-col">
+                                <span>{commessa.nome_commessa}</span>
+                                {commessa.codice_commessa && (
+                                  <span className="text-xs text-muted-foreground">{commessa.codice_commessa}</span>
+                                )}
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                ) : (
+                  <p className="font-bold">{fattura.commesse?.nome_commessa || '—'}</p>
+                )}
+              </div>
+
+              <div>
                 <p className="text-sm text-muted-foreground mb-2">
                   {isEmessa ? 'Cliente' : 'Fornitore'}
                 </p>
@@ -950,80 +1019,6 @@ export function FatturaDetailSheet({ fattura, onClose, onOpenFile, onDelete, onU
             </div>
           )}
 
-          {/* Commessa Collegata */}
-          {(fattura.commesse?.nome_commessa || isEditing) && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold border-b pb-2">Collegamento Aziendale</h3>
-              <div>
-                <p className="text-sm text-muted-foreground mb-2">Commessa</p>
-                {isEditing ? (
-                  <Popover open={openCommessaCombo} onOpenChange={setOpenCommessaCombo}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={openCommessaCombo}
-                        className="w-full justify-between h-11 border-2 border-border bg-white font-normal"
-                      >
-                        {commesse.find(c => c.id === selectedCommessaId)?.nome_commessa || fattura.commesse?.nome_commessa || "Seleziona commessa..."}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="p-0" align="start" style={{ width: 'var(--radix-popover-trigger-width)' }}>
-                      <Command>
-                        <CommandInput placeholder="Cerca commessa..." />
-                        <CommandEmpty>
-                          <div className="p-2 text-sm text-muted-foreground">
-                            Nessuna commessa trovata
-                          </div>
-                        </CommandEmpty>
-                        <CommandGroup className="max-h-[200px] overflow-auto">
-                          <CommandItem
-                            value="nessuna-commessa"
-                            onSelect={() => {
-                              setSelectedCommessaId('');
-                              setEditedData(prev => ({ ...prev, commessa_id: null }));
-                              setOpenCommessaCombo(false);
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                !selectedCommessaId ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            <span className="text-muted-foreground italic">Nessuna commessa</span>
-                          </CommandItem>
-                          {commesse.map((commessa) => (
-                            <CommandItem
-                              key={commessa.id}
-                              value={commessa.nome_commessa}
-                              onSelect={() => handleSelectCommessa(commessa.id)}
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  selectedCommessaId === commessa.id ? "opacity-100" : "opacity-0"
-                                )}
-                              />
-                              <div className="flex flex-col">
-                                <span>{commessa.nome_commessa}</span>
-                                {commessa.codice_commessa && (
-                                  <span className="text-xs text-muted-foreground">{commessa.codice_commessa}</span>
-                                )}
-                              </div>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                ) : (
-                  <p className="font-bold">{fattura.commesse?.nome_commessa || '-'}</p>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* Note Interne */}
           {(fattura.note || isEditing) && (

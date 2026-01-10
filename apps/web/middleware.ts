@@ -61,6 +61,11 @@ export async function middleware(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
+  // Allow unauthenticated access to password reset pages
+  if (pathname === '/reset-password' || pathname === '/update-password') {
+    return response;
+  }
+
   // If user is not logged in and trying to access protected routes
   if (!user && (pathname.startsWith('/dashboard') || pathname.startsWith('/onboarding'))) {
     const redirectUrl = new URL('/sign-in', request.url);
@@ -165,6 +170,8 @@ export const config = {
     '/dashboard/:path*',
     '/sign-in',
     '/signup',
+    '/reset-password',
+    '/update-password',
     '/onboarding/:path*',
     '/(app)/:path*',
     '/mobile/:path*'

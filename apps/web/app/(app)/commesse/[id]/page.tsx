@@ -114,7 +114,11 @@ export default function CommessaDetailPage() {
       data_fine_prevista: '',
       importo_commessa: '',
       budget_commessa: '',
-      costo_materiali: ''
+      costo_materiali: '',
+      costo_vitto: '',
+      costo_alloggio: '',
+      costo_carburante: '',
+      costi_vari: ''
     },
     descrizione: {
       descrizione: ''
@@ -822,7 +826,11 @@ export default function CommessaDetailPage() {
           data_fine_prevista: commessa.data_fine_prevista || '',
           importo_commessa: commessa.importo_commessa?.toString() || '',
           budget_commessa: commessa.budget_commessa?.toString() || '',
-          costo_materiali: commessa.costo_materiali?.toString() || ''
+          costo_materiali: commessa.costo_materiali?.toString() || '',
+          costo_vitto: commessa.costo_vitto?.toString() || '',
+          costo_alloggio: commessa.costo_alloggio?.toString() || '',
+          costo_carburante: commessa.costo_carburante?.toString() || '',
+          costi_vari: commessa.costi_vari?.toString() || ''
         };
         break;
       case 'descrizione':
@@ -1013,6 +1021,10 @@ export default function CommessaDetailPage() {
             importo_commessa: data.importo_commessa ? parseFloat(data.importo_commessa as string) : null,
             budget_commessa: data.budget_commessa ? parseFloat(data.budget_commessa as string) : null,
             costo_materiali: data.costo_materiali ? parseFloat(data.costo_materiali as string) : null,
+            costo_vitto: data.costo_vitto ? parseFloat(data.costo_vitto as string) : null,
+            costo_alloggio: data.costo_alloggio ? parseFloat(data.costo_alloggio as string) : null,
+            costo_carburante: data.costo_carburante ? parseFloat(data.costo_carburante as string) : null,
+            costi_vari: data.costi_vari ? parseFloat(data.costi_vari as string) : null,
           };
           break;
         case 'descrizione':
@@ -1939,6 +1951,22 @@ export default function CommessaDetailPage() {
                   <p className="text-sm text-muted-foreground">Costo Materiali</p>
                   <p className="text-base font-semibold">{commessa.costo_materiali ? formatCurrency(commessa.costo_materiali) : '—'}</p>
                 </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Costo Vitto</p>
+                  <p className="text-base font-semibold">{commessa.costo_vitto ? formatCurrency(commessa.costo_vitto) : '—'}</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Costo Alloggio</p>
+                  <p className="text-base font-semibold">{commessa.costo_alloggio ? formatCurrency(commessa.costo_alloggio) : '—'}</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Costo Carburante</p>
+                  <p className="text-base font-semibold">{commessa.costo_carburante ? formatCurrency(commessa.costo_carburante) : '—'}</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Costi Vari</p>
+                  <p className="text-base font-semibold">{commessa.costi_vari ? formatCurrency(commessa.costi_vari) : '—'}</p>
+                </div>
               </div>
             )}
 
@@ -2005,6 +2033,54 @@ export default function CommessaDetailPage() {
                       placeholder="0,00"
                       value={formatCurrencyInput(sectionData.pianificazione.costo_materiali as string)}
                       onChange={(e) => handleCurrencyChange('pianificazione', 'costo_materiali', e.target.value)}
+                      className="h-11 border-2 border-border bg-white"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-costo-vitto">Costo Vitto (€)</Label>
+                    <Input
+                      id="edit-costo-vitto"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0,00"
+                      value={formatCurrencyInput(sectionData.pianificazione.costo_vitto as string)}
+                      onChange={(e) => handleCurrencyChange('pianificazione', 'costo_vitto', e.target.value)}
+                      className="h-11 border-2 border-border bg-white"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-costo-alloggio">Costo Alloggio (€)</Label>
+                    <Input
+                      id="edit-costo-alloggio"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0,00"
+                      value={formatCurrencyInput(sectionData.pianificazione.costo_alloggio as string)}
+                      onChange={(e) => handleCurrencyChange('pianificazione', 'costo_alloggio', e.target.value)}
+                      className="h-11 border-2 border-border bg-white"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-costo-carburante">Costo Carburante (€)</Label>
+                    <Input
+                      id="edit-costo-carburante"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0,00"
+                      value={formatCurrencyInput(sectionData.pianificazione.costo_carburante as string)}
+                      onChange={(e) => handleCurrencyChange('pianificazione', 'costo_carburante', e.target.value)}
+                      className="h-11 border-2 border-border bg-white"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-costi-vari">Costi Vari (€)</Label>
+                    <Input
+                      id="edit-costi-vari"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0,00"
+                      value={formatCurrencyInput(sectionData.pianificazione.costi_vari as string)}
+                      onChange={(e) => handleCurrencyChange('pianificazione', 'costi_vari', e.target.value)}
                       className="h-11 border-2 border-border bg-white"
                     />
                   </div>
